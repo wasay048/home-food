@@ -1,0 +1,28 @@
+// Custom mobile-first Bootstrap variable overrides
+$body-bg: #ffffff;
+$body-color: #222;
+$primary: #198754; // align with success tone for brand
+$font-size-base: 0.95rem;
+$border-radius: .65rem;
+
+// Tightened spacing scale for mobile
+$spacer: 1rem;
+$spacers: (
+  0: 0,
+  1: 0.25rem,
+  2: 0.5rem,
+  3: 0.75rem,
+  4: 1rem,
+  5: 1.25rem,
+  6: 1.5rem
+);
+
+// Mobile-oriented breakpoints (focus on xs/sm)
+$grid-breakpoints: (
+  xs: 0,
+  sm: 420px,
+  md: 640px,
+  lg: 960px,
+  xl: 1200px,
+  xxl: 1400px
+);
