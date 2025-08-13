@@ -1,9 +1,12 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
+import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getAnalytics, isSupported } from "firebase/analytics";
+import {
+  getAnalytics,
+  isSupported as analyticsIsSupported,
+} from "firebase/analytics";
 
-// Build config from env
-const firebaseConfig = {
+const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
@@ -13,42 +16,20 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-function looksPopulated(value) {
-  return (
-    typeof value === "string" &&
-    value.trim() !== "" &&
-    !value.startsWith("your_") &&
-    !/^1:000000|xxxxxxxx|your_project/.test(value)
-  );
-}
+// Basic required field check
+const requiredKeys = ["apiKey", "authDomain", "projectId", "appId"];
+export const firebaseDisabled = requiredKeys.some((k) => !config[k]);
 
-const configValid = ["apiKey", "authDomain", "projectId", "appId"].every((k) =>
-  looksPopulated(firebaseConfig[k])
-);
-
-export const firebaseDisabled = !configValid;
-
-let firebaseApp = null;
-let db = null;
-let analyticsPromise = Promise.resolve(null);
-
+let app, auth, db, analytics;
 if (!firebaseDisabled) {
-  try {
-    firebaseApp = initializeApp(firebaseConfig);
-    db = getFirestore(firebaseApp);
-    analyticsPromise = isSupported().then((y) =>
-      y ? getAnalytics(firebaseApp) : null
-    );
-  } catch (err) {
-    console.warn("Firebase disabled due to initialization error:", err.message);
-    firebaseApp = null;
-    db = null;
-    analyticsPromise = Promise.resolve(null);
+  app = getApps().length ? getApps()[0] : initializeApp(config);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  if (config.measurementId) {
+    analyticsIsSupported().then((ok) => {
+      if (ok) analytics = getAnalytics(app);
+    });
   }
-} else {
-  console.info(
-    "Firebase not initialized: incomplete or placeholder config (expected; running in disabled mode)"
-  );
 }
 
-export { firebaseApp, db, analyticsPromise };
+export { app, auth, db, analytics };
