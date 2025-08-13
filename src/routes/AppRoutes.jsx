@@ -5,7 +5,7 @@ import LoginPage from "../pages/LoginPage";
 import WeChatCallbackPage from "../pages/WeChatCallbackPage";
 import ListingPage from "../pages/ListingPage";
 import FoodDetailPage from "../pages/FoodDetailPage";
-import CheckoutPage from "../pages/CheckoutPage";
+import OrderPage from "../pages/OrderPage";
 import PaymentPage from "../pages/PaymentPage";
 import SuccessPage from "../pages/SuccessPage";
 import ProtectedRoute from "./ProtectedRoute";
@@ -17,7 +17,7 @@ export default function AppRoutes() {
       <Route path="/" element={<ListingPage />} />
       <Route path="/foods" element={<ListingPage />} />
       <Route path="/food/:foodId" element={<FoodDetailPage />} />
-      <Route path="/checkout" element={<CheckoutPage />} />
+      <Route path="/order" element={<OrderPage />} />
       <Route path="/payment" element={<PaymentPage />} />
       <Route path="/success" element={<SuccessPage />} />
       <Route path="/login" element={<LoginPage />} />
