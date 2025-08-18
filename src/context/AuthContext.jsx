@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useEffect, useState } from "react";
-import { firebaseApp, firebaseDisabled } from "../services/firebase";
+import { app, firebaseDisabled } from "../services/firebase";
 import {
   getAuth,
   onAuthStateChanged,
@@ -11,7 +11,7 @@ import {
 
 const AuthContext = createContext(null);
 
-const auth = firebaseApp ? getAuth(firebaseApp) : null;
+const auth = app ? getAuth(app) : null;
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
