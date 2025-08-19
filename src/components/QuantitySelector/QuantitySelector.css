@@ -1,0 +1,189 @@
+/* Keep the original design structure */
+.quantity-selector-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quantity-selector-wrapper.small {
+  font-size: 0.875rem;
+}
+
+.quantity-selector-wrapper.medium {
+  font-size: 1rem;
+}
+
+.quantity-selector-wrapper.large {
+  font-size: 1.125rem;
+}
+
+/* Original right side design from existing CSS */
+.right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.right .count {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #333;
+  min-width: 24px;
+  text-align: center;
+}
+
+.counter {
+  display: flex;
+  gap: 8px;
+}
+
+.counter .button {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #333;
+}
+
+.counter .button:hover:not(.disabled) {
+  background: #e9ecef;
+  border-color: #3fc045;
+}
+
+.counter .button:active:not(.disabled) {
+  transform: scale(0.95);
+}
+
+.counter .button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f5f5f5;
+}
+
+.counter .button.dark:not(.disabled) {
+  background: #3fc045;
+  color: white;
+  border-color: #3fc045;
+}
+
+.counter .button.dark:hover:not(.disabled) {
+  background: #36a83b;
+}
+
+/* Unavailable state */
+.quantity-selector-wrapper.unavailable .right {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.availability-error {
+  color: #d32f2f;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+  text-align: center;
+  padding: 4px 8px;
+  background: #ffebee;
+  border-radius: 4px;
+  border: 1px solid #ffcdd2;
+}
+
+/* Optional availability info (when showAvailabilityInfo is true) */
+.availability-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+}
+
+.tag {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.6rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.tag.go-grab {
+  background-color: #e8f5e8;
+  color: #2d5a2d;
+  border: 1px solid #4caf50;
+}
+
+.tag.pre-order {
+  background-color: #fff3e0;
+  color: #bf5700;
+  border: 1px solid #ff9800;
+}
+
+.availability {
+  font-size: 0.6rem;
+  font-weight: 500;
+}
+
+.availability.unlimited {
+  color: #4caf50;
+}
+
+.availability.limited {
+  color: #ff9800;
+}
+
+/* Messages */
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.error-message {
+  color: #d32f2f;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+  padding: 4px 8px;
+  background: #ffebee;
+  border-radius: 4px;
+  border: 1px solid #ffcdd2;
+}
+
+.warning-message {
+  color: #f57c00;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+  padding: 4px 8px;
+  background: #fff3e0;
+  border-radius: 4px;
+  border: 1px solid #ffcc02;
+}
+
+/* Invalid State */
+.quantity-selector-wrapper.invalid .count {
+  color: #d32f2f;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .right {
+    gap: 12px;
+  }
+
+  .counter .button {
+    width: 28px;
+    height: 28px;
+  }
+
+  .availability-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}

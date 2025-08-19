@@ -1,0 +1,654 @@
+{
+  "title": "HomeFoods Complete Schema",
+  "version": "1.0.0",
+  "lastUpdated": "2025-08-13T11:54:14Z",
+  "updatedBy": "eshawasay1914",
+  "description": "Complete schema for the HomeFoods platform including Kitchen, Food Item, Coupon, and Likes entities",
+  
+  "schemas": {
+    "Kitchen": {
+      "type": "object",
+      "title": "Kitchen Schema",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the kitchen",
+          "example": "MRbF5in13qSx2RSV2Et9"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the kitchen",
+          "example": "James Kitchen"
+        },
+        "address": {
+          "type": "string",
+          "description": "Physical address of the kitchen",
+          "example": "Lahore-Sialkot Motorway"
+        },
+        "city": {
+          "type": "string",
+          "description": "City where the kitchen is located",
+          "example": "San Francisco"
+        },
+        "cuisine": {
+          "type": "string",
+          "description": "Type of cuisine offered",
+          "example": "Thai"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the kitchen",
+          "example": "This is the kitchen of James done. This is the kitchen of James done, This is the kitchen of James done.This is the kitchen of James done"
+        },
+        "chefIntro": {
+          "type": "string",
+          "description": "Introduction or bio of the chef",
+          "example": "Testing"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Unique identifier of the kitchen owner",
+          "example": "ao5qvI8dSjZI52Wf2hrR8vWL37s1"
+        },
+        "location": {
+          "type": "object",
+          "description": "Geographic coordinates of the kitchen",
+          "properties": {
+            "latitude": {
+              "type": "number",
+              "example": 37.7858435
+            },
+            "longitude": {
+              "type": "number",
+              "example": -122.4064977
+            }
+          }
+        },
+        "imageURL": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the kitchen's profile image"
+        },
+        "kitchenCoverPhoto": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the kitchen's cover photo"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Overall rating score",
+          "example": 261
+        },
+        "ratingCount": {
+          "type": "number",
+          "description": "Number of ratings received",
+          "example": 57
+        },
+        "dateSubmitted": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date when the kitchen was submitted for approval",
+          "example": "2025-06-15T09:48:57Z"
+        },
+        "dateApproved": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date when the kitchen was approved",
+          "example": "2025-06-15T13:35:23Z"
+        },
+        "paymentMethods": {
+          "type": "object",
+          "description": "Available payment methods",
+          "properties": {
+            "paypal": {
+              "type": "string",
+              "format": "email",
+              "description": "PayPal email address",
+              "example": "JamesPAyPal00@gmail.com"
+            },
+            "venmo": {
+              "type": "string",
+              "description": "Venmo handle",
+              "example": "JAmesVenomo@mail.com"
+            },
+            "zelle": {
+              "type": "string",
+              "description": "Zelle information",
+              "example": ""
+            }
+          }
+        },
+        "preorderSchedule": {
+          "type": "object",
+          "description": "Schedule for preorders organized by dates",
+          "properties": {
+            "dates": {
+              "type": "object",
+              "patternProperties": {
+                "^[0-9]{4}-[0-9]{2}-[0-9]{2}$": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "Unique identifier for the schedule entry",
+                        "example": "82740FC0-E0DC-48B2-9E13-9EE982E008E4"
+                      },
+                      "foodItemId": {
+                        "type": "string",
+                        "description": "Reference to the food item (links to FoodItem Schema)",
+                        "example": "graZSqpLNs70tP7pfedK"
+                      },
+                      "nameOfFood": {
+                        "type": "string",
+                        "description": "Name of the food item (denormalized from FoodItem)",
+                        "example": "Beads"
+                      },
+                      "availableTimes": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[0-9]{1,2}:[0-9]{2} (AM|PM)$"
+                        },
+                        "description": "Available pickup/delivery times",
+                        "example": ["5:30 PM", "7:30 PM"]
+                      },
+                      "numOfAvailableItems": {
+                        "type": "number",
+                        "description": "Number of items available for this date",
+                        "example": 10
+                      },
+                      "isLimitedOrder": {
+                        "type": "boolean",
+                        "description": "Whether this is a limited quantity order",
+                        "example": false
+                      }
+                    },
+                    "required": ["id", "foodItemId", "nameOfFood", "availableTimes", "numOfAvailableItems", "isLimitedOrder"]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "address",
+        "city",
+        "cuisine",
+        "description",
+        "ownerId",
+        "location",
+        "dateSubmitted",
+        "dateApproved"
+      ]
+    },
+    
+    "FoodItem": {
+      "type": "object",
+      "title": "Food Item Schema",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the food item",
+          "example": "2omM3QUn19xAuV9bYd5V"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the food item",
+          "example": "Cranch pizza testing"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the food item",
+          "example": "Testing 12"
+        },
+        "cost": {
+          "type": "number",
+          "description": "Price of the food item",
+          "example": 18
+        },
+        "foodCategory": {
+          "type": "string",
+          "description": "Categories the food belongs to (comma-separated)",
+          "example": "3, 4, 5"
+        },
+        "foodType": {
+          "type": "string",
+          "description": "Type/cuisine of the food",
+          "example": "Thai"
+        },
+        "imageUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the food item's image"
+        },
+        "kitchenId": {
+          "type": "string",
+          "description": "Reference to the kitchen that serves this food",
+          "example": "MRbF5in13qSx2RSV2Et9"
+        },
+        "kitchenName": {
+          "type": "string",
+          "description": "Name of the kitchen (denormalized for quick access)",
+          "example": "James Kitchen"
+        },
+        "isFeatured": {
+          "type": "boolean",
+          "description": "Whether this food item is featured",
+          "example": false
+        },
+        "availability": {
+          "type": "object",
+          "description": "Availability information",
+          "properties": {
+            "numAvailable": {
+              "type": "number",
+              "description": "Number of items currently available",
+              "example": 0
+            },
+            "numOfSoldItem": {
+              "type": "number",
+              "description": "Total number of items sold",
+              "example": 2
+            }
+          }
+        },
+        "engagement": {
+          "type": "object",
+          "description": "User engagement metrics",
+          "properties": {
+            "numOfLike": {
+              "type": "number",
+              "description": "Number of likes received",
+              "example": 0
+            },
+            "rating": {
+              "type": "number",
+              "description": "Average rating score",
+              "example": 9
+            },
+            "numRatings": {
+              "type": "number",
+              "description": "Total number of ratings",
+              "example": 0
+            },
+            "countRating": {
+              "type": "number",
+              "description": "Count of rating entries",
+              "example": 2
+            }
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "cost",
+        "foodType",
+        "kitchenId",
+        "kitchenName"
+      ]
+    },
+    
+    "Coupon": {
+      "type": "object",
+      "title": "Coupon Schema",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Unique coupon code used by customers",
+          "example": "Jam_12_Free",
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "coupon_Type": {
+          "type": "string",
+          "description": "Type of coupon discount",
+          "enum": ["Free", "Percentage", "Fixed_Amount"],
+          "example": "Free"
+        },
+        "description": {
+          "type": "string",
+          "description": "Customer-facing description of the coupon offer",
+          "example": "Surprise! You've received a complimentary cupcake with your order as a sweet thank-you from us. Enjoy!"
+        },
+        "isEnabled": {
+          "type": "boolean",
+          "description": "Whether the coupon is currently active and usable",
+          "example": true
+        },
+        "percentage": {
+          "type": "number",
+          "description": "Percentage discount (0-100) - used when coupon_Type is 'Percentage'",
+          "minimum": 0,
+          "maximum": 100,
+          "example": 10
+        },
+        "fixedAmount": {
+          "type": "number",
+          "description": "Fixed dollar amount discount - used when coupon_Type is 'Fixed_Amount'",
+          "minimum": 0,
+          "example": 5.00
+        },
+        "minimumOrderValue": {
+          "type": "number",
+          "description": "Minimum order value required to use this coupon",
+          "minimum": 0,
+          "example": 25.00
+        },
+        "maxDiscountAmount": {
+          "type": "number",
+          "description": "Maximum discount amount for percentage-based coupons",
+          "minimum": 0,
+          "example": 15.00
+        },
+        "usageLimit": {
+          "type": "object",
+          "description": "Usage limitations for the coupon",
+          "properties": {
+            "totalUses": {
+              "type": "number",
+              "description": "Maximum total times this coupon can be used across all users",
+              "example": 100
+            },
+            "perUserLimit": {
+              "type": "number",
+              "description": "Maximum times a single user can use this coupon",
+              "example": 1
+            },
+            "currentUseCount": {
+              "type": "number",
+              "description": "Current number of times coupon has been used",
+              "example": 23
+            }
+          }
+        },
+        "validity": {
+          "type": "object",
+          "description": "Coupon validity period",
+          "properties": {
+            "startDate": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When the coupon becomes active",
+              "example": "2025-08-13T11:54:14Z"
+            },
+            "endDate": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When the coupon expires",
+              "example": "2025-09-13T23:59:59Z"
+            }
+          }
+        },
+        "applicableScope": {
+          "type": "object",
+          "description": "What the coupon applies to",
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": ["all", "specific_kitchens", "specific_food_items", "specific_categories"],
+              "description": "Scope of coupon application",
+              "example": "specific_kitchens"
+            },
+            "kitchenIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of kitchen IDs this coupon applies to",
+              "example": ["MRbF5in13qSx2RSV2Et9"]
+            },
+            "foodItemIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of food item IDs this coupon applies to",
+              "example": ["2omM3QUn19xAuV9bYd5V"]
+            },
+            "foodCategories": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of food categories this coupon applies to",
+              "example": ["3", "4"]
+            }
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Additional coupon metadata",
+          "properties": {
+            "createdBy": {
+              "type": "string",
+              "description": "User ID who created the coupon",
+              "example": "eshawasay1914"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When the coupon was created",
+              "example": "2025-08-13T11:54:14Z"
+            },
+            "lastModified": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When the coupon was last modified",
+              "example": "2025-08-13T11:54:14Z"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Tags for organizing coupons",
+              "example": ["welcome", "first_time_user"]
+            }
+          }
+        }
+      },
+      "required": [
+        "code",
+        "coupon_Type",
+        "description",
+        "isEnabled"
+      ]
+    },
+    
+    "Like": {
+      "type": "object",
+      "title": "Like Schema",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the like entry",
+          "example": "like_z6HJ9L3KS3XR9yLZ9rexp7K4Eo43_2omM3QUn19xAuV9bYd5V"
+        },
+        "userID": {
+          "type": "string",
+          "description": "Unique identifier of the user who liked/unliked",
+          "example": "z6HJ9L3KS3XR9yLZ9rexp7K4Eo43"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to the food item that was liked/unliked",
+          "example": "2omM3QUn19xAuV9bYd5V"
+        },
+        "kitchenID": {
+          "type": "string",
+          "description": "Reference to the kitchen (denormalized from food item)",
+          "example": "MRbF5in13qSx2RSV2Et9"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["liked", "unliked"],
+          "description": "Current like status",
+          "example": "unliked"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the like action occurred",
+          "example": "2025-07-08T11:23:59Z"
+        },
+        "foodName": {
+          "type": "string",
+          "description": "Name of the food item (denormalized for quick access)",
+          "example": "Cranch pizza testing"
+        },
+        "FoodDescription": {
+          "type": "string",
+          "description": "Description of the food item (denormalized for quick access)",
+          "example": "Testing 12"
+        },
+        "cost": {
+          "type": "number",
+          "description": "Cost of the food item (denormalized for quick access)",
+          "example": 20
+        },
+        "imageUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the food item's image (denormalized for quick access)"
+        }
+      },
+      "required": [
+        "userID",
+        "productId",
+        "kitchenID",
+        "status",
+        "timestamp"
+      ]
+    }
+  },
+  
+  "relationships": {
+    "kitchen_to_food_items": {
+      "type": "one-to-many",
+      "description": "One kitchen can have multiple food items",
+      "parent": "Kitchen",
+      "child": "FoodItem",
+      "foreignKey": "kitchenId",
+      "example": {
+        "kitchen_id": "MRbF5in13qSx2RSV2Et9",
+        "food_items": ["2omM3QUn19xAuV9bYd5V", "graZSqpLNs70tP7pfedK"]
+      }
+    },
+    "food_item_to_likes": {
+      "type": "one-to-many",
+      "description": "One food item can have multiple likes from different users",
+      "parent": "FoodItem",
+      "child": "Like",
+      "foreignKey": "productId",
+      "example": {
+        "food_item_id": "2omM3QUn19xAuV9bYd5V",
+        "likes": ["like_z6HJ9L3KS3XR9yLZ9rexp7K4Eo43_2omM3QUn19xAuV9bYd5V"]
+      }
+    },
+    "user_to_likes": {
+      "type": "one-to-many",
+      "description": "One user can like multiple food items",
+      "parent": "User",
+      "child": "Like",
+      "foreignKey": "userID",
+      "example": {
+        "user_id": "z6HJ9L3KS3XR9yLZ9rexp7K4Eo43",
+        "likes": ["like_z6HJ9L3KS3XR9yLZ9rexp7K4Eo43_2omM3QUn19xAuV9bYd5V"]
+      }
+    },
+    "kitchen_to_likes": {
+      "type": "one-to-many",
+      "description": "Kitchen can receive likes on their food items (via denormalized kitchenID)",
+      "parent": "Kitchen",
+      "child": "Like",
+      "foreignKey": "kitchenID",
+      "note": "This is a denormalized relationship for quick kitchen analytics"
+    },
+    "coupon_to_kitchens": {
+      "type": "many-to-many",
+      "description": "Coupons can apply to multiple kitchens, kitchens can have multiple applicable coupons",
+      "implementation": "via applicableScope.kitchenIds in Coupon schema"
+    },
+    "coupon_to_food_items": {
+      "type": "many-to-many",
+      "description": "Coupons can apply to specific food items",
+      "implementation": "via applicableScope.foodItemIds in Coupon schema"
+    },
+    "preorder_to_food_items": {
+      "type": "many-to-one",
+      "description": "Preorder schedule entries reference specific food items",
+      "parent": "FoodItem",
+      "child": "Kitchen.preorderSchedule entry",
+      "foreignKey": "foodItemId"
+    }
+  },
+  
+  "denormalizedFields": {
+    "description": "Fields that are duplicated across schemas for performance",
+    "fields": [
+      {
+        "field": "kitchenName",
+        "locations": ["FoodItem.kitchenName"],
+        "source": "Kitchen.name",
+        "purpose": "Quick access without joins"
+      },
+      {
+        "field": "nameOfFood",
+        "locations": ["Kitchen.preorderSchedule.dates[].nameOfFood"],
+        "source": "FoodItem.name",
+        "purpose": "Schedule display without additional lookups"
+      },
+      {
+        "field": "kitchenID",
+        "locations": ["Like.kitchenID"],
+        "source": "FoodItem.kitchenId",
+        "purpose": "Quick kitchen analytics on likes"
+      },
+      {
+        "field": "foodName",
+        "locations": ["Like.foodName"],
+        "source": "FoodItem.name",
+        "purpose": "Quick access in like listings"
+      },
+      {
+        "field": "FoodDescription",
+        "locations": ["Like.FoodDescription"],
+        "source": "FoodItem.description",
+        "purpose": "Quick access in like listings"
+      },
+      {
+        "field": "cost",
+        "locations": ["Like.cost"],
+        "source": "FoodItem.cost",
+        "purpose": "Quick access in like listings"
+      },
+      {
+        "field": "imageUrl",
+        "locations": ["Like.imageUrl"],
+        "source": "FoodItem.imageUrl",
+        "purpose": "Quick access in like listings"
+      }
+    ]
+  },
+  
+  "indexingRecommendations": {
+    "Kitchen": ["id", "ownerId", "city", "cuisine", "dateApproved"],
+    "FoodItem": ["id", "kitchenId", "foodType", "foodCategory", "isFeatured"],
+    "Coupon": ["code", "isEnabled", "validity.startDate", "validity.endDate", "applicableScope.kitchenIds", "applicableScope.foodItemIds"],
+    "Like": ["userID", "productId", "kitchenID", "status", "timestamp"]
+  },
+  
+  "systemMetadata": {
+    "currentUser": "eshawasay1914",
+    "currentDateTime": "2025-08-13T11:54:14Z",
+    "timezone": "UTC",
+    "version": "1.0.0",
+    "lastUpdated": "2025-08-13T11:54:14Z"
+  }
+}

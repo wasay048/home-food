@@ -20,16 +20,24 @@ const config = {
 const requiredKeys = ["apiKey", "authDomain", "projectId", "appId"];
 export const firebaseDisabled = requiredKeys.some((k) => !config[k]);
 
-let app, auth, db, analytics;
+let firebaseApp, auth, db, analytics, analyticsPromise;
 if (!firebaseDisabled) {
-  app = getApps().length ? getApps()[0] : initializeApp(config);
-  auth = getAuth(app);
-  db = getFirestore(app);
+  firebaseApp = getApps().length ? getApps()[0] : initializeApp(config);
+  auth = getAuth(firebaseApp);
+  db = getFirestore(firebaseApp);
   if (config.measurementId) {
-    analyticsIsSupported().then((ok) => {
-      if (ok) analytics = getAnalytics(app);
+    analyticsPromise = analyticsIsSupported().then((ok) => {
+      if (ok) {
+        analytics = getAnalytics(firebaseApp);
+        return analytics;
+      }
+      return null;
     });
+  } else {
+    analyticsPromise = Promise.resolve(null);
   }
+} else {
+  analyticsPromise = Promise.resolve(null);
 }
 
-export { app, auth, db, analytics };
+export { firebaseApp, auth, db, analytics, analyticsPromise };
