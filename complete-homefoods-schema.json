@@ -1,9 +1,9 @@
 {
-  "title": "HomeFoods Complete Schema",
+  "title": "HomeFresh Complete Schema",
   "version": "1.0.0",
   "lastUpdated": "2025-08-13T11:54:14Z",
   "updatedBy": "eshawasay1914",
-  "description": "Complete schema for the HomeFoods platform including Kitchen, Food Item, Coupon, and Likes entities",
+  "description": "Complete schema for the Home Fresh platform including Kitchen, Food Item, Coupon, and Likes entities",
   
   "schemas": {
     "Kitchen": {

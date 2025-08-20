@@ -5,7 +5,7 @@ import "./LandingPage.css";
 export default function LandingPage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [animatedText, setAnimatedText] = useState("");
-  const fullText = "Delicious home-cooked meals, delivered fresh to your door";
+  const fullText = "Enjoy delicious meal from your favorite chef.";
 
   // Update time every second
   useEffect(() => {
@@ -58,14 +58,13 @@ export default function LandingPage() {
             <span className="logo-icon">🏠</span>
           </div>
           <h1 className="brand-name">
-            Home<span className="accent-text">Foods</span>
+            Home<span className="accent-text">Fresh</span>
           </h1>
         </div>
 
         <div className="coming-soon-section">
           <h2 className="coming-soon-title">
-            Something <span className="gradient-text">Amazing</span> is Coming
-            Soon
+            Welcome to <span className="gradient-text">HomeFresh!</span>
           </h2>
 
           <p className="subtitle">
@@ -81,8 +80,8 @@ export default function LandingPage() {
             </div>
             <div className="feature-card">
               <div className="feature-icon">🚀</div>
-              <h3>Fresh Delivery</h3>
-              <p>Fast and reliable delivery to your doorstep</p>
+              <h3>Fresh Experience</h3>
+              <p>Fast and reliable taste you can trust</p>
             </div>
             <div className="feature-card">
               <div className="feature-icon">💝</div>

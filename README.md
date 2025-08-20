@@ -1,4 +1,4 @@
-# Home Food Mobile Boilerplate
+# Home Fresh Mobile Boilerplate
 
 Mobile-first React (Vite) + Bootstrap 5 (prebuilt CSS) + Firebase (Auth/Firestore/Analytics) + WeChat OAuth placeholder.
 
