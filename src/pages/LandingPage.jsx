@@ -99,7 +99,7 @@ export default function LandingPage() {
           {/* CTA Section */}
           <div className="cta-section">
             <p className="launch-text">
-              We're putting the finishing touches on something special!
+              We&apos;re putting the finishing touches on something special!
             </p>
             <Link to="/foods" className="explore-btn">
               <span>Explore Preview</span>

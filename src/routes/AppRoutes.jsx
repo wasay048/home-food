@@ -19,7 +19,7 @@ export default function AppRoutes() {
 
       {/* Public routes */}
       <Route path="/foods" element={<ListingPage />} />
-      <Route path="/food/:kitchenId/:foodId" element={<FoodDetailPage />} />
+      <Route path="/share" element={<FoodDetailPage />} />
       <Route path="/order" element={<OrderPage />} />
       <Route path="/payment" element={<PaymentPage />} />
       <Route path="/success" element={<SuccessPage />} />

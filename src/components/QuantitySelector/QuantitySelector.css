@@ -1,189 +1,188 @@
-/* Keep the original design structure */
-.quantity-selector-wrapper {
+.quantity-selector {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  font-family: inherit;
 }
 
-.quantity-selector-wrapper.small {
-  font-size: 0.875rem;
-}
-
-.quantity-selector-wrapper.medium {
-  font-size: 1rem;
-}
-
-.quantity-selector-wrapper.large {
-  font-size: 1.125rem;
-}
-
-/* Original right side design from existing CSS */
-.right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.right .count {
-  font-size: 1.25rem;
-  font-weight: bold;
-  color: #333;
-  min-width: 24px;
-  text-align: center;
-}
-
-.counter {
+.quantity-selector__availability {
   display: flex;
   gap: 8px;
+  margin-bottom: 4px;
 }
 
-.counter .button {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #f8f9fa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #333;
-}
-
-.counter .button:hover:not(.disabled) {
-  background: #e9ecef;
-  border-color: #3fc045;
-}
-
-.counter .button:active:not(.disabled) {
-  transform: scale(0.95);
-}
-
-.counter .button.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: #f5f5f5;
-}
-
-.counter .button.dark:not(.disabled) {
-  background: #3fc045;
-  color: white;
-  border-color: #3fc045;
-}
-
-.counter .button.dark:hover:not(.disabled) {
-  background: #36a83b;
-}
-
-/* Unavailable state */
-.quantity-selector-wrapper.unavailable .right {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.availability-error {
-  color: #d32f2f;
-  font-size: 0.75rem;
-  font-weight: 500;
-  margin-bottom: 8px;
-  text-align: center;
+.availability-badge {
+  font-size: 12px;
   padding: 4px 8px;
-  background: #ffebee;
-  border-radius: 4px;
-  border: 1px solid #ffcdd2;
-}
-
-/* Optional availability info (when showAvailabilityInfo is true) */
-.availability-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  font-size: 0.75rem;
-}
-
-.tag {
-  padding: 2px 8px;
   border-radius: 12px;
-  font-size: 0.6rem;
   font-weight: 500;
-  text-transform: uppercase;
 }
 
-.tag.go-grab {
-  background-color: #e8f5e8;
-  color: #2d5a2d;
-  border: 1px solid #4caf50;
-}
-
-.tag.pre-order {
+.availability-badge--pre-order {
   background-color: #fff3e0;
-  color: #bf5700;
-  border: 1px solid #ff9800;
-}
-
-.availability {
-  font-size: 0.6rem;
-  font-weight: 500;
-}
-
-.availability.unlimited {
-  color: #4caf50;
-}
-
-.availability.limited {
   color: #ff9800;
+  border: 1px solid #ffcc80;
 }
 
-/* Messages */
-.messages {
+.availability-badge--go-grab {
+  background-color: #e8f5e8;
+  color: #4caf50;
+  border: 1px solid #81c784;
+}
+
+.quantity-selector__controls {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.quantity-selector__display {
+  min-width: 40px;
+  text-align: center;
+}
+
+.quantity-number {
+  font-size: 18px;
+  font-weight: 600;
+  color: #191a26;
+}
+
+.quantity-selector__buttons {
+  display: flex;
+  align-items: center;
+  background-color: #191a26;
+  border-radius: 25px;
+  padding: 4px;
   gap: 4px;
 }
 
-.error-message {
-  color: #d32f2f;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-align: center;
+.quantity-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background-color: transparent;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.quantity-btn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.quantity-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.quantity-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quantity-btn--increment {
+  background-color: #fff;
+  color: #191a26;
+}
+
+.quantity-btn--increment:hover:not(:disabled) {
+  background-color: #f0f0f0;
+}
+
+.quantity-btn--decrement {
+  background-color: transparent;
+  color: white;
+}
+
+.quantity-btn svg {
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+}
+
+/* Size variations */
+.quantity-selector--small .quantity-number {
+  font-size: 14px;
+}
+
+.quantity-selector--small .quantity-btn {
+  width: 28px;
+  height: 28px;
+}
+
+.quantity-selector--small .quantity-btn svg {
+  width: 10px;
+  height: 10px;
+}
+
+.quantity-selector--large .quantity-number {
+  font-size: 22px;
+}
+
+.quantity-selector--large .quantity-btn {
+  width: 44px;
+  height: 44px;
+}
+
+.quantity-selector--large .quantity-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* States */
+.quantity-selector--disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.quantity-selector--unavailable .quantity-btn {
+  background-color: #ccc;
+  color: #666;
+}
+
+/* Error and warning messages */
+.quantity-selector__warning,
+.quantity-selector__error {
+  margin-top: 4px;
+  font-size: 12px;
   padding: 4px 8px;
-  background: #ffebee;
   border-radius: 4px;
+}
+
+.quantity-selector__warning {
+  background-color: #fff3e0;
+  color: #f57c00;
+  border: 1px solid #ffcc80;
+}
+
+.quantity-selector__error {
+  background-color: #ffebee;
+  color: #d32f2f;
   border: 1px solid #ffcdd2;
 }
 
-.warning-message {
-  color: #f57c00;
-  font-size: 0.75rem;
+.warning-text,
+.error-text {
   font-weight: 500;
-  text-align: center;
-  padding: 4px 8px;
-  background: #fff3e0;
-  border-radius: 4px;
-  border: 1px solid #ffcc02;
 }
 
-/* Invalid State */
-.quantity-selector-wrapper.invalid .count {
-  color: #d32f2f;
-}
-
-/* Responsive */
+/* Responsive design */
 @media (max-width: 480px) {
-  .right {
-    gap: 12px;
+  .quantity-selector__controls {
+    gap: 8px;
   }
 
-  .counter .button {
-    width: 28px;
-    height: 28px;
+  .quantity-btn {
+    width: 32px;
+    height: 32px;
   }
 
-  .availability-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
+  .quantity-number {
+    font-size: 16px;
   }
 }

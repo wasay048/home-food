@@ -10,12 +10,14 @@
     "lint": "eslint . --ext .js,.jsx"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.8.2",
     "bootstrap": "^5.3.3",
     "firebase": "^10.12.2",
     "lodash": "^4.17.21",
     "lucide-react": "^0.539.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-redux": "^9.2.0",
     "react-router-dom": "^6.23.0"
   },
   "devDependencies": {

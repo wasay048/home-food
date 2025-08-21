@@ -1,11 +1,8 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
-// import { Link } from "react-router-dom";
+import React, { useCallback, useEffect, useState } from "react";
+import { useSearchParams, useLocation } from "react-router-dom";
 import ProductImage from "../assets/images/product.png";
 import User1 from "../assets/images/user1.svg";
-// import User2 from "../assets/images/user2.svg";
-// import User3 from "../assets/images/user3.svg";
-import { useFoodDetail } from "../hooks/useFoodData";
+import { useFoodDetailRedux } from "../hooks/useFoodDetailRedux";
 import MobileLoader from "../components/Loader/MobileLoader";
 import { LazyImage } from "../components/LazyImage/LazyImage";
 import StarRating from "../components/StarRating/StarRating";
@@ -17,20 +14,68 @@ import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
 import "../styles/FoodDetailPage.css";
 
 export default function FoodDetailPage() {
-  const { foodId, kitchenId } = useParams();
   const [searchParams] = useSearchParams();
-  const selectedDate = searchParams.get("date"); // Get date from URL params
+  const location = useLocation();
+
+  const getPageParams = () => {
+    if (location.pathname === "/share") {
+      return {
+        kitchenId: searchParams.get("kitchenId"),
+        foodId: searchParams.get("foodId"),
+        selectedDate: searchParams.get("date"),
+      };
+    }
+  };
+
+  const { kitchenId, foodId, selectedDate } = getPageParams();
+
+  if (!kitchenId || !foodId) {
+    return (
+      <div className="mobile-container">
+        <div className="padding-20">
+          <div className="alert alert-danger" role="alert">
+            <h4>Invalid URL</h4>
+            <p>
+              Missing required parameters. Please check your link and try again.
+            </p>
+            <small className="text-muted">
+              Expected: kitchenId and foodId{" "}
+              {location.pathname === "/share"
+                ? "as query parameters"
+                : "as URL parameters"}
+            </small>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const [activeTab, setActiveTab] = useState("description");
   const [selectedQuantity, setSelectedQuantity] = useState(1);
+  const [specialInstructions, setSpecialInstructions] = useState("");
   const [availabilityStatus, setAvailabilityStatus] = useState({
     isAvailable: true,
     quantity: 1,
     orderType: "GO_GRAB",
   });
 
-  const { food, kitchen, likes, reviews, reviewStats, loading, error } =
-    useFoodDetail(foodId, kitchenId);
+  const {
+    food,
+    kitchen,
+    likes,
+    reviews,
+    reviewStats,
+    loading,
+    error,
+    isLiked,
+    cartQuantity,
+    toggleLike,
+    addToCartAction,
+    updateCartItemQuantity,
+    isAuthenticated,
+    user,
+  } = useFoodDetailRedux(foodId, kitchenId);
+
   console.log("FoodDetailPage data:", {
     food,
     kitchen,
@@ -40,40 +85,57 @@ export default function FoodDetailPage() {
     loading,
     error,
     selectedDate,
+    urlPattern: location.pathname,
+    extractedParams: { kitchenId, foodId, selectedDate },
   });
 
   const orderType = selectedDate ? "Pre-Order" : "Go & Grab";
 
-  // Handle quantity change
-  const handleQuantityChange = (newQuantity) => {
-    console.log(`[FoodDetailPage] Quantity changed to: ${newQuantity}`);
-    setSelectedQuantity(newQuantity);
-  };
+  const handleQuantityChange = useCallback(
+    (newQuantity) => {
+      console.log(`[FoodDetailPage] Quantity changed to: ${newQuantity}`);
+      setSelectedQuantity(newQuantity);
 
-  // Handle availability change from QuantitySelector
-  const handleAvailabilityChange = (availabilityData) => {
-    console.log(`[FoodDetailPage] Availability changed:`, availabilityData);
+      // If item is already in cart, update the cart quantity
+      if (cartQuantity > 0) {
+        console.log(
+          `[FoodDetailPage] Updating cart quantity to: ${newQuantity}`
+        );
+        updateCartItemQuantity(newQuantity);
+      }
+    },
+    [cartQuantity, updateCartItemQuantity]
+  );
+
+  const handleAvailabilityChange = useCallback((availabilityData) => {
     setAvailabilityStatus(availabilityData);
-  };
+  }, []);
 
-  // Handle quantity errors
-  const handleQuantityError = (errorMessage) => {
+  const handleQuantityError = useCallback((errorMessage) => {
     console.error(`[FoodDetailPage] Quantity error: ${errorMessage}`);
-    // You could show a toast notification here
-  };
+  }, []);
 
-  // Handle quantity warnings
-  const handleQuantityWarning = (warningMessage) => {
+  const handleQuantityWarning = useCallback((warningMessage) => {
     console.warn(`[FoodDetailPage] Quantity warning: ${warningMessage}`);
-    // You could show a toast notification here
-  };
+  }, []);
 
-  // Handle Add to Cart
-  const handleAddToCart = () => {
+  const handleAddToCart = useCallback(() => {
+    console.log(`[FoodDetailPage] Add to Cart button clicked!`);
+    console.log(`[FoodDetailPage] Availability status:`, availabilityStatus);
+    console.log(`[FoodDetailPage] Selected quantity:`, selectedQuantity);
+    console.log(`[FoodDetailPage] Special instructions:`, specialInstructions);
+
     if (!availabilityStatus.isAvailable) {
       console.warn("Cannot add unavailable item to cart");
       return;
     }
+
+    const orderData = {
+      quantity: selectedQuantity,
+      orderType: availabilityStatus.orderType,
+      selectedDate,
+      specialInstructions: specialInstructions.trim(), // Add special instructions
+    };
 
     console.log(`Adding ${selectedQuantity} items to cart`, {
       foodId,
@@ -81,10 +143,38 @@ export default function FoodDetailPage() {
       selectedDate,
       orderType: availabilityStatus.orderType,
       quantity: selectedQuantity,
+      specialInstructions: specialInstructions.trim(),
     });
 
-    // Add your cart logic here
-  };
+    console.log(`[FoodDetailPage] Calling addToCartAction with:`, orderData);
+    const result = addToCartAction(orderData);
+
+    // Show feedback to user
+    if (result) {
+      if (result.success) {
+        console.log("✅ Success:", result.message);
+        // You can add a toast notification here or update UI state
+        alert(result.message); // Temporary - replace with better UI feedback
+      } else {
+        console.log("ℹ️ Info:", result.message);
+        // You can add a toast notification here or update UI state
+        alert(result.message); // Temporary - replace with better UI feedback
+      }
+    }
+  }, [
+    availabilityStatus,
+    selectedQuantity,
+    specialInstructions,
+    foodId,
+    kitchenId,
+    selectedDate,
+    addToCartAction,
+  ]); // Sync selectedQuantity with cart quantity when cart changes
+  useEffect(() => {
+    if (cartQuantity > 0) {
+      setSelectedQuantity(cartQuantity);
+    }
+  }, [cartQuantity]);
 
   useEffect(() => {
     const runDebugTests = async () => {
@@ -112,6 +202,7 @@ export default function FoodDetailPage() {
     runDebugTests();
   }, [foodId, kitchenId, selectedDate]);
 
+  console.log("🚀 ~ FoodDetailPage ~ reviewStats:", reviewStats);
   // Use dynamic review stats or fallback to static data
   const displayRating = reviewStats?.averageRating || 4.5;
   const totalReviewCount = reviewStats?.totalReviews || 0;
@@ -183,6 +274,13 @@ export default function FoodDetailPage() {
   //       "Craving something spicy? The Beef Tacos are packed with flavor and topped with fresh salsa. A delicious choice for taco lovers! 🌮🌶️",
   //   },
   // ];
+
+  // Add this handler function near your other handlers (around line 70)
+  const handleLikeToggle = useCallback(() => {
+    toggleLike();
+    console.log(`[FoodDetailPage] Food ${isLiked ? "unliked" : "liked"}`);
+  }, [toggleLike, isLiked]);
+
   if (loading) {
     return (
       <div className="container">
@@ -197,6 +295,7 @@ export default function FoodDetailPage() {
       </div>
     );
   }
+
   return (
     <div className="container">
       <div className="mobile-container">
@@ -204,13 +303,6 @@ export default function FoodDetailPage() {
           <div className="padding-20">
             <h2 className="title text-center">{food?.name}</h2>
             <h2 className="text text-center">By {food?.kitchenName}</h2>
-            {selectedDate && (
-              <div className="order-type-info">
-                <div className="order-type-badge pre-order">
-                  Pre-Order • {selectedDate}
-                </div>
-              </div>
-            )}
             <div className="review-info">
               <div className="left">
                 <div>
@@ -238,7 +330,7 @@ export default function FoodDetailPage() {
                         ).toFixed(1)
                       : "No ratings yet"}
                   </strong>
-                  (1K+ Reviews)
+                  {` ${kitchen?.ratingCount}+ reviews`}
                 </div>
               </div>
               <div className="line"></div>
@@ -273,7 +365,10 @@ export default function FoodDetailPage() {
               </div>
             </div>
             <div className="product-image">
-              <div className="icon">
+              <div
+                className={`icon heart-icon ${isLiked ? "liked" : ""}`}
+                onClick={handleLikeToggle}
+              >
                 <svg
                   width="18"
                   height="18"
@@ -283,10 +378,11 @@ export default function FoodDetailPage() {
                 >
                   <path
                     d="M9.80568 16.3852C9.53252 16.4816 9.08261 16.4816 8.80945 16.3852C6.47955 15.5898 1.27344 12.2717 1.27344 6.64781C1.27344 4.16527 3.27393 2.15674 5.74041 2.15674C7.20262 2.15674 8.49612 2.86374 9.30756 3.95638C10.119 2.86374 11.4205 2.15674 12.8747 2.15674C15.3412 2.15674 17.3417 4.16527 17.3417 6.64781C17.3417 12.2717 12.1356 15.5898 9.80568 16.3852Z"
-                    stroke="#FF5555"
-                    stroke-width="1.20512"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
+                    stroke={isLiked ? "#FF5555" : "#FF5555"}
+                    fill={isLiked ? "#FF5555" : "transparent"}
+                    strokeWidth="1.20512"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
                 </svg>
               </div>
@@ -306,12 +402,12 @@ export default function FoodDetailPage() {
                 food={food}
                 kitchen={kitchen}
                 selectedDate={selectedDate}
-                initialQuantity={1}
+                initialQuantity={Math.max(cartQuantity, 1)}
                 onQuantityChange={handleQuantityChange}
                 onAvailabilityChange={handleAvailabilityChange}
                 onError={handleQuantityError}
                 onWarning={handleQuantityWarning}
-                showAvailabilityInfo={false} // Keep design minimal
+                showAvailabilityInfo={false}
                 showErrorMessages={true}
                 size="medium"
                 className="food-detail-quantity"
@@ -356,6 +452,42 @@ export default function FoodDetailPage() {
                 </div>
               </div> */}
             </div>
+            {selectedDate && (
+              <div className="pickup-details">
+                <div className="pickup-field">
+                  <label className="pickup-label">Pick up date:</label>
+                  <div className="pickup-value date-value">
+                    {new Date(selectedDate).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </div>
+                </div>
+                <div className="pickup-field">
+                  <label className="pickup-label">Pick up time:</label>
+                  <div className="pickup-value time-value">
+                    6:22 PM
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M8 1C4.13 1 1 4.13 1 8s3.13 7 7 7 7-3.13 7-7-3.13-7-7-7zm0 12.5c-3.04 0-5.5-2.46-5.5-5.5S4.96 2.5 8 2.5s5.5 2.46 5.5 5.5-2.46 5.5-5.5 5.5z"
+                        fill="#4CAF50"
+                      />
+                      <path
+                        d="M8.5 4.5h-1v4.25l3.5 2.08.5-.83L8.5 7.92V4.5z"
+                        fill="#4CAF50"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="hr"></div>
           <div className="padding-20">
@@ -364,7 +496,23 @@ export default function FoodDetailPage() {
               Please let us know if you are allergic to anything or if we need
               to avoid anything .
             </p>
-            <div className="product-info mb-20"></div>
+            <textarea
+              className="special-instructions-input"
+              placeholder="Enter your special instructions here..."
+              value={specialInstructions}
+              onChange={(e) => setSpecialInstructions(e.target.value)}
+              rows={3}
+              style={{
+                width: "100%",
+                padding: "12px",
+                border: "1px solid #e0e0e0",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontFamily: "inherit",
+                resize: "vertical",
+                marginBottom: "16px",
+              }}
+            />
             <div className="custom-accordian">
               <button
                 className={`button${
@@ -647,7 +795,23 @@ export default function FoodDetailPage() {
               )}
             </div>
             <div className="add-to-cart-action">
-              <button className="button">Add to Cart</button>
+              <button
+                className={`button ${
+                  !availabilityStatus.isAvailable ? "sold-out" : ""
+                }`}
+                onClick={(e) => {
+                  console.log("🔥 BUTTON CLICKED! Event:", e);
+                  console.log(
+                    "🔥 handleAddToCart type:",
+                    typeof handleAddToCart
+                  );
+                  handleAddToCart(e);
+                }}
+                disabled={!availabilityStatus.isAvailable}
+                style={{ pointerEvents: "auto", zIndex: 1000 }}
+              >
+                {!availabilityStatus.isAvailable ? "Sold Out" : "Add to Cart"}
+              </button>
               <div className="icon">
                 <svg
                   width="24"

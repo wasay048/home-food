@@ -491,6 +491,7 @@ export async function getFoodDetailWithKitchenAndReviews(
 
     // Calculate review statistics
     const reviewStats = calculateReviewStats(reviews);
+    console.log("🚀 ~ getFoodDetailWithKitchenAndReviews ~ reviewStats:", reviewStats)
 
     const result = {
       food,
@@ -671,6 +672,7 @@ export function calculateReviewStats(reviews) {
   }
 
   const totalReviews = reviews.length;
+  console.log("🚀 ~ calculateReviewStats ~ totalReviews:", totalReviews)
   const ratingBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
   let totalRatingSum = 0;
 
@@ -817,6 +819,181 @@ export async function getFoodDetailWithKitchen(foodId, kitchenId = null) {
     );
     throw error;
   }
+}
+
+export async function getKitchenAllReviews(kitchenId, limitCount = 1000) {
+  console.log(
+    `[getKitchenAllReviews] Fetching all reviews for kitchen: ${kitchenId}`
+  );
+
+  if (firebaseDisabled) {
+    console.warn(
+      "[getKitchenAllReviews] Firebase disabled, returning mock data"
+    );
+    return getMockKitchenReviews(kitchenId);
+  }
+
+  if (!kitchenId || kitchenId.trim() === "") {
+    console.log(
+      "[getKitchenAllReviews] No kitchenId provided, returning empty array"
+    );
+    return [];
+  }
+
+  try {
+    console.log(
+      `[getKitchenAllReviews] Querying reviews subcollection for kitchen: ${kitchenId}`
+    );
+
+    // Query the kitchen's reviews subcollection directly
+    const reviewsRef = collection(db, "kitchens", kitchenId, "reviews");
+    const q = query(reviewsRef, limit(limitCount));
+
+    const querySnapshot = await getDocs(q);
+    const allReviews = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      kitchenId: kitchenId,
+      ...doc.data(),
+    }));
+
+    console.log(
+      `[getKitchenAllReviews] Found ${allReviews.length} total reviews for kitchen ${kitchenId}`
+    );
+
+    // Sort reviews by timestamp (newest first)
+    if (allReviews.length > 0) {
+      allReviews.sort((a, b) => {
+        const getTimestamp = (timeStamp) => {
+          if (!timeStamp) return new Date(0);
+
+          if (typeof timeStamp === "string") {
+            if (timeStamp.includes(" at ")) {
+              return new Date(
+                timeStamp.replace(" at ", " ").replace(" UTC+5", "")
+              );
+            }
+            return new Date(timeStamp);
+          }
+
+          if (timeStamp.seconds) {
+            return new Date(timeStamp.seconds * 1000);
+          }
+
+          return new Date(timeStamp);
+        };
+
+        const timeA = getTimestamp(a.timeStamp);
+        const timeB = getTimestamp(b.timeStamp);
+        return timeB - timeA; // Descending order (newest first)
+      });
+    }
+
+    console.log(
+      `[getKitchenAllReviews] Returning ${allReviews.length} reviews for kitchen ${kitchenId}`
+    );
+    return allReviews;
+  } catch (error) {
+    console.error(
+      `[getKitchenAllReviews] Error fetching kitchen reviews:`,
+      error
+    );
+    console.log("[getKitchenAllReviews] Returning mock data due to error");
+    return getMockKitchenReviews(kitchenId);
+  }
+}
+
+/**
+ * Get aggregated review statistics for a kitchen
+ */
+export async function getKitchenReviewStats(kitchenId) {
+  console.log(
+    `[getKitchenReviewStats] Getting review stats for kitchen: ${kitchenId}`
+  );
+
+  try {
+    // Get all reviews for the kitchen
+    const allReviews = await getKitchenAllReviews(kitchenId);
+
+    // Calculate statistics
+    const stats = calculateReviewStats(allReviews);
+
+    // Add kitchen-specific metadata
+    const kitchenStats = {
+      ...stats,
+      kitchenId,
+      reviewsList: allReviews,
+      uniqueFoodIds: [
+        ...new Set(allReviews.map((r) => r.foodId).filter(Boolean)),
+      ],
+      lastUpdated: new Date().toISOString(),
+    };
+
+    console.log(
+      `[getKitchenReviewStats] Kitchen ${kitchenId} stats:`,
+      kitchenStats
+    );
+    return kitchenStats;
+  } catch (error) {
+    console.error(
+      `[getKitchenReviewStats] Error calculating kitchen stats:`,
+      error
+    );
+    return {
+      kitchenId,
+      totalReviews: 0,
+      averageRating: 0,
+      ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      ratingPercentages: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      reviewsList: [],
+      uniqueFoodIds: [],
+      lastUpdated: new Date().toISOString(),
+      error: error.message,
+    };
+  }
+}
+
+// ...existing code...
+
+// Add mock data function for kitchen reviews
+function getMockKitchenReviews(kitchenId) {
+  return [
+    {
+      id: "kitchen-review-1",
+      kitchenId: kitchenId,
+      foodId: "food-1",
+      userId: "user-1",
+      userName: "Alice Johnson",
+      userProfile: "",
+      rating: 5,
+      message: "Amazing food from this kitchen! The Dim Sum was perfect.",
+      timeStamp: "July 10, 2025 at 2:30:00 PM UTC+5",
+      orderId: "order-1",
+    },
+    {
+      id: "kitchen-review-2",
+      kitchenId: kitchenId,
+      foodId: "food-2",
+      userId: "user-2",
+      userName: "Bob Smith",
+      userProfile: "",
+      rating: 4,
+      message: "Great kitchen, fast delivery and tasty food.",
+      timeStamp: "July 9, 2025 at 7:15:00 PM UTC+5",
+      orderId: "order-2",
+    },
+    {
+      id: "kitchen-review-3",
+      kitchenId: kitchenId,
+      foodId: "food-1",
+      userId: "user-3",
+      userName: "Carol Davis",
+      userProfile: "",
+      rating: 5,
+      message: "Best kitchen in the area! Highly recommend.",
+      timeStamp: "July 8, 2025 at 12:45:00 PM UTC+5",
+      orderId: "order-3",
+    },
+  ];
 }
 
 // Mock data functions

@@ -48,3 +48,126 @@
 .food-detail-quantity {
   flex-shrink: 0;
 }
+
+.heart-icon {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.heart-icon:hover {
+  transform: scale(1.1);
+  background-color: rgba(255, 85, 85, 0.1);
+}
+
+.heart-icon:active {
+  transform: scale(0.95);
+}
+
+.heart-icon.liked {
+  animation: heartBeat 0.6s ease-in-out;
+}
+
+@keyframes heartBeat {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.2);
+  }
+  50% {
+    transform: scale(1);
+  }
+  75% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.product-image .heart-icon {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background-color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+}
+
+/* Add to your existing FoodDetailPage.css file */
+.pickup-details {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pickup-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pickup-label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.pickup-value {
+  background-color: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  font-size: 14px;
+  font-weight: 600;
+  color: #191a26;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-value {
+  color: #dc3545;
+  background-color: #fff5f5;
+  border-color: #fed7d7;
+  margin-left: auto;
+}
+
+.time-value {
+  color: #198754;
+  background-color: #f0f8f4;
+  border-color: #c6f6d5;
+  margin-left: auto;
+}
+
+.time-value svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 480px) {
+  .pickup-field {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .pickup-label {
+    min-width: unset;
+  }
+
+  .pickup-value {
+    width: 100%;
+    justify-content: center;
+  }
+}
