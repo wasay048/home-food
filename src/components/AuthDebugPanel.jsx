@@ -1,14 +1,29 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { toggleDummyAuth } from "../store/slices/authSlice";
+import { logoutUser } from "../store/slices/authSlice";
 
 const AuthDebugPanel = () => {
   const dispatch = useDispatch();
   const authState = useSelector((state) => state.auth);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  const handleToggleDummyAuth = () => {
-    dispatch(toggleDummyAuth());
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const handleLogout = () => {
+    dispatch(logoutUser());
   };
+
+  // Don't render on mobile
+  if (isMobile) {
+    return null;
+  }
 
   return (
     <div
@@ -38,9 +53,9 @@ const AuthDebugPanel = () => {
       </div>
 
       <div style={{ marginBottom: "10px" }}>
-        <strong>Development Mode:</strong>{" "}
-        <span style={{ color: authState.isDevelopmentMode ? "blue" : "gray" }}>
-          {authState.isDevelopmentMode ? "🔧 ON" : "OFF"}
+        <strong>Auth Status:</strong>{" "}
+        <span style={{ color: authState.loading ? "orange" : "gray" }}>
+          {authState.loading ? "� LOADING" : "READY"}
         </span>
       </div>
 
@@ -48,30 +63,38 @@ const AuthDebugPanel = () => {
         <strong>User:</strong>{" "}
         {authState.user ? (
           <span style={{ color: "green" }}>
-            {authState.user.displayName || "Dummy User"}
+            {authState.user.nickname || authState.user.openid || "WeChat User"}
           </span>
         ) : (
           <span style={{ color: "red" }}>None</span>
         )}
       </div>
 
-      <button
-        onClick={handleToggleDummyAuth}
-        style={{
-          padding: "5px 10px",
-          backgroundColor: authState.isAuthenticated ? "#dc3545" : "#28a745",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-          cursor: "pointer",
-          fontSize: "11px",
-        }}
-      >
-        {authState.isAuthenticated ? "🔓 Logout" : "🔑 Login as Dummy"}
-      </button>
+      {authState.error && (
+        <div style={{ marginBottom: "10px", color: "red" }}>
+          <strong>Error:</strong> {authState.error}
+        </div>
+      )}
+
+      {authState.isAuthenticated && (
+        <button
+          onClick={handleLogout}
+          style={{
+            padding: "5px 10px",
+            backgroundColor: "#dc3545",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "11px",
+          }}
+        >
+          🔓 Logout
+        </button>
+      )}
 
       <div style={{ marginTop: "10px", fontSize: "10px", color: "#6c757d" }}>
-        Click to toggle dummy user authentication
+        WeChat Authentication System
       </div>
     </div>
   );

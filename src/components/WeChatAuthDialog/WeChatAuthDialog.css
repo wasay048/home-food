@@ -1,0 +1,181 @@
+/* WeChat Authentication Dialog Styles */
+.wechat-auth-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.wechat-auth-dialog {
+  background: white;
+  border-radius: 16px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wechat-auth-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.wechat-auth-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.wechat-auth-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  transition: color 0.2s ease;
+  border-radius: 4px;
+}
+
+.wechat-auth-close:hover {
+  color: #666;
+  background: #f5f5f5;
+}
+
+.wechat-auth-content {
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.wechat-auth-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #07c160 0%, #00b853 100%);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(7, 193, 96, 0.25);
+}
+
+.wechat-auth-icon img {
+  width: 32px;
+  height: 32px;
+  filter: brightness(0) invert(1);
+}
+
+.wechat-auth-message {
+  font-size: 16px;
+  color: #666;
+  margin: 0 0 32px;
+  line-height: 1.5;
+}
+
+.wechat-auth-button {
+  width: 100%;
+  background: linear-gradient(135deg, #07c160 0%, #00b853 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(7, 193, 96, 0.25);
+}
+
+.wechat-auth-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(7, 193, 96, 0.35);
+}
+
+.wechat-auth-button:active {
+  transform: translateY(0);
+}
+
+.wechat-auth-button img {
+  width: 20px;
+  height: 20px;
+  filter: brightness(0) invert(1);
+}
+
+.wechat-auth-note {
+  font-size: 14px;
+  color: #999;
+  margin: 16px 0 0;
+  line-height: 1.4;
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .wechat-auth-dialog-overlay {
+    padding: 16px;
+  }
+
+  .wechat-auth-dialog {
+    border-radius: 12px;
+  }
+
+  .wechat-auth-header {
+    padding: 20px 20px 12px;
+  }
+
+  .wechat-auth-header h3 {
+    font-size: 18px;
+  }
+
+  .wechat-auth-content {
+    padding: 24px 20px;
+  }
+
+  .wechat-auth-icon {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 20px;
+  }
+
+  .wechat-auth-icon img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .wechat-auth-message {
+    font-size: 15px;
+    margin-bottom: 28px;
+  }
+
+  .wechat-auth-button {
+    padding: 14px 20px;
+    font-size: 15px;
+  }
+}

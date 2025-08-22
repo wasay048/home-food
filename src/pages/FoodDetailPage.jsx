@@ -12,6 +12,7 @@ import {
   testFirestoreConnection,
 } from "../services/foodService";
 import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
+import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import "../styles/FoodDetailPage.css";
 
 export default function FoodDetailPage() {
@@ -55,6 +56,12 @@ export default function FoodDetailPage() {
   const [activeTab, setActiveTab] = useState("reviews");
   const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [specialInstructions, setSpecialInstructions] = useState("");
+  const [showWeChatDialog, setShowWeChatDialog] = useState(false);
+
+  // Debug: Log showWeChatDialog state changes
+  useEffect(() => {
+    console.log("🔍 showWeChatDialog state changed to:", showWeChatDialog);
+  }, [showWeChatDialog]);
   const [availabilityStatus, setAvailabilityStatus] = useState({
     isAvailable: true,
     quantity: 1,
@@ -151,6 +158,15 @@ export default function FoodDetailPage() {
 
     // Show feedback to user with toast notifications
     if (result) {
+      if (result.requiresAuth) {
+        // User needs to authenticate - show WeChat dialog
+        console.log("🔒 Authentication required - showing WeChat dialog");
+        console.log("🔒 Setting showWeChatDialog to true");
+        setShowWeChatDialog(true);
+        console.log("🔒 showWeChatDialog state should now be true");
+        return;
+      }
+
       if (result.success) {
         console.log("✅ Success:", result.message);
         // Show success toast
@@ -172,7 +188,14 @@ export default function FoodDetailPage() {
     selectedDate,
     addToCartAction,
     navigate,
-  ]); // Sync selectedQuantity with cart quantity when cart changes
+    setShowWeChatDialog,
+  ]);
+
+  const handleWeChatDialogClose = useCallback(() => {
+    setShowWeChatDialog(false);
+  }, []);
+
+  // Sync selectedQuantity with cart quantity when cart changes
 
   useEffect(() => {
     if (cartQuantity > 0) {
@@ -461,11 +484,25 @@ export default function FoodDetailPage() {
                 <div className="pickup-field">
                   <label className="pickup-label">Pick up date:</label>
                   <div className="pickup-value date-value">
-                    {new Date(selectedDate).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                    {/* Show actual checking date if different from selected date */}
+                    {availabilityStatus?.actualCheckingDate &&
+                    availabilityStatus.actualCheckingDate !== selectedDate ? (
+                      <>
+                        {new Date(
+                          availabilityStatus.actualCheckingDate
+                        ).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </>
+                    ) : (
+                      new Date(selectedDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    )}
                   </div>
                 </div>
                 <div className="pickup-field">
@@ -852,6 +889,11 @@ export default function FoodDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* WeChat Authentication Dialog */}
+      {showWeChatDialog && (
+        <WeChatAuthDialog onClose={handleWeChatDialogClose} />
+      )}
     </div>
   );
 }

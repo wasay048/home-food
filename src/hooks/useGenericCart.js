@@ -41,7 +41,8 @@ export const useGenericCart = () => {
     if (!isAuthenticated) {
       return {
         success: false,
-        message: "Please log in to add items to cart",
+        message: "Please sign in with WeChat to add items to cart",
+        requiresAuth: true, // Flag to indicate auth is needed
       };
     }
 
@@ -77,7 +78,8 @@ export const useGenericCart = () => {
     if (!isAuthenticated) {
       return {
         success: false,
-        message: "Please log in to modify cart",
+        message: "Please sign in with WeChat to modify cart",
+        requiresAuth: true, // Flag to indicate auth is needed
       };
     }
 

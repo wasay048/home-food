@@ -174,6 +174,7 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
         return {
           success: false,
           message: "User must be logged in to add to cart",
+          requiresAuth: true, // Add this flag for WeChat dialog
         };
       }
 

@@ -1,51 +1,60 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { PURGE } from "redux-persist";
+import { WECHAT_API } from "../../config/wechat";
 
-// Dummy user for development
-const dummyUser = {
-  id: "dummy-user-001",
-  name: "John Doe",
-  email: "john.doe@example.com",
-  avatar: "https://via.placeholder.com/150",
-  phone: "+1234567890",
-  isAuthenticated: true,
-  authMethod: "dummy", // Will be 'wechat' when implemented
-  wechatOpenId: null, // Will store WeChat OpenID when available
-  preferences: {
-    language: "en",
-    currency: "USD",
-    notifications: true,
-  },
-  addresses: [
-    {
-      id: "addr-001",
-      type: "home",
-      address: "123 Main St, San Francisco, CA",
-      isDefault: true,
-    },
-  ],
-  createdAt: new Date().toISOString(),
-};
-
-// Async thunk for WeChat authentication (placeholder)
+// WeChat authentication thunk
 export const authenticateWithWeChat = createAsyncThunk(
   "auth/authenticateWithWeChat",
-  async (wechatCode, { rejectWithValue }) => {
+  async (code, { rejectWithValue }) => {
     try {
-      // TODO: Implement WeChat authentication
-      console.log("WeChat authentication code:", wechatCode);
+      console.log("Starting WeChat authentication with code:", code);
 
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Step 1: Get access token using authorization code
+      const tokenResponse = await WECHAT_API.getAccessToken(code);
+      console.log("WeChat token response:", tokenResponse);
 
-      // For now, return dummy user with WeChat integration
-      return {
-        ...dummyUser,
+      if (tokenResponse.errcode) {
+        throw new Error(
+          tokenResponse.errmsg || "Failed to get WeChat access token"
+        );
+      }
+
+      const { access_token, openid } = tokenResponse;
+
+      // Step 2: Get user information
+      const userResponse = await WECHAT_API.getUserInfo(access_token, openid);
+      console.log("WeChat user response:", userResponse);
+
+      if (userResponse.errcode) {
+        throw new Error(
+          userResponse.errmsg || "Failed to get WeChat user info"
+        );
+      }
+
+      // Step 3: Create user object
+      const user = {
+        id: `wechat_${openid}`,
+        openid: openid,
+        name: userResponse.nickname,
+        displayName: userResponse.nickname,
+        avatar: userResponse.headimgurl,
+        country: userResponse.country,
+        province: userResponse.province,
+        city: userResponse.city,
+        sex: userResponse.sex, // 1: male, 2: female, 0: unknown
+        language: userResponse.language,
+        isAuthenticated: true,
         authMethod: "wechat",
-        wechatOpenId: `wechat_${wechatCode}_dummy`,
+        wechatOpenId: openid,
+        accessToken: access_token,
+        createdAt: new Date().toISOString(),
       };
+
+      console.log("✅ WeChat authentication successful:", user);
+      return user;
     } catch (error) {
-      return rejectWithValue(error.message);
+      console.error("❌ WeChat authentication failed:", error);
+      return rejectWithValue(error.message || "WeChat authentication failed");
     }
   }
 );
@@ -53,34 +62,14 @@ export const authenticateWithWeChat = createAsyncThunk(
 // Async thunk for logout
 export const logoutUser = createAsyncThunk(
   "auth/logout",
-  async (_, { rejectWithValue, dispatch }) => {
-    try {
-      // TODO: Implement actual logout logic (call backend API)
-      console.log("User logged out");
-
-      // Clear persisted data
-      return { clearData: true };
-    } catch (error) {
-      return rejectWithValue(error.message);
-    }
-  }
-);
-
-// Generate WeChat Auth URL (placeholder)
-export const generateWeChatAuthUrl = createAsyncThunk(
-  "auth/generateWeChatAuthUrl",
   async (_, { rejectWithValue }) => {
     try {
-      // TODO: Replace with actual WeChat app credentials
-      const appId = "YOUR_WECHAT_APP_ID"; // Will be replaced when you have credentials
-      const redirectUri = encodeURIComponent(
-        window.location.origin + "/wechat/callback"
-      );
-      const state = Math.random().toString(36).substring(7);
+      console.log("User logged out");
+      // Clear any stored tokens
+      sessionStorage.removeItem("wechat_access_token");
+      sessionStorage.removeItem("wechat_pending_cart_action");
 
-      const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${appId}&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_userinfo&state=${state}#wechat_redirect`;
-
-      return authUrl;
+      return { clearData: true };
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -90,12 +79,11 @@ export const generateWeChatAuthUrl = createAsyncThunk(
 const authSlice = createSlice({
   name: "auth",
   initialState: {
-    user: dummyUser, // Start with dummy user for development
-    isAuthenticated: true,
+    user: null, // No dummy user - start unauthenticated
+    isAuthenticated: false,
     loading: false,
     error: null,
     wechatAuthUrl: null,
-    isDevelopmentMode: true, // Flag to indicate we're using dummy user
   },
   reducers: {
     clearError: (state) => {
@@ -109,18 +97,6 @@ const authSlice = createSlice({
     setWeChatAuthUrl: (state, action) => {
       state.wechatAuthUrl = action.payload;
     },
-    // For development: toggle between dummy user and no user
-    toggleDummyAuth: (state) => {
-      if (state.isAuthenticated) {
-        state.user = null;
-        state.isAuthenticated = false;
-        console.log("Logged out dummy user");
-      } else {
-        state.user = dummyUser;
-        state.isAuthenticated = true;
-        console.log("Logged in dummy user");
-      }
-    },
     // Clear all persisted data on logout
     clearAllData: (state) => {
       state.user = null;
@@ -128,15 +104,6 @@ const authSlice = createSlice({
       state.loading = false;
       state.error = null;
       state.wechatAuthUrl = null;
-      state.isDevelopmentMode = false;
-    },
-    // Switch to production mode (when WeChat is ready)
-    setProductionMode: (state) => {
-      state.isDevelopmentMode = false;
-      if (state.user?.authMethod === "dummy") {
-        state.user = null;
-        state.isAuthenticated = false;
-      }
     },
   },
   extraReducers: (builder) => {
@@ -150,12 +117,12 @@ const authSlice = createSlice({
         state.user = action.payload;
         state.isAuthenticated = true;
         state.error = null;
-        state.isDevelopmentMode = false;
       })
       .addCase(authenticateWithWeChat.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
         state.isAuthenticated = false;
+        state.user = null;
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
@@ -163,21 +130,19 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = null;
         state.wechatAuthUrl = null;
-        // Don't reset to dummy user on logout - stay logged out
       })
-      .addCase(generateWeChatAuthUrl.fulfilled, (state, action) => {
-        state.wechatAuthUrl = action.payload;
+      // Handle PURGE action from redux-persist
+      .addCase(PURGE, (state) => {
+        state.user = null;
+        state.isAuthenticated = false;
+        state.loading = false;
+        state.error = null;
+        state.wechatAuthUrl = null;
       });
   },
 });
 
-export const {
-  clearError,
-  updateUserProfile,
-  setWeChatAuthUrl,
-  toggleDummyAuth,
-  setProductionMode,
-  clearAllData,
-} = authSlice.actions;
+export const { clearError, updateUserProfile, setWeChatAuthUrl, clearAllData } =
+  authSlice.actions;
 
 export default authSlice.reducer;
