@@ -12,6 +12,7 @@ export default function PaymentPage() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const editBtnRef = useRef(null);
+  const [uploadPreview, setUploadPreview] = useState(null);
   return (
     <>
       <div className="container">
@@ -107,6 +108,35 @@ export default function PaymentPage() {
                 <span>$19.00</span>
               </div>
             </div>
+              <p className="body-text-med mb-3">
+                Upload payment confirmation screenshot
+              </p>
+              {uploadPreview && (
+                <div className="upload-preview mb-12">
+                  <img
+                    src={uploadPreview}
+                    alt="Payment confirmation preview"
+                    style={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 12 }}
+                  />
+                </div>
+              )}
+              <div className="upload-wrapper">
+                <div className="upload">
+                  Upload
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files && e.target.files[0];
+                      if (file) {
+                        if (uploadPreview) URL.revokeObjectURL(uploadPreview);
+                        const url = URL.createObjectURL(file);
+                        setUploadPreview(url);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
             <button className="action-button">Place My Order</button>
           </div>
         </div>
