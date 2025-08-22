@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { useLogout } from "../hooks/useLogout";
 import "./LandingPage.css";
 
 export default function LandingPage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [animatedText, setAnimatedText] = useState("");
   const fullText = "Enjoy delicious meal from your favorite chef.";
+
+  // Redux state for debugging persistence
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const { items: cartItems, totalItems } = useSelector((state) => state.cart);
+  const { logout } = useLogout();
 
   // Update time every second
   useEffect(() => {
@@ -120,6 +127,56 @@ export default function LandingPage() {
         {/* Footer */}
         <footer className="landing-footer">
           <p>Get ready for a culinary revolution 🌟</p>
+
+          {/* Debug Panel for Testing Persistence */}
+          <div
+            style={{
+              marginTop: "20px",
+              padding: "15px",
+              background: "rgba(0,0,0,0.1)",
+              borderRadius: "8px",
+              fontSize: "12px",
+            }}
+          >
+            <h4>🔧 Debug Panel (Persistence Test)</h4>
+            <p>
+              <strong>User:</strong>{" "}
+              {isAuthenticated
+                ? user?.name || "Authenticated"
+                : "Not logged in"}
+            </p>
+            <p>
+              <strong>Cart Items:</strong> {totalItems} items
+            </p>
+            <div style={{ marginTop: "10px" }}>
+              <button
+                onClick={logout}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: "#ff4444",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  marginRight: "10px",
+                }}
+              >
+                🚪 Test Logout (Clear All Data)
+              </button>
+              <Link
+                to="/foods"
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: "#44ff44",
+                  color: "white",
+                  textDecoration: "none",
+                  borderRadius: "4px",
+                }}
+              >
+                🛒 Go to Foods (Test Cart)
+              </Link>
+            </div>
+          </div>
         </footer>
       </div>
     </div>

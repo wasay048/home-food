@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { REHYDRATE } from "redux-persist";
 
 // Async thunk for adding item to cart
 export const addToCart = createAsyncThunk(
@@ -90,6 +91,32 @@ export const updateCartQuantity = createAsyncThunk(
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     return { cartItemId, quantity };
+  }
+);
+
+// Async thunk for updating cart item (quantity and special instructions)
+export const updateCartItem = createAsyncThunk(
+  "cart/updateItem",
+  async ({ cartItemId, quantity, specialInstructions }, { getState }) => {
+    const { auth } = getState();
+    const userId = auth.user?.id;
+
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    // TODO: Implement actual update API call
+    console.log("Updating cart item:", {
+      cartItemId,
+      quantity,
+      specialInstructions,
+      userId,
+    });
+
+    // Simulate API call delay
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    return { cartItemId, quantity, specialInstructions };
   }
 );
 
@@ -217,10 +244,36 @@ const cartSlice = createSlice({
         cartSlice.caseReducers.calculateTotals(state);
       })
 
+      // Update cart item (quantity and special instructions)
+      .addCase(updateCartItem.fulfilled, (state, action) => {
+        const { cartItemId, quantity, specialInstructions } = action.payload;
+        const item = state.items.find((item) => item.id === cartItemId);
+        if (item) {
+          item.quantity = quantity;
+          if (specialInstructions !== undefined) {
+            item.specialInstructions = specialInstructions;
+          }
+        }
+        cartSlice.caseReducers.calculateTotals(state);
+      })
+
       // Fetch cart
       .addCase(fetchCart.fulfilled, (state, action) => {
         state.items = action.payload;
         cartSlice.caseReducers.calculateTotals(state);
+      })
+
+      // Handle rehydration from persistence
+      .addCase(REHYDRATE, (state, action) => {
+        if (action.payload?.cart) {
+          // Merge persisted cart state
+          return {
+            ...state,
+            ...action.payload.cart,
+            loading: false,
+            error: null,
+          };
+        }
       });
   },
 });

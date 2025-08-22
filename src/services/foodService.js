@@ -491,7 +491,10 @@ export async function getFoodDetailWithKitchenAndReviews(
 
     // Calculate review statistics
     const reviewStats = calculateReviewStats(reviews);
-    console.log("🚀 ~ getFoodDetailWithKitchenAndReviews ~ reviewStats:", reviewStats)
+    console.log(
+      "🚀 ~ getFoodDetailWithKitchenAndReviews ~ reviewStats:",
+      reviewStats
+    );
 
     const result = {
       food,
@@ -672,7 +675,7 @@ export function calculateReviewStats(reviews) {
   }
 
   const totalReviews = reviews.length;
-  console.log("🚀 ~ calculateReviewStats ~ totalReviews:", totalReviews)
+  console.log("🚀 ~ calculateReviewStats ~ totalReviews:", totalReviews);
   const ratingBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
   let totalRatingSum = 0;
 
@@ -1024,9 +1027,17 @@ function getMockFoodData(foodId) {
 }
 
 function getMockKitchenData(kitchenId) {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const dayAfter = new Date(today);
+  dayAfter.setDate(today.getDate() + 2);
+
+  const formatDate = (date) => date.toISOString().split("T")[0];
+
   return {
     id: kitchenId,
-    name: "Resto Parmato Bapo",
+    name: "Coco's Kitchen",
     address: "Lahore-Sialkot Motorway",
     city: "San Francisco",
     cuisine: "Thai",
@@ -1039,6 +1050,38 @@ function getMockKitchenData(kitchenId) {
     },
     rating: 4.9,
     ratingCount: 1247,
+    preorderSchedule: {
+      dates: {
+        [formatDate(tomorrow)]: [
+          {
+            id: "schedule-1",
+            foodItemId: "food-3",
+            nameOfFood: "Dim Sum (Dumplings)",
+            availableTimes: ["6:22 PM", "7:30 PM"],
+            numOfAvailableItems: 10,
+            isLimitedOrder: false,
+          },
+          {
+            id: "schedule-2",
+            foodItemId: "food-4",
+            nameOfFood: "Margherita Pizza",
+            availableTimes: ["6:22 PM", "8:00 PM"],
+            numOfAvailableItems: 8,
+            isLimitedOrder: false,
+          },
+        ],
+        [formatDate(dayAfter)]: [
+          {
+            id: "schedule-3",
+            foodItemId: "food-3",
+            nameOfFood: "Dim Sum (Dumplings)",
+            availableTimes: ["5:30 PM", "7:00 PM"],
+            numOfAvailableItems: 12,
+            isLimitedOrder: false,
+          },
+        ],
+      },
+    },
   };
 }
 
@@ -1055,8 +1098,42 @@ function getMockFeaturedFoods() {
 
 function getMockAllFoods() {
   return [
+    // Go & Grab items (available now)
     getMockFoodData("food-1"),
-    { ...getMockFoodData("food-2"), name: "Beef Noodles", cost: 120.0 },
+    {
+      ...getMockFoodData("food-2"),
+      id: "food-2",
+      name: "Margherita Pizza",
+      cost: 12.45,
+      availability: {
+        numAvailable: 5,
+        numOfSoldItem: 2,
+      },
+      imageUrl: "/src/assets/images/order2.png",
+    },
+    // Pre-order items (sold out now but available for pre-order)
+    {
+      ...getMockFoodData("food-3"),
+      id: "food-3",
+      name: "Dim Sum (Dumplings)",
+      cost: 22.45,
+      availability: {
+        numAvailable: 0, // Sold out for today
+        numOfSoldItem: 15,
+      },
+      imageUrl: "/src/assets/images/order1.png",
+    },
+    {
+      ...getMockFoodData("food-4"),
+      id: "food-4",
+      name: "Margherita Pizza (Pre-order)",
+      cost: 12.45,
+      availability: {
+        numAvailable: 0, // Sold out for today
+        numOfSoldItem: 8,
+      },
+      imageUrl: "/src/assets/images/order2.png",
+    },
   ];
 }
 
@@ -1115,4 +1192,145 @@ function getMockReviews(foodId) {
       orderId: "order-789",
     },
   ];
+}
+
+/**
+ * Get a kitchen with all its food items from Firebase
+ * This is specifically for the listing page that needs kitchen + foods data
+ */
+export async function getKitchenWithFoodItems(kitchenId) {
+  console.log(`[getKitchenWithFoodItems] Fetching kitchen: ${kitchenId}`);
+
+  if (firebaseDisabled) {
+    console.warn(
+      "[getKitchenWithFoodItems] Firebase disabled, returning mock data"
+    );
+    return {
+      kitchen: getMockKitchenData(kitchenId),
+      foods: getMockAllFoods(),
+    };
+  }
+
+  try {
+    // Get kitchen document
+    const kitchenDoc = await getDoc(doc(db, "kitchens", kitchenId));
+
+    if (!kitchenDoc.exists()) {
+      console.warn(`[getKitchenWithFoodItems] Kitchen ${kitchenId} not found`);
+      return {
+        kitchen: null,
+        foods: [],
+      };
+    }
+
+    const kitchen = {
+      id: kitchenDoc.id,
+      ...kitchenDoc.data(),
+    };
+
+    // Get all food items from this kitchen's subcollection
+    const foodItemsRef = collection(db, "kitchens", kitchenId, "foodItems");
+    const foodItemsSnapshot = await getDocs(foodItemsRef);
+
+    const foods = foodItemsSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      kitchenId: kitchenId,
+      ...doc.data(),
+    }));
+
+    console.log(
+      `[getKitchenWithFoodItems] Found ${foods.length} food items for kitchen ${kitchenId}`
+    );
+
+    return {
+      kitchen,
+      foods,
+    };
+  } catch (error) {
+    console.error("[getKitchenWithFoodItems] Error:", error);
+    // Return mock data as fallback
+    return {
+      kitchen: getMockKitchenData(kitchenId),
+      foods: getMockAllFoods(),
+    };
+  }
+}
+
+/**
+ * Get all kitchens with their food items
+ * This aggregates data from multiple kitchens for a comprehensive listing
+ */
+export async function getAllKitchensWithFoodItems(limitKitchens = 10) {
+  console.log(
+    `[getAllKitchensWithFoodItems] Fetching up to ${limitKitchens} kitchens`
+  );
+
+  if (firebaseDisabled) {
+    console.warn(
+      "[getAllKitchensWithFoodItems] Firebase disabled, returning mock data"
+    );
+    return [
+      {
+        kitchen: getMockKitchenData("mock-kitchen-1"),
+        foods: getMockAllFoods(),
+      },
+    ];
+  }
+
+  try {
+    // Get all kitchens
+    const kitchensQuery = query(
+      collection(db, "kitchens"),
+      limit(limitKitchens)
+    );
+    const kitchensSnapshot = await getDocs(kitchensQuery);
+
+    const kitchensWithFoods = [];
+
+    // For each kitchen, get its food items
+    for (const kitchenDoc of kitchensSnapshot.docs) {
+      const kitchen = {
+        id: kitchenDoc.id,
+        ...kitchenDoc.data(),
+      };
+
+      // Get food items for this kitchen
+      const foodItemsRef = collection(
+        db,
+        "kitchens",
+        kitchenDoc.id,
+        "foodItems"
+      );
+      const foodItemsSnapshot = await getDocs(foodItemsRef);
+
+      const foods = foodItemsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        kitchenId: kitchenDoc.id,
+        ...doc.data(),
+      }));
+
+      kitchensWithFoods.push({
+        kitchen,
+        foods,
+      });
+
+      console.log(
+        `[getAllKitchensWithFoodItems] Kitchen ${kitchenDoc.id}: ${foods.length} food items`
+      );
+    }
+
+    console.log(
+      `[getAllKitchensWithFoodItems] Loaded ${kitchensWithFoods.length} kitchens with food data`
+    );
+    return kitchensWithFoods;
+  } catch (error) {
+    console.error("[getAllKitchensWithFoodItems] Error:", error);
+    // Return mock data as fallback
+    return [
+      {
+        kitchen: getMockKitchenData("mock-kitchen-1"),
+        foods: getMockAllFoods(),
+      },
+    ];
+  }
 }

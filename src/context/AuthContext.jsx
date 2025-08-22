@@ -1,4 +1,6 @@
 import React, { createContext, useCallback, useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { performCompleteLogout } from "../store/actions/logoutActions";
 import { firebaseApp, firebaseDisabled } from "../services/firebase";
 import {
   getAuth,
@@ -16,6 +18,7 @@ const auth = firebaseApp ? getAuth(firebaseApp) : null;
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     if (firebaseDisabled || !auth) {
@@ -81,9 +84,24 @@ export function AuthProvider({ children }) {
   );
 
   const signOut = useCallback(async () => {
-    if (firebaseDisabled || !auth) return;
-    return fbSignOut(auth);
-  }, [auth]);
+    try {
+      // Firebase signout first
+      if (!firebaseDisabled && auth) {
+        await fbSignOut(auth);
+      }
+
+      // Then perform complete logout with Redux persist clearing
+      await dispatch(performCompleteLogout()).unwrap();
+
+      console.log("✅ Complete logout successful");
+    } catch (error) {
+      console.error("❌ Logout error:", error);
+      // Still attempt basic cleanup if comprehensive logout fails
+      if (!firebaseDisabled && auth) {
+        await fbSignOut(auth);
+      }
+    }
+  }, [auth, dispatch]);
 
   const value = {
     user,

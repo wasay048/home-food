@@ -19,9 +19,10 @@ export default function AppRoutes() {
 
       {/* Public routes */}
       <Route path="/foods" element={<ListingPage />} />
+      <Route path="/foods/:kitchenId" element={<ListingPage />} />
       <Route path="/share" element={<FoodDetailPage />} />
       <Route path="/order" element={<OrderPage />} />
-      <Route path="/payment" element={<PaymentPage />} />
+      <Route path="/checkout" element={<PaymentPage />} />
       <Route path="/success" element={<SuccessPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/wechat/callback" element={<WeChatCallbackPage />} />

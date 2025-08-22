@@ -12,13 +12,17 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",
     "bootstrap": "^5.3.3",
+    "dayjs": "^1.11.13",
     "firebase": "^10.12.2",
     "lodash": "^4.17.21",
-    "lucide-react": "^0.539.0",
+    "lucide-react": "^0.263.1",
     "react": "^18.2.0",
+    "react-datepicker": "^8.7.0",
     "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.6.0",
     "react-redux": "^9.2.0",
-    "react-router-dom": "^6.23.0"
+    "react-router-dom": "^6.23.0",
+    "redux-persist": "^6.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",

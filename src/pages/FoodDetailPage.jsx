@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { useSearchParams, useLocation } from "react-router-dom";
+import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
+import { showToast } from "../utils/toast";
 import ProductImage from "../assets/images/product.png";
 import User1 from "../assets/images/user1.svg";
 import { useFoodDetailRedux } from "../hooks/useFoodDetailRedux";
@@ -16,6 +17,7 @@ import "../styles/FoodDetailPage.css";
 export default function FoodDetailPage() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const getPageParams = () => {
     if (location.pathname === "/share") {
@@ -50,7 +52,7 @@ export default function FoodDetailPage() {
     );
   }
 
-  const [activeTab, setActiveTab] = useState("description");
+  const [activeTab, setActiveTab] = useState("reviews");
   const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [availabilityStatus, setAvailabilityStatus] = useState({
@@ -72,8 +74,6 @@ export default function FoodDetailPage() {
     toggleLike,
     addToCartAction,
     updateCartItemQuantity,
-    isAuthenticated,
-    user,
   } = useFoodDetailRedux(foodId, kitchenId);
 
   console.log("FoodDetailPage data:", {
@@ -88,8 +88,6 @@ export default function FoodDetailPage() {
     urlPattern: location.pathname,
     extractedParams: { kitchenId, foodId, selectedDate },
   });
-
-  const orderType = selectedDate ? "Pre-Order" : "Go & Grab";
 
   const handleQuantityChange = useCallback(
     (newQuantity) => {
@@ -113,10 +111,12 @@ export default function FoodDetailPage() {
 
   const handleQuantityError = useCallback((errorMessage) => {
     console.error(`[FoodDetailPage] Quantity error: ${errorMessage}`);
+    showToast.error(errorMessage);
   }, []);
 
   const handleQuantityWarning = useCallback((warningMessage) => {
     console.warn(`[FoodDetailPage] Quantity warning: ${warningMessage}`);
+    showToast.warning(warningMessage);
   }, []);
 
   const handleAddToCart = useCallback(() => {
@@ -126,7 +126,7 @@ export default function FoodDetailPage() {
     console.log(`[FoodDetailPage] Special instructions:`, specialInstructions);
 
     if (!availabilityStatus.isAvailable) {
-      console.warn("Cannot add unavailable item to cart");
+      showToast.error("This item is currently unavailable");
       return;
     }
 
@@ -149,16 +149,18 @@ export default function FoodDetailPage() {
     console.log(`[FoodDetailPage] Calling addToCartAction with:`, orderData);
     const result = addToCartAction(orderData);
 
-    // Show feedback to user
+    // Show feedback to user with toast notifications
     if (result) {
       if (result.success) {
         console.log("✅ Success:", result.message);
-        // You can add a toast notification here or update UI state
-        alert(result.message); // Temporary - replace with better UI feedback
+        // Show success toast
+        showToast.cart(result.message);
+        // Redirect to foods page after 1 second
+        navigate("/foods", { replace: true });
       } else {
         console.log("ℹ️ Info:", result.message);
-        // You can add a toast notification here or update UI state
-        alert(result.message); // Temporary - replace with better UI feedback
+        // Show info toast for duplicate items
+        showToast.warning(result.message);
       }
     }
   }, [
@@ -169,7 +171,9 @@ export default function FoodDetailPage() {
     kitchenId,
     selectedDate,
     addToCartAction,
+    navigate,
   ]); // Sync selectedQuantity with cart quantity when cart changes
+
   useEffect(() => {
     if (cartQuantity > 0) {
       setSelectedQuantity(cartQuantity);
@@ -409,7 +413,7 @@ export default function FoodDetailPage() {
                 onWarning={handleQuantityWarning}
                 showAvailabilityInfo={false}
                 showErrorMessages={true}
-                size="medium"
+                size="large"
                 className="food-detail-quantity"
               />
               {/* <div className="right">
@@ -494,7 +498,7 @@ export default function FoodDetailPage() {
             <h3 className="small-title mb-8">Special Instruction</h3>
             <p className="body-text mb-16">
               Please let us know if you are allergic to anything or if we need
-              to avoid anything .
+              to avoid anything.
             </p>
             <textarea
               className="special-instructions-input"
@@ -819,6 +823,7 @@ export default function FoodDetailPage() {
                   viewBox="0 0 24 24"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
+                  onClick={() => navigate("/foods", { replace: true })}
                 >
                   <path
                     d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z"

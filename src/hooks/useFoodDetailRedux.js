@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import dayjs from "dayjs";
 import {
   fetchFoodDetail,
   toggleFoodLike,
@@ -127,6 +128,45 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
     dispatch(toggleFoodLike(foodId));
   }, [dispatch, foodId, isAuthenticated]);
 
+  // Generate pickup details based on order type and date
+  const generatePickupDetails = useCallback((selectedDate = null) => {
+    const now = dayjs();
+
+    if (!selectedDate) {
+      // Go & Grab - pickup today + 30 minutes
+      const pickupTime = now.add(30, "minutes");
+      return {
+        pickupDate: now.format("YYYY-MM-DD"),
+        pickupTime: pickupTime.format("h:mm A"),
+        displayPickupTime: "Pick up today",
+        displayPickupClock: pickupTime.format("h:mm A"),
+        orderType: "grab-and-go",
+      };
+    } else {
+      // Pre-order - pickup on selected date at 6:30 PM
+      const pickupDate = dayjs(selectedDate);
+      const isToday = pickupDate.isSame(now, "day");
+      const isTomorrow = pickupDate.isSame(now.add(1, "day"), "day");
+
+      let displayText;
+      if (isToday) {
+        displayText = "Pick up today";
+      } else if (isTomorrow) {
+        displayText = "Pick up tomorrow";
+      } else {
+        displayText = `Pick up ${pickupDate.format("MMM D ddd")}`;
+      }
+
+      return {
+        pickupDate: pickupDate.format("YYYY-MM-DD"),
+        pickupTime: "6:30 PM",
+        displayPickupTime: displayText,
+        displayPickupClock: "6:30 PM",
+        orderType: "pre-order",
+      };
+    }
+  }, []);
+
   const addToCartAction = useCallback(
     (orderData) => {
       if (!isAuthenticated) {
@@ -142,36 +182,26 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
 
       // Check if exact same item exists and if quantity is the same
       if (exactCartItem) {
-        if (exactCartItem.quantity === orderData.quantity) {
-          // Same quantity - show message that item already exists
-          console.log(
-            "Item already exists with same quantity:",
-            exactCartItem.quantity
-          );
-          return {
-            success: false,
-            message:
-              "This item already exists in the cart with the same quantity and specifications",
-            existingQuantity: exactCartItem.quantity,
-          };
-        } else {
-          // Different quantity - update the cart to new quantity
-          console.log(
-            `Updating cart quantity from ${exactCartItem.quantity} to ${orderData.quantity}`
-          );
-
-          dispatch(
-            updateCartQuantity({
-              cartItemId: exactCartItem.id,
-              quantity: orderData.quantity,
-            })
-          );
-          return {
-            success: true,
-            message: `Cart updated to ${orderData.quantity} items`,
-          };
-        }
+        console.log(
+          "Item already exists with same quantity:",
+          exactCartItem.quantity
+        );
+        dispatch(
+          updateCartQuantity({
+            cartItemId: exactCartItem.id,
+            quantity: orderData.quantity,
+          })
+        );
+        return {
+          success: false,
+          message:
+            "This item already exists in the cart with the same quantity and specifications",
+          existingQuantity: exactCartItem.quantity,
+        };
       }
+
+      // Generate pickup details based on the selected date
+      const pickupDetails = generatePickupDetails(orderData.selectedDate);
 
       const cartItem = {
         foodId,
@@ -180,17 +210,39 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
         orderType: orderData.orderType,
         selectedDate: orderData.selectedDate,
         specialInstructions: orderData.specialInstructions || "",
-        // Add other necessary data
+        // Add pickup details for proper cart organization
+        pickupDetails,
+        // Include complete food object with all fields
         food: food
           ? {
+              id: food.id,
               name: food.name,
-              price: food.price,
-              image: food.image,
+              cost: food.cost,
+              price: food.price || food.cost,
+              imageUrl: food.imageUrl,
+              image: food.image || food.imageUrl,
+              description: food.description,
+              category: food.category,
+              isAvailable: food.isAvailable,
+              kitchenName: food.kitchenName,
+              maxQuantity: food.maxQuantity,
+              totalQuantity: food.totalQuantity,
+              availableQuantity: food.availableQuantity,
+              isPreOrder: food.isPreOrder,
+              // Include any other fields that might be present
+              ...food,
             }
           : null,
+        // Include complete kitchen object with all fields
         kitchen: kitchen
           ? {
+              id: kitchen.id,
               name: kitchen.name,
+              address: kitchen.address,
+              rating: kitchen.rating,
+              ratingCount: kitchen.ratingCount,
+              // Include any other fields that might be present
+              ...kitchen,
             }
           : null,
       };
@@ -213,6 +265,7 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
       updateCartQuantity,
       food,
       kitchen,
+      generatePickupDetails,
     ]
   );
 

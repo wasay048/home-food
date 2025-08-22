@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { PURGE } from "redux-persist";
 
 // Dummy user for development
 const dummyUser = {
@@ -52,11 +53,13 @@ export const authenticateWithWeChat = createAsyncThunk(
 // Async thunk for logout
 export const logoutUser = createAsyncThunk(
   "auth/logout",
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, dispatch }) => {
     try {
-      // TODO: Implement actual logout logic
+      // TODO: Implement actual logout logic (call backend API)
       console.log("User logged out");
-      return null;
+
+      // Clear persisted data
+      return { clearData: true };
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -118,6 +121,15 @@ const authSlice = createSlice({
         console.log("Logged in dummy user");
       }
     },
+    // Clear all persisted data on logout
+    clearAllData: (state) => {
+      state.user = null;
+      state.isAuthenticated = false;
+      state.loading = false;
+      state.error = null;
+      state.wechatAuthUrl = null;
+      state.isDevelopmentMode = false;
+    },
     // Switch to production mode (when WeChat is ready)
     setProductionMode: (state) => {
       state.isDevelopmentMode = false;
@@ -150,11 +162,8 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.loading = false;
         state.error = null;
-        // Reset to dummy user in development mode
-        if (state.isDevelopmentMode) {
-          state.user = dummyUser;
-          state.isAuthenticated = true;
-        }
+        state.wechatAuthUrl = null;
+        // Don't reset to dummy user on logout - stay logged out
       })
       .addCase(generateWeChatAuthUrl.fulfilled, (state, action) => {
         state.wechatAuthUrl = action.payload;
@@ -168,6 +177,7 @@ export const {
   setWeChatAuthUrl,
   toggleDummyAuth,
   setProductionMode,
+  clearAllData,
 } = authSlice.actions;
 
 export default authSlice.reducer;

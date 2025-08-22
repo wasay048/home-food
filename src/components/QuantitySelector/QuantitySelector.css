@@ -106,8 +106,28 @@
 }
 
 /* Size variations */
+
+/* Small variant - for listing pages */
+.quantity-selector--small {
+  gap: 6px;
+}
+
+.quantity-selector--small .quantity-selector__controls {
+  gap: 8px;
+}
+
+.quantity-selector--small .quantity-selector__display {
+  min-width: 32px;
+}
+
 .quantity-selector--small .quantity-number {
   font-size: 14px;
+  font-weight: 600;
+}
+
+.quantity-selector--small .quantity-selector__buttons {
+  padding: 2px;
+  gap: 2px;
 }
 
 .quantity-selector--small .quantity-btn {
@@ -120,13 +140,48 @@
   height: 10px;
 }
 
+/* Medium variant - default */
+.quantity-selector--medium .quantity-number {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.quantity-selector--medium .quantity-btn {
+  width: 36px;
+  height: 36px;
+}
+
+.quantity-selector--medium .quantity-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Large variant - for detail pages */
+.quantity-selector--large {
+  gap: 10px;
+}
+
+.quantity-selector--large .quantity-selector__controls {
+  gap: 16px;
+}
+
+.quantity-selector--large .quantity-selector__display {
+  min-width: 48px;
+}
+
 .quantity-selector--large .quantity-number {
-  font-size: 22px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.quantity-selector--large .quantity-selector__buttons {
+  padding: 6px;
+  gap: 6px;
 }
 
 .quantity-selector--large .quantity-btn {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
 }
 
 .quantity-selector--large .quantity-btn svg {
@@ -177,12 +232,52 @@
     gap: 8px;
   }
 
-  .quantity-btn {
+  /* Small variant responsive */
+  .quantity-selector--small .quantity-btn {
+    width: 24px;
+    height: 24px;
+  }
+
+  .quantity-selector--small .quantity-number {
+    font-size: 12px;
+  }
+
+  .quantity-selector--small .quantity-btn svg {
+    width: 8px;
+    height: 8px;
+  }
+
+  /* Medium variant responsive */
+  .quantity-selector--medium .quantity-btn {
     width: 32px;
     height: 32px;
   }
 
-  .quantity-number {
+  .quantity-selector--medium .quantity-number {
     font-size: 16px;
+  }
+
+  .quantity-selector--medium .quantity-btn svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  /* Large variant responsive */
+  .quantity-selector--large .quantity-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .quantity-selector--large .quantity-number {
+    font-size: 20px;
+  }
+
+  .quantity-selector--large .quantity-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .quantity-selector--large .quantity-selector__controls {
+    gap: 12px;
   }
 }

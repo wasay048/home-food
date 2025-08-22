@@ -1,111 +1,529 @@
-import React from "react";
-import Order1 from '../assets/images/order1.png'
-import Order2 from '../assets/images/order2.png'
-import { Link } from "react-router-dom";
+import React, { useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import dayjs from "dayjs";
+import { clearCart } from "../store/slices/cartSlice";
+import { showToast } from "../utils/toast";
+import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
+import Edit from "../assets/images/edit.svg";
+import { useKitchenWithFoods } from "../hooks/useKitchenListing";
+import { useGenericCart } from "../hooks/useGenericCart";
+
 export default function OrderPage() {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  // Get cart items from Redux
+  const cartItems = useSelector((state) => state.cart.items);
+
+  // Use generic cart hook for reliable quantity updates
+  const { handleQuantityChange } = useGenericCart();
+
+  // Get kitchen data for availability information
+  const kitchenId = cartItems.length > 0 ? cartItems[0].kitchenId : null;
+  const {
+    kitchen,
+    foods,
+    loading: kitchenLoading,
+  } = useKitchenWithFoods(kitchenId);
+
+  // Debug logging
+  console.log("OrderPage - Kitchen data:", {
+    kitchenId,
+    hasKitchen: !!kitchen,
+    foodsCount: foods.length,
+    kitchenLoading,
+  });
+
+  // Create a map of food data for quick lookup
+  const foodDataMap = useMemo(() => {
+    const map = new Map();
+    foods.forEach((food) => {
+      map.set(food.id, food);
+    });
+    return map;
+  }, [foods]);
+
+  // Helper function to get enriched food data with availability
+  const getEnrichedFoodData = (cartItem) => {
+    const fullFoodData = foodDataMap.get(cartItem.foodId);
+
+    console.log(`OrderPage - Getting food data for ${cartItem.foodId}:`, {
+      hasFullData: !!fullFoodData,
+      fullFoodData: fullFoodData
+        ? {
+            id: fullFoodData.id,
+            name: fullFoodData.name,
+            availability: fullFoodData.availability,
+            numAvailable: fullFoodData.numAvailable,
+          }
+        : null,
+    });
+
+    if (fullFoodData) {
+      // Return full food data from kitchen with actual availability
+      return fullFoodData;
+    }
+
+    // Fallback: create food object from cart item data
+    const fallbackData = {
+      id: cartItem.foodId,
+      name: cartItem.food?.name,
+      cost: cartItem.food?.cost,
+      imageUrl: cartItem.food?.imageUrl,
+      kitchenId: cartItem.kitchenId,
+      description: cartItem.food?.description,
+      // Default availability - will show "Add to cart" without restrictions
+      availability: { numAvailable: 99 },
+      numAvailable: 99,
+    };
+
+    console.log(
+      `OrderPage - Using fallback data for ${cartItem.foodId}:`,
+      fallbackData
+    );
+    return fallbackData;
+  };
+
+  // Group cart items by type and date
+  const groupedCartItems = useMemo(() => {
+    const groups = {
+      grabAndGo: [],
+      preOrders: {},
+    };
+
+    cartItems.forEach((item) => {
+      // Determine order type: Go&Grab vs Pre-Order
+      // Priority: pickupDetails.orderType > orderType > isPreOrder flag > selectedDate presence
+      const orderType =
+        item.pickupDetails?.orderType ||
+        item.orderType ||
+        (item.isPreOrder ? "PRE_ORDER" : "GO_GRAB");
+
+      if (orderType === "GO_GRAB") {
+        // Go&Grab items - immediate pickup today
+        groups.grabAndGo.push({
+          ...item,
+          // Ensure we have pickup details for display
+          displayPickupTime: item.pickupDetails?.display || "Pick up today",
+          displayPickupClock:
+            item.pickupDetails?.time ||
+            dayjs().add(30, "minutes").format("h:mm A"),
+        });
+      } else if (
+        orderType === "PRE_ORDER" ||
+        item.isPreOrder ||
+        item.selectedDate
+      ) {
+        // Pre-Order items - scheduled pickup on specific dates
+        const dateKey = item.selectedDate || item.pickupDetails?.date;
+        if (dateKey) {
+          if (!groups.preOrders[dateKey]) {
+            groups.preOrders[dateKey] = [];
+          }
+          groups.preOrders[dateKey].push({
+            ...item,
+            // Ensure we have pickup details for display
+            displayPickupTime:
+              item.pickupDetails?.display ||
+              `Pick up ${dayjs(dateKey).format("MMM D ddd")}`,
+            displayPickupClock: item.pickupDetails?.time || "6:30 PM",
+          });
+        }
+      } else {
+        // Fallback: if no clear classification, treat as Go&Grab
+        groups.grabAndGo.push({
+          ...item,
+          displayPickupTime: item.pickupDetails?.display || "Pick up today",
+          displayPickupClock:
+            item.pickupDetails?.time ||
+            dayjs().add(30, "minutes").format("h:mm A"),
+        });
+      }
+    });
+
+    // Sort preOrder dates to ensure consistent ordering
+    const sortedPreOrders = {};
+    Object.keys(groups.preOrders)
+      .sort((a, b) => dayjs(a).diff(dayjs(b)))
+      .forEach((date) => {
+        sortedPreOrders[date] = groups.preOrders[date];
+      });
+    groups.preOrders = sortedPreOrders;
+
+    return groups;
+  }, [cartItems]);
+
+  // Calculate totals with enhanced price data
+  const totals = useMemo(() => {
+    const subtotal = cartItems.reduce((total, item) => {
+      // Try to get the most accurate price data
+      const enrichedFood = foodDataMap.get(item.foodId);
+      const cost = enrichedFood?.cost || item.food?.cost || 0;
+      const numericCost = typeof cost === "string" ? parseFloat(cost) : cost;
+
+      console.log(`OrderPage - Pricing calculation for ${item.foodId}:`, {
+        itemName: item.food?.name,
+        quantity: item.quantity,
+        originalCost: item.food?.cost,
+        enrichedCost: enrichedFood?.cost,
+        finalCost: numericCost,
+        lineTotal: numericCost * item.quantity,
+      });
+
+      return total + numericCost * item.quantity;
+    }, 0);
+
+    const tax = subtotal * 0.0725; // 7.25% tax rate
+    const total = subtotal + tax;
+
+    console.log("OrderPage - Total calculation:", {
+      subtotal: subtotal.toFixed(2),
+      tax: tax.toFixed(2),
+      total: total.toFixed(2),
+      cartItemsCount: cartItems.length,
+    });
+
+    return {
+      subtotal: subtotal.toFixed(2),
+      tax: tax.toFixed(2),
+      total: total.toFixed(2),
+    };
+  }, [cartItems, foodDataMap]);
+
+  // Helper to get cart quantity for a food item
+  const getCartQuantity = (foodId, selectedDate = null) => {
+    return cartItems
+      .filter(
+        (item) =>
+          item.foodId === foodId &&
+          (!selectedDate || item.selectedDate === selectedDate)
+      )
+      .reduce((total, item) => total + item.quantity, 0);
+  };
+
+  // Handle remove all
+  const handleRemoveAll = () => {
+    dispatch(clearCart());
+    showToast.info("Cart cleared successfully");
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    return dayjs(dateString).format("MMM D ddd");
+  };
+
+  const totalItemsCount = cartItems.reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
+
   return (
     <div className="container">
       <div className="mobile-container">
-<div className="padding-20 order-page">
-  <div className="top">
-    <div className="back-link-title">
-    <Link className="back-link">
-    <svg width="9" height="14" viewBox="0 0 9 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M7.94194 0.51631C8.18602 0.760388 8.18602 1.15612 7.94194 1.40019L2.34222 6.99992L7.94194 12.5996C8.18602 12.8437 8.18602 13.2394 7.94194 13.4835C7.69786 13.7276 7.30214 13.7276 7.05806 13.4835L1.01639 7.44186C0.772315 7.19778 0.772315 6.80205 1.01639 6.55798L7.05806 0.51631C7.30214 0.272233 7.69786 0.272233 7.94194 0.51631Z" fill="#212226"/>
-</svg>
+        <div className="padding-20">
+          <div className="back-link-title">
+            <Link className="back-link" to="/foods">
+              <svg
+                width="9"
+                height="14"
+                viewBox="0 0 9 14"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M7.94194 0.51631C8.18602 0.760388 8.18602 1.15612 7.94194 1.40019L2.34222 6.99992L7.94194 12.5996C8.18602 12.8437 8.18602 13.2394 7.94194 13.4835C7.69786 13.7276 7.30214 13.7276 7.05806 13.4835L1.01639 7.44186C0.772315 7.19778 0.772315 6.80205 1.01639 6.55798L7.05806 0.51631C7.30214 0.272233 7.69786 0.272233 7.94194 0.51631Z"
+                  fill="#212226"
+                />
+              </svg>
+            </Link>
+            <div className="title">
+              Order ({totalItemsCount} Item{totalItemsCount !== 1 ? "s" : ""})
+            </div>
+          </div>
 
-    </Link>
-    <div className="title">
-      Order
-    </div>
-  </div>
-  <div className="orders-top">
-    <div className="text">
-      3 Item in the Cart
-    </div>
-    <div className="action">
-      Remove all
-    </div>
-  </div>
-  <div className="order-item">
-    <div className="left">
-      <div className="image">
-        <img src={Order1} alt="Order image" />
-      </div>
-      <div className="data">
-        <div className="title">
-          Dim Sum (Dumplings)
+          {/* Kitchen Info */}
+          {cartItems.length > 0 && cartItems[0].kitchen && (
+            <h2 className="small-title mb-2">{cartItems[0].kitchen.name}</h2>
+          )}
+
+          {cartItems.length === 0 ? (
+            <div className="text-center py-5">
+              <p>Your cart is empty</p>
+              <Link
+                to="/foods"
+                className="action-button"
+                style={{
+                  textDecoration: "none",
+                  display: "inline-block",
+                  padding: "12px 24px",
+                  marginTop: "16px",
+                }}
+              >
+                Continue Shopping
+              </Link>
+            </div>
+          ) : (
+            <>
+              {/* Go&Grab Section - Show first if items exist */}
+              {groupedCartItems.grabAndGo.length > 0 && (
+                <>
+                  <h2 className="small-title mb-20">Go&Grab</h2>
+                  <div className="menu-listing">
+                    {groupedCartItems.grabAndGo.map((item, index) => {
+                      const cartQty = getCartQuantity(item.foodId);
+                      return (
+                        <div
+                          key={`grab-${item.foodId}-${index}`}
+                          className="menu-list"
+                        >
+                          <div className="left">
+                            <div className="image">
+                              <img
+                                src={
+                                  item.food?.imageUrl ||
+                                  "/src/assets/images/product.png"
+                                }
+                                alt={item.food?.name || "Food item"}
+                                onError={(e) => {
+                                  e.target.src =
+                                    "/src/assets/images/product.png";
+                                }}
+                              />
+                            </div>
+                            <div className="data">
+                              <div className="title">
+                                {item.food?.name || "Unknown Item"}
+                              </div>
+                              <div className="text">
+                                {item.food?.description ||
+                                  "This dish features tender, juicy flavors"}
+                              </div>
+                              <div className="price">
+                                $ {item.food?.cost || "0.00"}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="quantity-warpper">
+                            <div className="right mb-1">
+                              <QuantitySelector
+                                food={getEnrichedFoodData(item)}
+                                kitchen={kitchen || item.kitchen}
+                                selectedDate={null}
+                                size="small"
+                                initialQuantity={cartQty}
+                                onQuantityChange={async (newQuantity) => {
+                                  const currentQty = getCartQuantity(
+                                    item.foodId
+                                  );
+                                  const enrichedFood =
+                                    getEnrichedFoodData(item);
+
+                                  await handleQuantityChange({
+                                    food: enrichedFood,
+                                    kitchen: kitchen || item.kitchen,
+                                    newQuantity,
+                                    currentQuantity: currentQty,
+                                    selectedDate: null,
+                                    specialInstructions:
+                                      item.specialInstructions || "",
+                                    isPreOrder: false,
+                                  });
+                                }}
+                              />
+                            </div>
+                            <div className="title">
+                              {item.displayPickupTime}
+                            </div>
+                            <div className="bottom">
+                              <div className="time">
+                                {item.displayPickupClock}
+                              </div>
+                              <div className="icon">
+                                <img src={Edit} alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              {/* Pre-Order Sections - Show after Go&Grab */}
+              {Object.entries(groupedCartItems.preOrders).map(
+                ([date, items]) => (
+                  <div key={date}>
+                    <h2 className="small-title mb-16">
+                      Pre-order for {formatDate(date)}
+                    </h2>
+                    <div className="menu-listing">
+                      {items.map((item, index) => {
+                        const cartQty = getCartQuantity(item.foodId, date);
+                        return (
+                          <div
+                            key={`preorder-${item.foodId}-${date}-${index}`}
+                            className="menu-list"
+                          >
+                            <div className="left">
+                              <div className="image">
+                                <img
+                                  src={
+                                    item.food?.imageUrl ||
+                                    "/src/assets/images/product.png"
+                                  }
+                                  alt={item.food?.name || "Food item"}
+                                  onError={(e) => {
+                                    e.target.src =
+                                      "/src/assets/images/product.png";
+                                  }}
+                                />
+                              </div>
+                              <div className="data">
+                                <div className="title">
+                                  {item.food?.name || "Unknown Item"}
+                                </div>
+                                <div className="text">
+                                  {item.food?.description ||
+                                    "This dish features tender, juicy flavors"}
+                                </div>
+                                <div className="price">
+                                  $ {item.food?.cost || "0.00"}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="quantity-warpper">
+                              <div className="right mb-1">
+                                <QuantitySelector
+                                  food={getEnrichedFoodData(item)}
+                                  kitchen={kitchen || item.kitchen}
+                                  selectedDate={date}
+                                  size="small"
+                                  initialQuantity={cartQty}
+                                  onQuantityChange={async (newQuantity) => {
+                                    const currentQty = getCartQuantity(
+                                      item.foodId,
+                                      date
+                                    );
+                                    const enrichedFood =
+                                      getEnrichedFoodData(item);
+
+                                    await handleQuantityChange({
+                                      food: enrichedFood,
+                                      kitchen: kitchen || item.kitchen,
+                                      newQuantity,
+                                      currentQuantity: currentQty,
+                                      selectedDate: date,
+                                      specialInstructions:
+                                        item.specialInstructions || "",
+                                      isPreOrder: true,
+                                    });
+                                  }}
+                                />
+                              </div>
+                              <div className="title">
+                                {item.displayPickupTime}
+                              </div>
+                              <div className="bottom">
+                                <div className="time">
+                                  {item.displayPickupClock}
+                                </div>
+                                <div className="icon">
+                                  <img src={Edit} alt="" />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )
+              )}
+
+              {/* Order Summary */}
+              <div
+                className="order-summary"
+                style={{
+                  backgroundColor: "#f8f9fa",
+                  padding: "16px",
+                  borderRadius: "8px",
+                  marginTop: "24px",
+                  marginBottom: "16px",
+                }}
+              >
+                <div
+                  className="summary-row"
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
+                  }}
+                >
+                  <span>
+                    Subtotal ({totalItemsCount} item
+                    {totalItemsCount !== 1 ? "s" : ""}):
+                  </span>
+                  <span>${totals.subtotal}</span>
+                </div>
+                <div
+                  className="summary-row"
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
+                  }}
+                >
+                  <span>Tax (7.25%):</span>
+                  <span>${totals.tax}</span>
+                </div>
+                <div
+                  className="summary-row"
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontWeight: "600",
+                    fontSize: "16px",
+                    borderTop: "1px solid #dee2e6",
+                    paddingTop: "8px",
+                  }}
+                >
+                  <span>Total:</span>
+                  <span>${totals.total}</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+                <button
+                  onClick={handleRemoveAll}
+                  style={{
+                    flex: "1",
+                    padding: "12px 16px",
+                    backgroundColor: "#f8f9fa",
+                    border: "1px solid #dee2e6",
+                    borderRadius: "8px",
+                    color: "#6c757d",
+                    cursor: "pointer",
+                  }}
+                >
+                  Clear Cart
+                </button>
+                <button
+                  className="action-button"
+                  onClick={() => navigate("/checkout")}
+                  style={{ flex: "2" }}
+                >
+                  Check Out
+                </button>
+              </div>
+            </>
+          )}
         </div>
-        <div className="cusine">
-          Chinese
-        </div>
-        <div className="price">
-          $18.2
-        </div>
       </div>
-    </div>
-    <div className="counter">
-      <div className="action dec">
-        <svg width="12" height="2" viewBox="0 0 12 2" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M1.33325 1H10.6666" stroke="#3FC045" stroke-width="0.875" stroke-linecap="round"/>
-</svg>
-
-      </div>
-      <div className="count">
-        1
-      </div>
-       <div className="action inc">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M1.33325 6.00016H10.6666M5.99992 10.6668V6.00016L5.99992 1.3335" stroke="white" stroke-width="0.875" stroke-linecap="round"/>
-</svg>
-
-
-      </div>
-    </div>
-  </div>
-   <div className="order-item">
-    <div className="left">
-      <div className="image">
-        <img src={Order2} alt="Order image" />
-      </div>
-      <div className="data">
-        <div className="title">
-          Margherita Pizza
-        </div>
-        <div className="cusine">
-          Chinese
-        </div>
-        <div className="price">
-         $10.21
-        </div>
-      </div>
-    </div>
-    <div className="counter">
-      <div className="action dec">
-        <svg width="12" height="2" viewBox="0 0 12 2" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M1.33325 1H10.6666" stroke="#3FC045" stroke-width="0.875" stroke-linecap="round"/>
-</svg>
-
-      </div>
-      <div className="count">
-        2
-      </div>
-       <div className="action inc">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M1.33325 6.00016H10.6666M5.99992 10.6668V6.00016L5.99992 1.3335" stroke="white" stroke-width="0.875" stroke-linecap="round"/>
-</svg>
-
-
-      </div>
-    </div>
-  </div>
-  </div>
-  <button className="action-button">
-    Continue
-  </button>
-</div>
-      </div>
-      
     </div>
   );
 }

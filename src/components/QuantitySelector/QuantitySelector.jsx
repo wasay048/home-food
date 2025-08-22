@@ -54,8 +54,24 @@ const QuantitySelector = ({
 
     // Determine order type and availability
     if (selectedDate) {
+      console.log(
+        "🚀 ~ QuantitySelector ~ selectedDate received:",
+        selectedDate
+      );
+      console.log(
+        "🚀 ~ QuantitySelector ~ selectedDate type:",
+        typeof selectedDate
+      );
+
       const orderDate = new Date(selectedDate);
       orderDate.setHours(0, 0, 0, 0);
+
+      console.log("🚀 ~ QuantitySelector ~ orderDate:", orderDate);
+      console.log("🚀 ~ QuantitySelector ~ today:", today);
+      console.log(
+        "🚀 ~ QuantitySelector ~ orderDate > today:",
+        orderDate > today
+      );
 
       if (orderDate > today) {
         // Case 1: Future date - PRE_ORDER
@@ -85,11 +101,18 @@ const QuantitySelector = ({
               const day = String(orderDate.getDate()).padStart(2, "0");
               return `${year}-${month}-${day}`;
             })();
+
         console.log("🚀 ~ QuantitySelector ~ dateKey:", dateKey);
+        console.log("🚀 ~ QuantitySelector ~ selectedDate:", selectedDate);
         console.log(
           "🚀 ~ QuantitySelector ~ kitchen.preorderSchedule.dates:",
           kitchen.preorderSchedule.dates
         );
+        console.log(
+          "🚀 ~ QuantitySelector ~ Available dates:",
+          Object.keys(kitchen.preorderSchedule.dates)
+        );
+
         const scheduleForDate = kitchen.preorderSchedule.dates[dateKey];
 
         console.log("DEBUG - Date lookup:", {
@@ -114,7 +137,10 @@ const QuantitySelector = ({
         const foodSchedule = scheduleForDate.find(
           (item) => item.foodItemId === food.id
         );
+
         console.log("🚀 ~ QuantitySelector ~ foodSchedule:", foodSchedule);
+        console.log("🚀 ~ QuantitySelector ~ food.id:", food.id);
+        console.log("🚀 ~ QuantitySelector ~ food object:", food);
 
         console.log("DEBUG - Food schedule lookup:", {
           foodId: food.id,
@@ -187,11 +213,92 @@ const QuantitySelector = ({
           };
         }
       } else if (orderDate.getTime() === today.getTime()) {
-        // Case 2: Today's date - check current availability
-        const orderType = "GO_GRAB";
-        const numAvailable = food.numAvailable || 0;
+        // Case 2: Today's date - check BOTH current availability AND preorder schedule
+        console.log(
+          "DEBUG - Today's date - checking both GO_GRAB and PRE_ORDER"
+        );
 
-        console.log("DEBUG - Today's date GO_GRAB:", { numAvailable });
+        // First check if there's a preorder schedule for today
+        if (kitchen?.preorderSchedule?.dates) {
+          const dateKey = selectedDate.includes("-")
+            ? selectedDate
+            : (() => {
+                const year = orderDate.getFullYear();
+                const month = String(orderDate.getMonth() + 1).padStart(2, "0");
+                const day = String(orderDate.getDate()).padStart(2, "0");
+                return `${year}-${month}-${day}`;
+              })();
+
+          console.log("DEBUG - Today's date - dateKey:", dateKey);
+          const scheduleForDate = kitchen.preorderSchedule.dates[dateKey];
+
+          if (scheduleForDate && Array.isArray(scheduleForDate)) {
+            const foodSchedule = scheduleForDate.find(
+              (item) => item.foodItemId === food.id
+            );
+
+            console.log(
+              "DEBUG - Today's date - foodSchedule found:",
+              !!foodSchedule,
+              foodSchedule
+            );
+
+            if (foodSchedule) {
+              console.log(
+                "DEBUG - Today's date found in preorder schedule - using PRE_ORDER logic"
+              );
+
+              // Use preorder logic for today if it's in the schedule
+              const orderType = "PRE_ORDER";
+
+              if (foodSchedule.isLimitedOrder === false) {
+                const availableItems = foodSchedule.numOfAvailableItems || 0;
+
+                console.log("DEBUG - Today PRE_ORDER limited case:", {
+                  availableItems,
+                });
+
+                if (availableItems <= 0) {
+                  return {
+                    isAvailable: false,
+                    maxAvailable: 0,
+                    orderType,
+                    message: "Sold out for today",
+                    warning: null,
+                  };
+                }
+
+                return {
+                  isAvailable: true,
+                  maxAvailable: Math.min(availableItems, maxQuantity),
+                  orderType,
+                  message: null,
+                  warning:
+                    availableItems < 5 ? `Only ${availableItems} left` : null,
+                };
+              } else {
+                console.log("DEBUG - Today PRE_ORDER unlimited case");
+                return {
+                  isAvailable: true,
+                  maxAvailable: maxQuantity,
+                  orderType,
+                  message: null,
+                  warning: null,
+                };
+              }
+            }
+          }
+        }
+
+        // Fallback to regular GO_GRAB logic if not in preorder schedule
+        console.log(
+          "DEBUG - Today's date - no preorder schedule, falling back to GO_GRAB"
+        );
+        const orderType = "GO_GRAB";
+        const numAvailable =
+          food.availability?.numAvailable || food.numAvailable || 0;
+
+        console.log("DEBUG - Today's date GO_GRAB fallback:", { numAvailable });
 
         if (numAvailable <= 0) {
           return {
@@ -224,7 +331,8 @@ const QuantitySelector = ({
     } else {
       // Case 3: No selectedDate - GO_GRAB
       const orderType = "GO_GRAB";
-      const numAvailable = food.numAvailable || 0;
+      const numAvailable =
+        food.availability?.numAvailable || food.numAvailable || 0;
 
       console.log("DEBUG - No date GO_GRAB:", { numAvailable });
 
@@ -398,21 +506,6 @@ const QuantitySelector = ({
 
   return (
     <div className={containerClasses}>
-      {showAvailabilityInfo && (
-        <div className="quantity-selector__availability">
-          {availabilityStatus.orderType === "PRE_ORDER" && (
-            <span className="availability-badge availability-badge--pre-order">
-              Pre-Order {selectedDate && `• ${selectedDate}`}
-            </span>
-          )}
-          {availabilityStatus.orderType === "GO_GRAB" && (
-            <span className="availability-badge availability-badge--go-grab">
-              Go & Grab
-            </span>
-          )}
-        </div>
-      )}
-
       <div className="quantity-selector__controls">
         <div className="quantity-selector__display">
           <span className="quantity-number">{quantity}</span>
