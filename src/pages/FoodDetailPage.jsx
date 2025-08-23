@@ -21,13 +21,29 @@ export default function FoodDetailPage() {
   const navigate = useNavigate();
 
   const getPageParams = () => {
-    if (location.pathname === "/share") {
-      return {
+    console.log("🔍 [FoodDetailPage] Current pathname:", location.pathname);
+    console.log("🔍 [FoodDetailPage] Search params:", searchParams.toString());
+
+    // Handle both "/share" and "/share/" paths
+    if (location.pathname === "/share" || location.pathname === "/share/") {
+      const params = {
         kitchenId: searchParams.get("kitchenId"),
         foodId: searchParams.get("foodId"),
         selectedDate: searchParams.get("date"),
       };
+      console.log("🔍 [FoodDetailPage] Extracted params:", params);
+      return params;
     }
+
+    // Fallback return to prevent undefined destructuring
+    console.log(
+      "🔍 [FoodDetailPage] Using fallback params (pathname not /share)"
+    );
+    return {
+      kitchenId: null,
+      foodId: null,
+      selectedDate: null,
+    };
   };
 
   const { kitchenId, foodId, selectedDate } = getPageParams();
