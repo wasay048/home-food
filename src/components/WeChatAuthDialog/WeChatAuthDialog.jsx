@@ -4,7 +4,6 @@ import {
   isMobileDevice,
   isWeChatBrowser,
 } from "../../config/wechat";
-import { openWeChatMobile } from "../../utils/wechatMobile";
 import wechatIcon from "../../assets/wechat-icon.svg";
 import "./WeChatAuthDialog.css";
 
@@ -29,24 +28,25 @@ const WeChatAuthDialog = ({ onClose }) => {
         // Already in WeChat browser - direct redirect
         console.log("📱 WeChat browser detected - direct redirect");
         window.location.href = authUrl;
-      } else {
-        // Use enhanced mobile integration
-        console.log("🚀 Using enhanced mobile WeChat integration");
-        const result = await openWeChatMobile(authUrl);
-        console.log("📊 Mobile integration result:", result);
+      } else if (isMobile) {
+        // Mobile device - use simple, reliable approach
+        console.log("📱 Mobile device - attempting WeChat authentication");
 
-        if (!result.success) {
-          console.warn("❌ Mobile integration failed:", result);
-        }
+        // On mobile, directly try to redirect to WeChat OAuth
+        // WeChat will handle the app opening automatically if installed
+        // If not installed, it will show the appropriate download page
+        window.location.href = authUrl;
+      } else {
+        // Desktop - direct redirect
+        console.log("🖥️ Desktop - direct redirect");
+        window.location.href = authUrl;
       }
     } catch (error) {
       console.error("❌ Error in WeChat authentication:", error);
 
-      // Final fallback
+      // Simple fallback
       const authUrl = generateWeChatAuthUrl();
-      if (confirm("Authentication error. Try web version?")) {
-        window.location.href = authUrl;
-      }
+      window.location.href = authUrl;
     }
   };
 

@@ -26,13 +26,12 @@ export const isWeChatBrowser = () => {
   return /micromessenger/i.test(navigator.userAgent);
 };
 
-// Generate WeChat OAuth URL optimized for mobile
+// Generate WeChat OAuth URL - Simplified and Reliable
 export const generateWeChatAuthUrl = (state = null) => {
   const randomState = state || Math.random().toString(36).substring(7);
-  const isMobile = isMobileDevice();
-  const isWeChat = isWeChatBrowser();
 
-  console.log("🔍 Device detection:", { isMobile, isWeChat });
+  console.log("🔗 Generating WeChat OAuth URL");
+  console.log("🔍 Current origin:", window.location.origin);
 
   const params = new URLSearchParams({
     appid: WECHAT_CONFIG.APP_ID,
@@ -42,26 +41,15 @@ export const generateWeChatAuthUrl = (state = null) => {
     state: randomState,
   });
 
-  // Use appropriate URL based on context
-  let baseUrl;
-  if (isWeChat) {
-    // Already in WeChat browser - use web OAuth
-    baseUrl = WECHAT_CONFIG.WEB_AUTHORIZE_URL;
-  } else if (isMobile) {
-    // Mobile browser - use mobile OAuth that can open WeChat app
-    baseUrl = WECHAT_CONFIG.MOBILE_AUTHORIZE_URL;
-  } else {
-    // Desktop - use QR code OAuth
-    baseUrl = WECHAT_CONFIG.QR_AUTHORIZE_URL;
-  }
-
+  // Use the standard WeChat OAuth URL that works for both mobile and web
+  const baseUrl = WECHAT_CONFIG.WEB_AUTHORIZE_URL;
   const authUrl = `${baseUrl}?${params.toString()}#wechat_redirect`;
-  console.log("🔗 Generated WeChat OAuth URL:", authUrl);
+
+  console.log("🔗 Final WeChat OAuth URL:", authUrl);
+  console.log("📋 OAuth parameters:", Object.fromEntries(params));
 
   return authUrl;
-};
-
-// WeChat API endpoints
+}; // WeChat API endpoints
 export const WECHAT_API = {
   // Get access token using authorization code
   getAccessToken: async (code) => {

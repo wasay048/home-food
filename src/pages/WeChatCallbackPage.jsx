@@ -28,7 +28,42 @@ const WeChatCallbackPage = () => {
           throw new Error("Authorization code not received from WeChat");
         }
 
-        // Dispatch WeChat authentication
+        // Check for development mode
+        if (code === "dev_mock_code") {
+          console.log("🧪 Processing development mode authentication");
+
+          // Get mock user from localStorage (set by dev button)
+          const mockUserStr = localStorage.getItem("wechat_auth_user");
+          if (mockUserStr) {
+            const mockUser = JSON.parse(mockUserStr);
+            console.log("✅ Dev authentication successful:", mockUser);
+
+            // Manually update Redux state (simulate the thunk result)
+            dispatch({
+              type: "auth/authenticateWithWeChat/fulfilled",
+              payload: mockUser,
+            });
+
+            setStatus("success");
+            showToast.success(`Welcome ${mockUser.name}! (Dev Mode)`);
+
+            // Handle pending cart action
+            const pendingCartAction = sessionStorage.getItem(
+              "wechat_pending_cart_action"
+            );
+            if (pendingCartAction === "true") {
+              sessionStorage.removeItem("wechat_pending_cart_action");
+              showToast.info("You can now add items to your cart");
+              setTimeout(() => navigate("/foods", { replace: true }), 1500);
+            } else {
+              setTimeout(() => navigate("/foods", { replace: true }), 1500);
+            }
+
+            return;
+          }
+        }
+
+        // Regular WeChat authentication
         setStatus("processing");
         const result = await dispatch(authenticateWithWeChat(code)).unwrap();
 

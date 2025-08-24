@@ -43,9 +43,9 @@ export function AuthProvider({ children }) {
 
   // Placeholder: In real impl, redirect user to WeChat OAuth authorize URL
   const signInWithWeChatPopup = useCallback(() => {
-    const appId = import.meta.env.VITE_WECHAT_APP_ID;
+    const appId = "wx4a71fe09bb125182";
     const redirect = encodeURIComponent(
-      import.meta.env.VITE_WECHAT_REDIRECT_URI
+      "https://master.d5tekh3anrrmn.amplifyapp.com/"
     );
     const scope = "snsapi_userinfo";
     const state = "we_" + Math.random().toString(36).slice(2);
