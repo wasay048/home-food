@@ -8,7 +8,7 @@ export default function LandingPage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [animatedText, setAnimatedText] = useState("");
   const fullText = "Enjoy delicious meal from your favorite chef.";
-  console.log("Deployed Version 1");
+  console.log("Deployed Version 2");
   // Redux state for debugging persistence
   const { user, isAuthenticated } = useSelector((state) => state.auth);
   const { items: cartItems, totalItems } = useSelector((state) => state.cart);

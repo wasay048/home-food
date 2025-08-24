@@ -3,8 +3,7 @@ export const WECHAT_CONFIG = {
   APP_ID: "wx4a71fe09bb125182",
   APP_SECRET: "e8a88b5e0271b89a1dc71261d9063fad", // Note: In production, this should be on the backend only
   REDIRECT_URI: `${window.location.origin}/wechat/callback`,
-  SCOPE: "snsapi_userinfo", // Get user info including avatar and nickname
-
+  SCOPE: "snsapi_base", // Get user info including avatar and nickname
   // WeChat OAuth URLs
   // Use different URLs based on device type
   WEB_AUTHORIZE_URL: "https://open.weixin.qq.com/connect/oauth2/authorize",
