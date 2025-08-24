@@ -45,9 +45,9 @@ export function AuthProvider({ children }) {
   const signInWithWeChatPopup = useCallback(() => {
     const appId = "wx4a71fe09bb125182";
     const redirect = encodeURIComponent(
-      "https://master.d5tekh3anrrmn.amplifyapp.com/"
+      "https://master.d5tekh3anrrmn.amplifyapp.com/wechat/callback"
     );
-    const scope = "snsapi_userinfo";
+    const scope = "snsapi_base";
     const state = "we_" + Math.random().toString(36).slice(2);
     window.location.href = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${appId}&redirect_uri=${redirect}&response_type=code&scope=${scope}&state=${state}#wechat_redirect`;
   }, []);
