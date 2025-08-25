@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
+import qrCode from '../assets/images/home-food-qr.svg'
 import dayjs from "dayjs";
 import {
   useKitchenWithFoods,
@@ -525,59 +526,7 @@ export default function ListingPage() {
               HomeFresh app, available in the iOS App Store.
             </div>
             <div className="qr">
-              <svg
-                width="80"
-                height="80"
-                viewBox="0 0 80 80"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <rect width="80" height="80" rx="12" fill="#F7F7FA" />
-                <rect
-                  x="10"
-                  y="10"
-                  width="18"
-                  height="18"
-                  rx="3"
-                  fill="#191A26"
-                />
-                <rect
-                  x="52"
-                  y="10"
-                  width="18"
-                  height="18"
-                  rx="3"
-                  fill="#191A26"
-                />
-                <rect
-                  x="10"
-                  y="52"
-                  width="18"
-                  height="18"
-                  rx="3"
-                  fill="#191A26"
-                />
-                <rect
-                  x="52"
-                  y="52"
-                  width="18"
-                  height="18"
-                  rx="3"
-                  fill="#191A26"
-                />
-                <rect
-                  x="32"
-                  y="32"
-                  width="16"
-                  height="16"
-                  rx="2"
-                  fill="#191A26"
-                />
-                <rect x="20" y="20" width="4" height="4" fill="#3FC045" />
-                <rect x="56" y="20" width="4" height="4" fill="#3FC045" />
-                <rect x="20" y="56" width="4" height="4" fill="#3FC045" />
-                <rect x="56" y="56" width="4" height="4" fill="#3FC045" />
-              </svg>
+              <img src={qrCode} alt="QR Code" />
             </div>
           </div>
         </div>

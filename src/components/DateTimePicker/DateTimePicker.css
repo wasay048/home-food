@@ -202,9 +202,9 @@ ld {
 
 /* Compact layout for listing page */
 .pickup-time-section {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
+  
+  padding-top: 0px;
+  
 }
 
 .pickup-time-section .date-time-picker {

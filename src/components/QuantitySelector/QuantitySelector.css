@@ -110,8 +110,16 @@
 /* Small variant - for listing pages */
 .quantity-selector--small {
   gap: 6px;
+  margin-left: auto;
 }
-
+.menu-listing .menu-list .listing-page-picker .picker-select {
+  padding: 4px 5px;
+    font-size: 9px;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+    background: #f8f9fa;
+    min-height: 20px;
+}
 .quantity-selector--small .quantity-selector__controls {
   gap: 8px;
 }
@@ -131,13 +139,13 @@
 }
 
 .quantity-selector--small .quantity-btn {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
 }
 
 .quantity-selector--small .quantity-btn svg {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 /* Medium variant - default */
@@ -175,18 +183,18 @@
 }
 
 .quantity-selector--large .quantity-selector__buttons {
-  padding: 6px;
-  gap: 6px;
+  padding: 2px;
+  gap: 2px;
 }
 
 .quantity-selector--large .quantity-btn {
-  width: 48px;
-  height: 48px;
+  width: 32px;
+  height: 32px;
 }
 
 .quantity-selector--large .quantity-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 16px !important;
+  height: 16px !important;
 }
 
 /* States */
