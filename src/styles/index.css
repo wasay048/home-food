@@ -1115,7 +1115,7 @@ body,
   flex-shrink: 0;
   border: 1px solid #eaedf3;
 }
-.scanner-bottom .qr img{
+.scanner-bottom .qr img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -1361,5 +1361,378 @@ body,
 
   .pickup-date-info {
     margin-bottom: 0;
+  }
+}
+
+/* Upload Section Styles */
+.upload-section {
+  margin-bottom: 24px;
+}
+
+.upload-dropzone {
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 32px 16px;
+  text-align: center;
+  background-color: #f9fafb;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-dropzone:hover {
+  border-color: #3fc045;
+  background-color: #f0f9f0;
+  transform: translateY(-1px);
+}
+
+.upload-dropzone.active {
+  border-color: #3fc045;
+  background-color: #f0f9f0;
+  box-shadow: 0 0 0 3px rgba(63, 192, 69, 0.1);
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-icon {
+  color: #6b7280;
+  margin-bottom: 8px;
+  transition: color 0.3s ease;
+}
+
+.upload-dropzone:hover .upload-icon {
+  color: #3fc045;
+}
+
+.upload-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.upload-description {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.upload-link {
+  color: #3fc045;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.upload-formats {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* Upload Preview Styles */
+.upload-preview-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.upload-preview {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #f3f4f6;
+  border: 2px solid #e5e7eb;
+}
+
+.preview-image {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  display: block;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.remove-image-btn:hover {
+  background-color: rgba(239, 68, 68, 0.8);
+}
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.file-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.file-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 12px;
+}
+
+.file-size {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* Upload Status */
+.upload-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-item.uploading {
+  color: #3f83f8;
+}
+
+.status-item.success {
+  color: #10b981;
+}
+
+.status-item.error {
+  color: #ef4444;
+}
+
+/* Upload Status Overlay */
+.upload-status-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.upload-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 8px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Firebase URL */
+.firebase-url {
+  padding: 8px 12px;
+  background-color: #eff6ff;
+  border-radius: 6px;
+  border: 1px solid #dbeafe;
+}
+
+.url-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0 0 4px 0;
+  font-weight: 500;
+}
+
+.url-link {
+  font-size: 13px;
+  color: #3f83f8;
+  text-decoration: none;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.url-link:hover {
+  text-decoration: underline;
+}
+
+/* Order placement button states */
+.action-button:disabled {
+  background-color: #9ca3af !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+.action-button:disabled:hover {
+  background-color: #9ca3af !important;
+  transform: none !important;
+}
+
+/* Success Page Order Summary */
+.order-summary-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.order-summary-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a202c;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.order-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.order-detail-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.detail-label {
+  font-size: 14px;
+  color: #4a5568;
+  font-weight: 500;
+}
+
+.detail-value {
+  font-size: 14px;
+  color: #1a202c;
+  font-weight: 600;
+}
+
+.success-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.action-button.secondary {
+  background-color: #ffffff;
+  color: #3fc045;
+  border: 2px solid #3fc045;
+}
+
+.action-button.secondary:hover {
+  background-color: #f0f9f0;
+  transform: translateY(-1px);
+}
+
+/* Mobile responsive for success page */
+@media (max-width: 767px) {
+  .order-summary-card {
+    padding: 16px;
+    margin: 16px 0;
+  }
+
+  .order-summary-title {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .detail-label,
+  .detail-value {
+    font-size: 13px;
+  }
+
+  .success-actions {
+    gap: 10px;
+  }
+}
+
+/* Mobile responsive for upload */
+@media (max-width: 767px) {
+  .upload-dropzone {
+    padding: 24px 12px;
+  }
+
+  .upload-title {
+    font-size: 16px;
+  }
+
+  .upload-description {
+    font-size: 13px;
+  }
+
+  .file-details {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .file-name {
+    margin-right: 0;
+  }
+
+  .upload-status-overlay {
+    font-size: 13px;
+  }
+
+  .firebase-url {
+    padding: 6px 10px;
+  }
+
+  .url-link {
+    font-size: 12px;
   }
 }

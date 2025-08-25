@@ -1,14 +1,76 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import {           <div className="success-image-wrapper">
+            <img src={Success} alt="Success" />
+            <h2 className="title">
+              Your order has been <br /> successfully placed
+            </h2>
+            <p className="text mb-20">
+              Your order is being worked on. It'll take <br /> 20-30 min to get
+              ready for pick up.
+            </p>
+            
+            {/* Order Details */}
+            {orderID && (
+              <div className="order-summary-card">
+                <h4 className="order-summary-title">Order Summary</h4>
+                
+                <div className="order-detail-row">
+                  <span className="detail-label">Order ID:</span>
+                  <span className="detail-value">#{orderID}</span>
+                </div>
+                
+                {totalAmount && (
+                  <div className="order-detail-row">
+                    <span className="detail-label">Total Amount:</span>
+                    <span className="detail-value">${totalAmount}</span>
+                  </div>
+                )}
+                
+                {kitchenName && (
+                  <div className="order-detail-row">
+                    <span className="detail-label">Kitchen:</span>
+                    <span className="detail-value">{kitchenName}</span>
+                  </div>
+                )}
+                
+                {pickupAddress && (
+                  <div className="order-detail-row">
+                    <span className="detail-label">Pickup Address:</span>
+                    <span className="detail-value">{pickupAddress}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          <div className="success-actions">
+            <Link to="/order" className="action-button secondary mb-12">
+              View Order Details
+            </Link>
+            <Link to="/" className="action-button">
+              Back to Home
+            </Link>
+          </div>tion } from "react-router-dom";
 import Success from "../assets/images/success.svg";
 
 export default function SuccessPage() {
+  const location = useLocation();
+  const orderDetails = location.state || {};
+  
+  const {
+    orderID,
+    orderDocId,
+    totalAmount,
+    kitchenName,
+    pickupAddress
+  } = orderDetails;
+
   return (
     <div className="container">
       <div className="mobile-container">
         <div className="padding-20 order-page">
           <div className="back-link-title">
-            <Link className="back-link">
+            <Link className="back-link" to="/">
               <svg
                 width="9"
                 height="14"

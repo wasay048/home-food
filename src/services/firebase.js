@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 import {
   getAnalytics,
   isSupported as analyticsIsSupported,
@@ -20,11 +21,12 @@ const config = {
 const requiredKeys = ["apiKey", "authDomain", "projectId", "appId"];
 export const firebaseDisabled = requiredKeys.some((k) => !config[k]);
 
-let firebaseApp, auth, db, analytics, analyticsPromise;
+let firebaseApp, auth, db, storage, analytics, analyticsPromise;
 if (!firebaseDisabled) {
   firebaseApp = getApps().length ? getApps()[0] : initializeApp(config);
   auth = getAuth(firebaseApp);
   db = getFirestore(firebaseApp);
+  storage = getStorage(firebaseApp);
   if (config.measurementId) {
     analyticsPromise = analyticsIsSupported().then((ok) => {
       if (ok) {
@@ -40,4 +42,4 @@ if (!firebaseDisabled) {
   analyticsPromise = Promise.resolve(null);
 }
 
-export { firebaseApp, auth, db, analytics, analyticsPromise };
+export { firebaseApp, auth, db, storage, analytics, analyticsPromise };
