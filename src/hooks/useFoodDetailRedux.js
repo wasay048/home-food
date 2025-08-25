@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import dayjs from "dayjs";
 import {
@@ -6,6 +6,7 @@ import {
   toggleFoodLike,
   toggleLikeLocally,
   clearCurrentFood,
+  checkFoodLikeStatus,
 } from "../store/slices/foodSlice";
 import { addToCart, updateCartQuantity } from "../store/slices/cartSlice";
 import { fetchFoodReviews, addFoodReview } from "../store/slices/reviewsSlice";
@@ -19,6 +20,9 @@ import {
  */
 export const useFoodDetailRedux = (foodId, kitchenId) => {
   const dispatch = useDispatch();
+
+  // Local state to track like status check
+  const [likeStatusChecked, setLikeStatusChecked] = useState(false);
 
   // Selectors
   const { user, isAuthenticated } = useSelector((state) => state.auth);
@@ -121,51 +125,71 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
       return;
     }
 
-    // Optimistic update
-    dispatch(toggleLikeLocally(foodId));
+    if (!kitchenId) {
+      console.warn("Kitchen ID is required to like food");
+      return;
+    }
 
-    // API call
+    if (!likeStatusChecked) {
+      console.warn("Like status not yet checked, preventing toggle");
+      return;
+    }
+
+    console.log("🔍 Toggle like called:", {
+      foodId,
+      kitchenId,
+      userId: user?.id,
+      currentlyLiked: isLiked,
+      likedFoodsArray: likedFoods,
+      likeStatusChecked,
+    });
+
+    // Do NOT do optimistic update - let the thunk handle both API and state
     dispatch(toggleFoodLike(foodId));
-  }, [dispatch, foodId, isAuthenticated]);
+  }, [
+    dispatch,
+    foodId,
+    kitchenId,
+    isAuthenticated,
+    isLiked,
+    likedFoods,
+    user?.id,
+    likeStatusChecked,
+  ]);
 
   // Generate pickup details based on order type and date
-  const generatePickupDetails = useCallback((selectedDate = null) => {
-    const now = dayjs();
+  const generatePickupDetails = useCallback(
+    (selectedDate = null, selectedTime = null) => {
+      const now = dayjs();
 
-    if (!selectedDate) {
-      // Go & Grab - pickup today + 30 minutes
-      const pickupTime = now.add(30, "minutes");
-      return {
-        pickupDate: now.format("YYYY-MM-DD"),
-        pickupTime: pickupTime.format("h:mm A"),
-        displayPickupTime: "Pick up today",
-        displayPickupClock: pickupTime.format("h:mm A"),
-        orderType: "grab-and-go",
-      };
-    } else {
-      // Pre-order - pickup on selected date at 6:30 PM
-      const pickupDate = dayjs(selectedDate);
-      const isToday = pickupDate.isSame(now, "day");
-      const isTomorrow = pickupDate.isSame(now.add(1, "day"), "day");
-
-      let displayText;
-      if (isToday) {
-        displayText = "Pick up today";
-      } else if (isTomorrow) {
-        displayText = "Pick up tomorrow";
+      if (!selectedDate) {
+        // Go & Grab - pickup today + 30 minutes or use selected time
+        const pickupTime = selectedTime
+          ? selectedTime
+          : now.add(30, "minutes").format("h:mm A");
+        return {
+          date: now.format("YYYY-MM-DD"),
+          time: pickupTime,
+          display: `Today at ${pickupTime}`,
+          orderType: "Go&Grab",
+        };
       } else {
-        displayText = `Pick up ${pickupDate.format("MMM D ddd")}`;
-      }
+        // Pre-order - pickup on selected date at selected time or default 6:30 PM
+        const pickupDate = dayjs(selectedDate);
+        const pickupTime = selectedTime || "6:30 PM";
+        const isToday = pickupDate.isSame(now, "day");
+        const orderType = isToday ? "Go&Grab" : "Pre-Order";
 
-      return {
-        pickupDate: pickupDate.format("YYYY-MM-DD"),
-        pickupTime: "6:30 PM",
-        displayPickupTime: displayText,
-        displayPickupClock: "6:30 PM",
-        orderType: "pre-order",
-      };
-    }
-  }, []);
+        return {
+          date: pickupDate.format("YYYY-MM-DD"),
+          time: pickupTime,
+          display: `${pickupDate.format("MMM DD, YYYY")} at ${pickupTime}`,
+          orderType: orderType,
+        };
+      }
+    },
+    []
+  );
 
   const addToCartAction = useCallback(
     (orderData) => {
@@ -201,8 +225,11 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
         };
       }
 
-      // Generate pickup details based on the selected date
-      const pickupDetails = generatePickupDetails(orderData.selectedDate);
+      // Generate pickup details based on the selected date and time
+      const pickupDetails = generatePickupDetails(
+        orderData.selectedDate,
+        orderData.selectedTime
+      );
 
       const cartItem = {
         foodId,
@@ -328,6 +355,25 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
       // clearData();
     };
   }, [loadFoodDetail, loadKitchenStats, loadFoodReviews]);
+
+  // Check like status when food loads and user is authenticated
+  useEffect(() => {
+    if (foodId && kitchenId && isAuthenticated && food) {
+      console.log("🔍 Checking like status for food:", {
+        foodId,
+        kitchenId,
+        userId: user?.id,
+      });
+      dispatch(checkFoodLikeStatus({ foodId, kitchenId })).then((result) => {
+        console.log("✅ Like status checked:", result);
+        setLikeStatusChecked(true);
+      });
+    } else if (!isAuthenticated) {
+      // If not authenticated, we know the status (not liked)
+      console.log("🔍 Not authenticated, setting like status as checked");
+      setLikeStatusChecked(true);
+    }
+  }, [dispatch, foodId, kitchenId, isAuthenticated, food, user?.id]);
 
   // Computed values
   const loading = foodLoading || isCurrentKitchenStatsLoading;

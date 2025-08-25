@@ -13,6 +13,7 @@ export const addToCart = createAsyncThunk(
       orderType,
       food,
       specialInstructions,
+      pickupDetails,
     },
     { getState }
   ) => {
@@ -31,6 +32,7 @@ export const addToCart = createAsyncThunk(
       selectedDate,
       orderType,
       specialInstructions,
+      pickupDetails,
       userId,
     });
 
@@ -47,6 +49,13 @@ export const addToCart = createAsyncThunk(
       orderType,
       specialInstructions: specialInstructions || "", // Store special instructions
       food: food || null, // Store food data for display
+      pickupDetails: pickupDetails || {
+        date: selectedDate,
+        time: null,
+        display:
+          orderType === "GO_GRAB" ? "Pick up today" : `Pick up ${selectedDate}`,
+        orderType: orderType,
+      },
       addedAt: new Date().toISOString(),
     };
   }
@@ -120,6 +129,33 @@ export const updateCartItem = createAsyncThunk(
   }
 );
 
+// Async thunk for updating pickup details (date and time)
+export const updatePickupDetails = createAsyncThunk(
+  "cart/updatePickupDetails",
+  async ({ cartItemId, pickupDate, pickupTime, orderType }, { getState }) => {
+    const { auth } = getState();
+    const userId = auth.user?.id;
+
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    // TODO: Implement actual update API call
+    console.log("Updating pickup details:", {
+      cartItemId,
+      pickupDate,
+      pickupTime,
+      orderType,
+      userId,
+    });
+
+    // Simulate API call delay
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    return { cartItemId, pickupDate, pickupTime, orderType };
+  }
+);
+
 // Async thunk for fetching user's cart
 export const fetchCart = createAsyncThunk(
   "cart/fetchCart",
@@ -187,6 +223,43 @@ const cartSlice = createSlice({
       }
 
       cartSlice.caseReducers.calculateTotals(state);
+    },
+
+    // Update pickup details locally for immediate UI feedback
+    updatePickupDetailsLocally: (state, action) => {
+      const { cartItemId, pickupDate, pickupTime, orderType } = action.payload;
+      const item = state.items.find((item) => item.id === cartItemId);
+
+      if (item) {
+        // Update selected date and order type
+        if (pickupDate !== undefined) {
+          item.selectedDate = pickupDate;
+        }
+        if (orderType !== undefined) {
+          item.orderType = orderType;
+        }
+
+        // Update pickup details object
+        if (!item.pickupDetails) {
+          item.pickupDetails = {};
+        }
+
+        if (pickupDate !== undefined) {
+          item.pickupDetails.date = pickupDate;
+          item.pickupDetails.display =
+            orderType === "GO_GRAB" ? "Pick up today" : `Pick up ${pickupDate}`;
+        }
+
+        if (pickupTime !== undefined) {
+          item.pickupDetails.time = pickupTime;
+        }
+
+        if (orderType !== undefined) {
+          item.pickupDetails.orderType = orderType;
+        }
+
+        state.lastUpdated = new Date().toISOString();
+      }
     },
   },
   extraReducers: (builder) => {
@@ -257,6 +330,44 @@ const cartSlice = createSlice({
         cartSlice.caseReducers.calculateTotals(state);
       })
 
+      // Update pickup details (date and time)
+      .addCase(updatePickupDetails.fulfilled, (state, action) => {
+        const { cartItemId, pickupDate, pickupTime, orderType } =
+          action.payload;
+        const item = state.items.find((item) => item.id === cartItemId);
+        if (item) {
+          // Update selected date and order type
+          if (pickupDate !== undefined) {
+            item.selectedDate = pickupDate;
+          }
+          if (orderType !== undefined) {
+            item.orderType = orderType;
+          }
+
+          // Update pickup details object
+          if (!item.pickupDetails) {
+            item.pickupDetails = {};
+          }
+
+          if (pickupDate !== undefined) {
+            item.pickupDetails.date = pickupDate;
+            item.pickupDetails.display =
+              orderType === "GO_GRAB"
+                ? "Pick up today"
+                : `Pick up ${pickupDate}`;
+          }
+
+          if (pickupTime !== undefined) {
+            item.pickupDetails.time = pickupTime;
+          }
+
+          if (orderType !== undefined) {
+            item.pickupDetails.orderType = orderType;
+          }
+        }
+        cartSlice.caseReducers.calculateTotals(state);
+      })
+
       // Fetch cart
       .addCase(fetchCart.fulfilled, (state, action) => {
         state.items = action.payload;
@@ -278,7 +389,12 @@ const cartSlice = createSlice({
   },
 });
 
-export const { clearCart, clearError, calculateTotals, addItemLocally } =
-  cartSlice.actions;
+export const {
+  clearCart,
+  clearError,
+  calculateTotals,
+  addItemLocally,
+  updatePickupDetailsLocally,
+} = cartSlice.actions;
 
 export default cartSlice.reducer;

@@ -13,6 +13,7 @@ import {
 } from "../services/foodService";
 import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
 import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
+import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import "../styles/FoodDetailPage.css";
 
 export default function FoodDetailPage() {
@@ -74,6 +75,10 @@ export default function FoodDetailPage() {
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [showWeChatDialog, setShowWeChatDialog] = useState(false);
 
+  // Date and time picker states
+  const [pickupDate, setPickupDate] = useState(selectedDate);
+  const [pickupTime, setPickupTime] = useState(null); // Let DateTimePicker set appropriate default
+
   // Debug: Log showWeChatDialog state changes
   useEffect(() => {
     console.log("🔍 showWeChatDialog state changed to:", showWeChatDialog);
@@ -99,6 +104,29 @@ export default function FoodDetailPage() {
     updateCartItemQuantity,
   } = useFoodDetailRedux(foodId, kitchenId);
 
+  // Determine order type based on availability and selected date
+  const orderType = React.useMemo(() => {
+    if (selectedDate) return "PRE_ORDER";
+
+    // Check if food is available for Go&Grab (current availability > 0)
+    const currentAvailability =
+      food?.availability?.numAvailable || food?.numAvailable || 0;
+    if (currentAvailability > 0) return "GO_GRAB";
+
+    // Check if food is in preorder schedule
+    if (kitchen?.preorderSchedule?.dates) {
+      const preorderDates = Object.values(
+        kitchen.preorderSchedule.dates
+      ).flat();
+      const hasPreorder = preorderDates.some(
+        (item) => item.foodItemId === food?.id
+      );
+      if (hasPreorder) return "PRE_ORDER";
+    }
+
+    return "GO_GRAB"; // Default fallback
+  }, [selectedDate, food, kitchen]);
+
   console.log("FoodDetailPage data:", {
     food,
     kitchen,
@@ -108,9 +136,24 @@ export default function FoodDetailPage() {
     loading,
     error,
     selectedDate,
+    orderType,
+    pickupDate,
+    pickupTime,
     urlPattern: location.pathname,
     extractedParams: { kitchenId, foodId, selectedDate },
+    kitchenPreorderSchedule: kitchen?.preorderSchedule,
   });
+
+  // Date/Time picker handlers
+  const handleDateChange = useCallback((newDate) => {
+    setPickupDate(newDate);
+    console.log("📅 Date changed to:", newDate);
+  }, []);
+
+  const handleTimeChange = useCallback((newTime) => {
+    setPickupTime(newTime);
+    console.log("⏰ Time changed to:", newTime);
+  }, []);
 
   const handleQuantityChange = useCallback(
     (newQuantity) => {
@@ -156,14 +199,16 @@ export default function FoodDetailPage() {
     const orderData = {
       quantity: selectedQuantity,
       orderType: availabilityStatus.orderType,
-      selectedDate,
+      selectedDate: pickupDate || selectedDate, // Use selected pickup date
+      selectedTime: pickupTime, // Include selected pickup time
       specialInstructions: specialInstructions.trim(), // Add special instructions
     };
 
     console.log(`Adding ${selectedQuantity} items to cart`, {
       foodId,
       kitchenId,
-      selectedDate,
+      selectedDate: pickupDate || selectedDate,
+      selectedTime: pickupTime,
       orderType: availabilityStatus.orderType,
       quantity: selectedQuantity,
       specialInstructions: specialInstructions.trim(),
@@ -201,7 +246,8 @@ export default function FoodDetailPage() {
     specialInstructions,
     foodId,
     kitchenId,
-    selectedDate,
+    pickupDate,
+    pickupTime,
     addToCartAction,
     navigate,
     setShowWeChatDialog,
@@ -212,12 +258,18 @@ export default function FoodDetailPage() {
   }, []);
 
   // Sync selectedQuantity with cart quantity when cart changes
-
   useEffect(() => {
     if (cartQuantity > 0) {
       setSelectedQuantity(cartQuantity);
     }
   }, [cartQuantity]);
+
+  // Initialize pickup date from URL parameter
+  useEffect(() => {
+    if (selectedDate && !pickupDate) {
+      setPickupDate(selectedDate);
+    }
+  }, [selectedDate, pickupDate]);
 
   useEffect(() => {
     const runDebugTests = async () => {
@@ -444,7 +496,7 @@ export default function FoodDetailPage() {
               <QuantitySelector
                 food={food}
                 kitchen={kitchen}
-                selectedDate={selectedDate}
+                selectedDate={pickupDate || selectedDate} // Use picker date first, then fallback to URL date
                 initialQuantity={Math.max(cartQuantity, 1)}
                 onQuantityChange={handleQuantityChange}
                 onAvailabilityChange={handleAvailabilityChange}
@@ -495,56 +547,21 @@ export default function FoodDetailPage() {
                 </div>
               </div> */}
             </div>
-            {selectedDate && (
-              <div className="pickup-details">
-                <div className="pickup-field">
-                  <label className="pickup-label">Pick up date:</label>
-                  <div className="pickup-value date-value">
-                    {/* Show actual checking date if different from selected date */}
-                    {availabilityStatus?.actualCheckingDate &&
-                    availabilityStatus.actualCheckingDate !== selectedDate ? (
-                      <>
-                        {new Date(
-                          availabilityStatus.actualCheckingDate
-                        ).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </>
-                    ) : (
-                      new Date(selectedDate).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
-                    )}
-                  </div>
-                </div>
-                <div className="pickup-field">
-                  <label className="pickup-label">Pick up time:</label>
-                  <div className="pickup-value time-value">
-                    6:22 PM
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M8 1C4.13 1 1 4.13 1 8s3.13 7 7 7 7-3.13 7-7-3.13-7-7-7zm0 12.5c-3.04 0-5.5-2.46-5.5-5.5S4.96 2.5 8 2.5s5.5 2.46 5.5 5.5-2.46 5.5-5.5 5.5z"
-                        fill="#4CAF50"
-                      />
-                      <path
-                        d="M8.5 4.5h-1v4.25l3.5 2.08.5-.83L8.5 7.92V4.5z"
-                        fill="#4CAF50"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            )}
+
+            {/* Dynamic Date Time Picker */}
+            <div className="pickup-details">
+              <DateTimePicker
+                food={food}
+                kitchen={kitchen}
+                orderType={orderType}
+                selectedDate={pickupDate}
+                selectedTime={pickupTime}
+                onDateChange={handleDateChange}
+                onTimeChange={handleTimeChange}
+                disabled={!food || !kitchen}
+                className="food-detail-picker"
+              />
+            </div>
           </div>
           <div className="hr"></div>
           <div className="padding-20">

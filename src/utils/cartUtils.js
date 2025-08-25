@@ -54,6 +54,7 @@ export const handleGenericAddToCart = async (
     kitchen,
     quantity = 1,
     selectedDate = null,
+    selectedTime = null,
     specialInstructions = "",
     isPreOrder = false,
     pickupDetails = null,
@@ -120,7 +121,8 @@ export const handleGenericAddToCart = async (
 
     // Generate pickup details if not provided
     const finalPickupDetails =
-      pickupDetails || generatePickupDetails(selectedDate, isPreOrder);
+      pickupDetails ||
+      generatePickupDetails(selectedDate, isPreOrder, selectedTime);
 
     // Prepare cart item data
     const cartItemData = {
@@ -252,50 +254,48 @@ export const handleGenericRemoveFromCart = async (
  * @param {boolean} isPreOrder - Whether this is a pre-order
  * @returns {Object} - Pickup details object
  */
-const generatePickupDetails = (selectedDate = null, isPreOrder = false) => {
+const generatePickupDetails = (
+  selectedDate = null,
+  isPreOrder = false,
+  selectedTime = null
+) => {
   if (!isPreOrder || !selectedDate) {
-    // Go & Grab - pickup today + 30 minutes
+    // Go & Grab - pickup today + 30 minutes or use selected time
     const now = new Date();
-    const pickupTime = new Date(now.getTime() + 30 * 60 * 1000);
-    return {
-      date: now.toISOString().split("T")[0], // Standard date format YYYY-MM-DD
-      time: pickupTime.toLocaleTimeString("en-US", {
+    const pickupTime =
+      selectedTime ||
+      new Date(now.getTime() + 30 * 60 * 1000).toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
         hour12: true,
-      }),
-      display: "Pick up today",
-      orderType: "GO_GRAB",
+      });
+
+    return {
+      date: now.toISOString().split("T")[0], // Standard date format YYYY-MM-DD
+      time: pickupTime,
+      display: `Today at ${pickupTime}`,
+      orderType: "Go&Grab",
     };
   } else {
-    // Pre-order - pickup on selected date at 6:30 PM
+    // Pre-order - pickup on selected date at selected time or default 6:30 PM
     const pickupDate = new Date(selectedDate);
+    const pickupTime = selectedTime || "6:30 PM";
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     pickupDate.setHours(0, 0, 0, 0);
 
     const isToday = pickupDate.getTime() === today.getTime();
-    const isTomorrow =
-      pickupDate.getTime() === today.getTime() + 24 * 60 * 60 * 1000;
-
-    let displayText;
-    if (isToday) {
-      displayText = "Pick up today";
-    } else if (isTomorrow) {
-      displayText = "Pick up tomorrow";
-    } else {
-      displayText = `Pick up ${pickupDate.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        weekday: "short",
-      })}`;
-    }
+    const orderType = isToday ? "Go&Grab" : "Pre-Order";
 
     return {
-      date: selectedDate, // Keep original date format
-      time: "6:30 PM",
-      display: displayText,
-      orderType: "PRE_ORDER",
+      date: selectedDate,
+      time: pickupTime,
+      display: `${pickupDate.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })} at ${pickupTime}`,
+      orderType: orderType,
     };
   }
 };
@@ -317,6 +317,7 @@ export const handleGenericQuantityChange = async (
     newQuantity,
     currentQuantity,
     selectedDate = null,
+    selectedTime = null,
     specialInstructions = "",
     isPreOrder = false,
   },
@@ -336,6 +337,7 @@ export const handleGenericQuantityChange = async (
           kitchen,
           quantity: quantityToAdd,
           selectedDate,
+          selectedTime,
           specialInstructions,
           isPreOrder,
         },

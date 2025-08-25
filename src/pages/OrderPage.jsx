@@ -1,10 +1,14 @@
-import React, { useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import dayjs from "dayjs";
-import { clearCart } from "../store/slices/cartSlice";
+import {
+  clearCart,
+  updatePickupDetailsLocally,
+} from "../store/slices/cartSlice";
 import { showToast } from "../utils/toast";
 import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
+import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import Edit from "../assets/images/edit.svg";
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
 import { useGenericCart } from "../hooks/useGenericCart";
@@ -12,12 +16,29 @@ import { useGenericCart } from "../hooks/useGenericCart";
 export default function OrderPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const location = useLocation();
 
   // Get cart items from Redux
   const cartItems = useSelector((state) => state.cart.items);
 
   // Use generic cart hook for reliable quantity updates
   const { handleQuantityChange } = useGenericCart();
+
+  // State for tracking which items are in edit mode for pickup date/time
+  const [editModeItems, setEditModeItems] = useState(new Set());
+  const [tempPickupDates, setTempPickupDates] = useState({});
+  const [tempPickupTimes, setTempPickupTimes] = useState({});
+
+  // Handle navigation from PaymentPage edit functionality
+  useEffect(() => {
+    if (location.state?.editItem) {
+      const itemToEdit = location.state.editItem;
+      setEditModeItems(new Set([itemToEdit]));
+
+      // Clear the location state to prevent re-triggering
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Get kitchen data for availability information
   const kitchenId = cartItems.length > 0 ? cartItems[0].kitchenId : null;
@@ -213,6 +234,115 @@ export default function OrderPage() {
     return dayjs(dateString).format("MMM D ddd");
   };
 
+  // Handler functions for edit mode
+  const handleEditClick = useCallback(
+    (itemKey) => {
+      setEditModeItems((prev) => new Set([...prev, itemKey]));
+
+      // Initialize temp values with current cart item values
+      const item = cartItems.find(
+        (item) => `${item.foodId}-${item.selectedDate || "grab"}` === itemKey
+      );
+
+      if (item) {
+        setTempPickupDates((prev) => ({
+          ...prev,
+          [itemKey]: item.selectedDate || dayjs().format("YYYY-MM-DD"),
+        }));
+        setTempPickupTimes((prev) => ({
+          ...prev,
+          [itemKey]:
+            item.pickupDetails?.time ||
+            dayjs().add(30, "minute").format("HH:mm"),
+        }));
+      }
+    },
+    [cartItems]
+  );
+
+  const handleCancelEdit = useCallback((itemKey) => {
+    setEditModeItems((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(itemKey);
+      return newSet;
+    });
+
+    // Clear temp values
+    setTempPickupDates((prev) => {
+      const newDates = { ...prev };
+      delete newDates[itemKey];
+      return newDates;
+    });
+    setTempPickupTimes((prev) => {
+      const newTimes = { ...prev };
+      delete newTimes[itemKey];
+      return newTimes;
+    });
+  }, []);
+
+  const handleSaveEdit = useCallback(
+    (itemKey) => {
+      const newDate = tempPickupDates[itemKey];
+      const newTime = tempPickupTimes[itemKey];
+
+      if (newDate && newTime) {
+        // Determine order type based on date
+        const isToday = dayjs(newDate).isSame(dayjs(), "day");
+        const orderType = isToday ? "Go&Grab" : "Pre-Order";
+
+        // Update Redux store with new pickup details
+        dispatch(
+          updatePickupDetailsLocally({
+            cartItemId: itemKey,
+            pickupDetails: {
+              date: newDate,
+              time: newTime,
+              display: `${dayjs(newDate).format("MMM DD, YYYY")} at ${newTime}`,
+              orderType: orderType,
+            },
+          })
+        );
+
+        console.log("Saving pickup details for item:", itemKey, {
+          date: newDate,
+          time: newTime,
+          orderType: orderType,
+        });
+      }
+
+      // Exit edit mode
+      setEditModeItems((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(itemKey);
+        return newSet;
+      });
+
+      showToast.success("Pickup time updated successfully");
+
+      // If we came from PaymentPage, navigate back after a short delay
+      if (location.state?.returnTo === "/payment") {
+        setTimeout(() => {
+          navigate("/payment");
+        }, 1000); // Give time for toast to show
+      }
+    },
+    [tempPickupDates, tempPickupTimes, dispatch, location.state, navigate]
+  );
+
+  const handleDateChange = useCallback((itemKey, newDate) => {
+    setTempPickupDates((prev) => ({
+      ...prev,
+      [itemKey]: newDate,
+    }));
+  }, []);
+
+  const handleTimeChange = useCallback((itemKey, newTime) => {
+    setTempPickupTimes((prev) => ({
+      ...prev,
+      [itemKey]: newTime,
+    }));
+  }, []);
+
   const totalItemsCount = cartItems.reduce(
     (total, item) => total + item.quantity,
     0
@@ -333,17 +463,105 @@ export default function OrderPage() {
                                 }}
                               />
                             </div>
-                            <div className="title">
-                              {item.displayPickupTime}
-                            </div>
-                            <div className="bottom">
-                              <div className="time">
-                                {item.displayPickupClock}
-                              </div>
-                              <div className="icon">
-                                <img src={Edit} alt="" />
-                              </div>
-                            </div>
+                            {(() => {
+                              const itemKey = `${item.foodId}-grab`;
+                              const isInEditMode = editModeItems.has(itemKey);
+
+                              if (isInEditMode) {
+                                return (
+                                  <div className="pickup-edit-section">
+                                    <DateTimePicker
+                                      food={getEnrichedFoodData(item)}
+                                      kitchen={kitchen || item.kitchen}
+                                      orderType="GO_GRAB"
+                                      selectedDate={
+                                        tempPickupDates[itemKey] ||
+                                        dayjs().format("YYYY-MM-DD")
+                                      }
+                                      selectedTime={
+                                        tempPickupTimes[itemKey] ||
+                                        dayjs()
+                                          .add(30, "minute")
+                                          .format("HH:mm")
+                                      }
+                                      onDateChange={(newDate) =>
+                                        handleDateChange(itemKey, newDate)
+                                      }
+                                      onTimeChange={(newTime) =>
+                                        handleTimeChange(itemKey, newTime)
+                                      }
+                                      className="listing-page-picker"
+                                      dateLabel="Pick up date:"
+                                      timeLabel="Pick up time:"
+                                    />
+                                    <div
+                                      className="edit-actions"
+                                      style={{
+                                        display: "flex",
+                                        gap: "8px",
+                                        marginTop: "8px",
+                                      }}
+                                    >
+                                      <button
+                                        onClick={() => handleSaveEdit(itemKey)}
+                                        style={{
+                                          flex: 1,
+                                          padding: "6px 12px",
+                                          backgroundColor: "#4CAF50",
+                                          color: "white",
+                                          border: "none",
+                                          borderRadius: "4px",
+                                          fontSize: "12px",
+                                          cursor: "pointer",
+                                        }}
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleCancelEdit(itemKey)
+                                        }
+                                        style={{
+                                          flex: 1,
+                                          padding: "6px 12px",
+                                          backgroundColor: "#f8f9fa",
+                                          color: "#6c757d",
+                                          border: "1px solid #dee2e6",
+                                          borderRadius: "4px",
+                                          fontSize: "12px",
+                                          cursor: "pointer",
+                                        }}
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              } else {
+                                return (
+                                  <>
+                                    <div className="title">
+                                      {item.displayPickupTime}
+                                    </div>
+                                    <div className="bottom">
+                                      <div className="time">
+                                        {item.displayPickupClock}
+                                      </div>
+                                      <div
+                                        className="icon"
+                                        onClick={() => handleEditClick(itemKey)}
+                                        style={{ cursor: "pointer" }}
+                                      >
+                                        <img
+                                          src={Edit}
+                                          alt="Edit pickup time"
+                                        />
+                                      </div>
+                                    </div>
+                                  </>
+                                );
+                              }
+                            })()}
                           </div>
                         </div>
                       );
@@ -424,17 +642,105 @@ export default function OrderPage() {
                                   }}
                                 />
                               </div>
-                              <div className="title">
-                                {item.displayPickupTime}
-                              </div>
-                              <div className="bottom">
-                                <div className="time">
-                                  {item.displayPickupClock}
-                                </div>
-                                <div className="icon">
-                                  <img src={Edit} alt="" />
-                                </div>
-                              </div>
+                              {(() => {
+                                const itemKey = `${item.foodId}-${date}`;
+                                const isInEditMode = editModeItems.has(itemKey);
+
+                                if (isInEditMode) {
+                                  return (
+                                    <div className="pickup-edit-section">
+                                      <DateTimePicker
+                                        food={getEnrichedFoodData(item)}
+                                        kitchen={kitchen || item.kitchen}
+                                        orderType="PRE_ORDER"
+                                        selectedDate={
+                                          tempPickupDates[itemKey] || date
+                                        }
+                                        selectedTime={
+                                          tempPickupTimes[itemKey] || "18:30"
+                                        }
+                                        onDateChange={(newDate) =>
+                                          handleDateChange(itemKey, newDate)
+                                        }
+                                        onTimeChange={(newTime) =>
+                                          handleTimeChange(itemKey, newTime)
+                                        }
+                                        className="listing-page-picker"
+                                        dateLabel="Pick up date:"
+                                        timeLabel="Pick up time:"
+                                      />
+                                      <div
+                                        className="edit-actions"
+                                        style={{
+                                          display: "flex",
+                                          gap: "8px",
+                                          marginTop: "8px",
+                                        }}
+                                      >
+                                        <button
+                                          onClick={() =>
+                                            handleSaveEdit(itemKey)
+                                          }
+                                          style={{
+                                            flex: 1,
+                                            padding: "6px 12px",
+                                            backgroundColor: "#4CAF50",
+                                            color: "white",
+                                            border: "none",
+                                            borderRadius: "4px",
+                                            fontSize: "12px",
+                                            cursor: "pointer",
+                                          }}
+                                        >
+                                          Save
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            handleCancelEdit(itemKey)
+                                          }
+                                          style={{
+                                            flex: 1,
+                                            padding: "6px 12px",
+                                            backgroundColor: "#f8f9fa",
+                                            color: "#6c757d",
+                                            border: "1px solid #dee2e6",
+                                            borderRadius: "4px",
+                                            fontSize: "12px",
+                                            cursor: "pointer",
+                                          }}
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                } else {
+                                  return (
+                                    <>
+                                      <div className="title">
+                                        {item.displayPickupTime}
+                                      </div>
+                                      <div className="bottom">
+                                        <div className="time">
+                                          {item.displayPickupClock}
+                                        </div>
+                                        <div
+                                          className="icon"
+                                          onClick={() =>
+                                            handleEditClick(itemKey)
+                                          }
+                                          style={{ cursor: "pointer" }}
+                                        >
+                                          <img
+                                            src={Edit}
+                                            alt="Edit pickup time"
+                                          />
+                                        </div>
+                                      </div>
+                                    </>
+                                  );
+                                }
+                              })()}
                             </div>
                           </div>
                         );

@@ -4,6 +4,8 @@ import {
   getFoodById,
   getAllFoods,
 } from "../../services/foodService";
+import { addLike, removeLike, checkUserLike } from "../../services/likeService";
+import { serializeFirestoreData } from "../../utils/firestoreSerializer";
 
 // Async thunk for fetching food details with all related data
 export const fetchFoodDetail = createAsyncThunk(
@@ -45,29 +47,91 @@ export const fetchAllFoods = createAsyncThunk(
   }
 );
 
+// Async thunk for checking if user has liked a food
+export const checkFoodLikeStatus = createAsyncThunk(
+  "food/checkLikeStatus",
+  async ({ foodId, kitchenId }, { getState }) => {
+    const { auth } = getState();
+    const userId = auth.user?.id;
+
+    console.log("🔍 Checking like status:", { foodId, kitchenId, userId });
+
+    if (!userId || !kitchenId) {
+      console.log("❌ Missing userId or kitchenId for like status check");
+      return { foodId, liked: false };
+    }
+
+    try {
+      const isLiked = await checkUserLike(kitchenId, foodId, userId);
+      console.log("✅ Like status check result:", { foodId, isLiked });
+      return { foodId, liked: isLiked };
+    } catch (error) {
+      console.error("❌ Error checking like status:", error);
+      return { foodId, liked: false };
+    }
+  }
+);
+
 // Async thunk for toggling food like
 export const toggleFoodLike = createAsyncThunk(
   "food/toggleLike",
   async (foodId, { getState }) => {
     const { auth, food } = getState();
     const userId = auth.user?.id;
+    const kitchenId = food.currentKitchen?.id;
+
+    console.log("🔄 Toggle like action:", {
+      foodId,
+      userId,
+      kitchenId,
+      currentLikedFoods: food.likedFoods,
+    });
 
     if (!userId) {
       throw new Error("User not authenticated");
     }
 
-    const isCurrentlyLiked = food.likedFoods.includes(foodId);
+    if (!kitchenId) {
+      throw new Error("Kitchen information not available");
+    }
 
-    // TODO: Implement actual like API call
-    console.log(`${isCurrentlyLiked ? "Unliking" : "Liking"} food:`, {
+    const isCurrentlyLiked = food.likedFoods.includes(foodId);
+    console.log("🔍 Current like state from Redux:", {
       foodId,
-      userId,
+      isCurrentlyLiked,
     });
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    // Check actual Firestore state to avoid optimistic update conflicts
+    console.log("🔍 Checking actual Firestore like state before toggle");
+    const actualFirestoreState = await checkUserLike(kitchenId, foodId, userId);
+    console.log("🔍 Actual Firestore like state:", {
+      foodId,
+      actualFirestoreState,
+    });
 
-    return { foodId, userId, liked: !isCurrentlyLiked };
+    try {
+      if (actualFirestoreState) {
+        // Remove like from Firestore
+        console.log("🔥 Attempting to remove like from Firestore");
+        await removeLike(kitchenId, foodId, userId);
+        console.log("✅ Like removed from Firestore");
+      } else {
+        // Add like to Firestore
+        console.log("🔥 Attempting to add like to Firestore");
+        await addLike(kitchenId, foodId, userId);
+        console.log("✅ Like added to Firestore");
+      }
+
+      return {
+        foodId,
+        userId,
+        kitchenId,
+        liked: !actualFirestoreState,
+      };
+    } catch (error) {
+      console.error("❌ Error toggling like in Firestore:", error);
+      throw error;
+    }
   }
 );
 
@@ -143,11 +207,21 @@ const foodSlice = createSlice({
       const foodId = action.payload;
       const isLiked = state.likedFoods.includes(foodId);
 
+      console.log("🔄 toggleLikeLocally called:", {
+        foodId,
+        currentlyLiked: isLiked,
+        likedFoods: state.likedFoods,
+      });
+
       if (isLiked) {
         state.likedFoods = state.likedFoods.filter((id) => id !== foodId);
+        console.log("➖ Locally removed like for:", foodId);
       } else {
         state.likedFoods.push(foodId);
+        console.log("➕ Locally added like for:", foodId);
       }
+
+      console.log("🔍 Updated likedFoods locally:", state.likedFoods);
     },
   },
   extraReducers: (builder) => {
@@ -161,11 +235,16 @@ const foodSlice = createSlice({
         state.loading = false;
         const { food, kitchen, likes, reviews, reviewStats } = action.payload;
 
-        state.currentFood = food;
-        state.currentKitchen = kitchen;
-        state.currentReviews = reviews || [];
-        state.currentReviewStats = reviewStats;
-        state.currentLikes = likes || [];
+        // Serialize Firestore data to prevent Redux non-serializable warnings
+        state.currentFood = serializeFirestoreData(food);
+        state.currentKitchen = serializeFirestoreData(kitchen);
+        state.currentReviews = reviews
+          ? reviews.map((review) => serializeFirestoreData(review))
+          : [];
+        state.currentReviewStats = serializeFirestoreData(reviewStats);
+        state.currentLikes = likes
+          ? likes.map((like) => serializeFirestoreData(like))
+          : [];
         state.lastUpdated = new Date().toISOString();
       })
       .addCase(fetchFoodDetail.rejected, (state, action) => {
@@ -208,6 +287,27 @@ const foodSlice = createSlice({
         } else {
           state.likedFoods.push(foodId);
         }
+      })
+
+      // Check like status
+      .addCase(checkFoodLikeStatus.fulfilled, (state, action) => {
+        const { foodId, liked } = action.payload;
+
+        console.log("✅ Like status check fulfilled:", {
+          foodId,
+          liked,
+          currentLikedFoods: state.likedFoods,
+        });
+
+        if (liked && !state.likedFoods.includes(foodId)) {
+          state.likedFoods.push(foodId);
+          console.log("➕ Added foodId to likedFoods:", foodId);
+        } else if (!liked) {
+          state.likedFoods = state.likedFoods.filter((id) => id !== foodId);
+          console.log("➖ Removed foodId from likedFoods:", foodId);
+        }
+
+        console.log("🔍 Updated likedFoods:", state.likedFoods);
       });
   },
 });

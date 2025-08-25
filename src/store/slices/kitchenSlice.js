@@ -3,6 +3,7 @@ import {
   getKitchenReviewStats,
   getKitchenAllReviews,
 } from "../../services/foodService";
+import { serializeFirestoreData } from "../../utils/firestoreSerializer";
 
 // Async thunk for fetching kitchen aggregated reviews
 export const fetchKitchenStats = createAsyncThunk(
@@ -178,7 +179,7 @@ const kitchenSlice = createSlice({
       .addCase(fetchKitchenStats.fulfilled, (state, action) => {
         const { kitchenId, stats } = action.payload;
         state.statsLoading[kitchenId] = false;
-        state.kitchenStats[kitchenId] = stats;
+        state.kitchenStats[kitchenId] = serializeFirestoreData(stats);
         state.statsLastUpdated[kitchenId] = new Date().toISOString();
       })
       .addCase(fetchKitchenStats.rejected, (state, action) => {
@@ -196,7 +197,9 @@ const kitchenSlice = createSlice({
       .addCase(fetchKitchenReviews.fulfilled, (state, action) => {
         const { kitchenId, reviews } = action.payload;
         state.reviewsLoading[kitchenId] = false;
-        state.kitchenReviews[kitchenId] = reviews;
+        state.kitchenReviews[kitchenId] = reviews
+          ? reviews.map((review) => serializeFirestoreData(review))
+          : [];
         state.reviewsLastUpdated[kitchenId] = new Date().toISOString();
       })
       .addCase(fetchKitchenReviews.rejected, (state, action) => {
@@ -213,8 +216,11 @@ const kitchenSlice = createSlice({
           state.kitchenReviews[kitchenId] = [];
         }
 
+        // Serialize the review before adding to state
+        const serializedReview = serializeFirestoreData(review);
+
         // Add new review to the beginning of the array
-        state.kitchenReviews[kitchenId].unshift(review);
+        state.kitchenReviews[kitchenId].unshift(serializedReview);
 
         // Update stats if they exist
         if (state.kitchenStats[kitchenId]) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
 import {
@@ -9,6 +9,7 @@ import { useGenericCart } from "../hooks/useGenericCart";
 import Edit from "../assets/images/edit.svg";
 import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
 import MobileLoader from "../components/Loader/MobileLoader";
+import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 
 export default function ListingPage() {
   const navigate = useNavigate();
@@ -20,6 +21,10 @@ export default function ListingPage() {
 
   // Use the generic cart hook for all cart operations
   const { cartItems, getCartQuantity, handleQuantityChange } = useGenericCart();
+
+  // State for managing pickup dates and times for each food item
+  const [pickupDates, setPickupDates] = useState({});
+  const [pickupTimes, setPickupTimes] = useState({});
 
   // Get the current kitchen ID from the food data (using the first food item)
   const { allFoods: allFoodsFromAllKitchens } = useAllKitchensWithFoods(10);
@@ -189,6 +194,39 @@ export default function ListingPage() {
   console.log("🚀 ~ ListingPage ~ goGrabItems:", goGrabItems);
   console.log("🚀 ~ ListingPage ~ preOrderItems:", preOrderItems);
 
+  // Date/Time picker handlers
+  const handleDateChange = useCallback(
+    (foodId, newDate, isPreOrder = false) => {
+      const key = isPreOrder ? `${foodId}_preorder` : foodId;
+      setPickupDates((prev) => ({
+        ...prev,
+        [key]: newDate,
+      }));
+      console.log("📅 [ListingPage] Date changed:", {
+        foodId,
+        newDate,
+        isPreOrder,
+      });
+    },
+    []
+  );
+
+  const handleTimeChange = useCallback(
+    (foodId, newTime, isPreOrder = false) => {
+      const key = isPreOrder ? `${foodId}_preorder` : foodId;
+      setPickupTimes((prev) => ({
+        ...prev,
+        [key]: newTime,
+      }));
+      console.log("⏰ [ListingPage] Time changed:", {
+        foodId,
+        newTime,
+        isPreOrder,
+      });
+    },
+    []
+  );
+
   // Get preorder items for a specific date
   const getPreOrderItemsForDate = (dateString) => {
     if (!kitchen?.preorderSchedule?.dates?.[dateString]) return [];
@@ -314,24 +352,43 @@ export default function ListingPage() {
                             initialQuantity={cartQty}
                             onQuantityChange={async (newQuantity) => {
                               const currentQty = getCartQuantity(food.id);
+                              const selectedDate = pickupDates[food.id];
+                              const selectedTime = pickupTimes[food.id];
+                              const isToday = selectedDate
+                                ? dayjs(selectedDate).isSame(dayjs(), "day")
+                                : true;
+
                               await handleQuantityChange({
                                 food,
                                 kitchen,
                                 newQuantity,
                                 currentQuantity: currentQty,
-                                selectedDate: null,
+                                selectedDate: selectedDate,
+                                selectedTime: selectedTime,
                                 specialInstructions: "",
-                                isPreOrder: false,
+                                isPreOrder: !isToday,
                               });
                             }}
                           />
                         </div>
-                        <div className="title">Pick up today</div>
-                        <div className="bottom">
-                          <div className="time">6:22 PM</div>
-                          <div className="icon">
-                            <img src={Edit} alt="" />
-                          </div>
+                        <div className="pickup-time-section">
+                          <DateTimePicker
+                            food={food}
+                            kitchen={kitchen}
+                            orderType="GO_GRAB"
+                            selectedDate={pickupDates[food.id]}
+                            selectedTime={pickupTimes[food.id]}
+                            onDateChange={(newDate) =>
+                              handleDateChange(food.id, newDate, false)
+                            }
+                            onTimeChange={(newTime) =>
+                              handleTimeChange(food.id, newTime, false)
+                            }
+                            disabled={!food || !kitchen}
+                            className="listing-page-picker"
+                            dateLabel=""
+                            timeLabel=""
+                          />
                         </div>
                       </div>
                     </div>
@@ -404,26 +461,43 @@ export default function ListingPage() {
                                   food.id,
                                   dateInfo.dateString
                                 );
+                                const selectedTime =
+                                  pickupTimes[`${food.id}_preorder`];
+
                                 await handleQuantityChange({
                                   food,
                                   kitchen,
                                   newQuantity,
                                   currentQuantity: currentQty,
                                   selectedDate: dateInfo.dateString,
+                                  selectedTime: selectedTime,
                                   specialInstructions: "",
                                   isPreOrder: true,
                                 });
                               }}
                             />
                           </div>
-                          <div className="title">
-                            Pick up {dateInfo.displayDate}
-                          </div>
-                          <div className="bottom">
-                            <div className="time">{availableTimes[0]}</div>
-                            <div className="icon">
-                              <img src={Edit} alt="" />
-                            </div>
+                          <div className="pickup-time-section">
+                            <DateTimePicker
+                              food={food}
+                              kitchen={kitchen}
+                              orderType="PRE_ORDER"
+                              selectedDate={
+                                pickupDates[`${food.id}_preorder`] ||
+                                dateInfo.dateString
+                              }
+                              selectedTime={pickupTimes[`${food.id}_preorder`]}
+                              onDateChange={(newDate) =>
+                                handleDateChange(food.id, newDate, true)
+                              }
+                              onTimeChange={(newTime) =>
+                                handleTimeChange(food.id, newTime, true)
+                              }
+                              disabled={!food || !kitchen}
+                              className="listing-page-picker"
+                              dateLabel=""
+                              timeLabel=""
+                            />
                           </div>
                         </div>
                       </div>

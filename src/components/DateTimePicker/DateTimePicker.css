@@ -1,0 +1,301 @@
+.date-time-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.p/* Custom styling to match existing design */
+.date-time-picker .picker-select option:disabled {
+  color: #ccc;
+}
+
+.date-time-picker .picker-select option[data-recommended="true"] {
+  background-color: #e8f5e8;
+  font-weight: 600;
+  color: #2e7d2e;
+}
+
+/* Hover effects */
+.picker-select:not(:disabled):hover {
+  border-color: #4caf50;
+}
+ld {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.picker-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin: 0;
+}
+
+.picker-select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.picker-select:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.picker-select:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.picker-value {
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.picker-value.disabled {
+  background-color: #f5f5f5;
+  color: #999;
+}
+
+.picker-value.error {
+  background-color: #ffebee;
+  color: #d32f2f;
+  border-color: #d32f2f;
+}
+
+/* Time picker icon styling */
+.time-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-value svg {
+  flex-shrink: 0;
+}
+
+/* Responsive styling */
+@media (min-width: 768px) {
+  .date-time-picker {
+    flex-direction: row;
+    align-items: end;
+  }
+
+  .picker-field {
+    flex: 1;
+  }
+}
+
+/* Error and disabled states */
+.date-time-picker.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.date-time-picker.no-dates .picker-value {
+  background-color: #ffebee;
+  color: #d32f2f;
+  border-color: #d32f2f;
+}
+
+/* Custom styling to match existing design */
+.date-time-picker .picker-select option:disabled {
+  color: #ccc;
+}
+
+/* Hover effects */
+.picker-select:not(:disabled):hover {
+  border-color: #4caf50;
+}
+
+/* Loading state */
+.picker-select.loading {
+  background-image: url("data:image/svg+xml,%3csvg width='16' height='16' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M8 1.5a6.5 6.5 0 1 0 6.5 6.5' stroke='%23666' stroke-width='2' stroke-linecap='round'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Integration with existing FoodDetailPage styles */
+.pickup-details .date-time-picker {
+  margin-top: 8px;
+}
+
+.pickup-details .date-time-picker .picker-field {
+  margin-bottom: 0;
+}
+
+.pickup-details .date-time-picker .picker-label {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.pickup-details .date-time-picker .picker-select {
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.pickup-details .date-time-picker .picker-value {
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+/* Listing Page specific styles */
+.listing-page-picker {
+  margin-top: 8px;
+}
+
+.listing-page-picker .picker-field {
+  margin-bottom: 8px;
+}
+
+.listing-page-picker .picker-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.listing-page-picker .picker-select {
+  padding: 6px 8px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  background: #f8f9fa;
+  min-height: 32px;
+}
+
+.listing-page-picker .picker-select:focus {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 1px rgba(76, 175, 80, 0.2);
+  background: white;
+}
+
+/* Compact layout for listing page */
+.pickup-time-section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.pickup-time-section .date-time-picker {
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pickup-time-section .picker-field {
+  margin-bottom: 0;
+}
+
+/* Mobile responsive for listing page */
+@media (max-width: 767px) {
+  .listing-page-picker .picker-select {
+    font-size: 11px;
+    padding: 5px 6px;
+    min-height: 28px;
+  }
+
+  .listing-page-picker .picker-label {
+    font-size: 11px;
+  }
+
+  .pickup-time-section {
+    margin-top: 6px;
+    padding-top: 6px;
+  }
+}
+
+/* Order Page Edit Section */
+.pickup-edit-section {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.pickup-edit-section .date-time-picker {
+  margin-bottom: 8px;
+}
+
+.pickup-edit-section .picker-field {
+  margin-bottom: 8px;
+}
+
+.pickup-edit-section .picker-label {
+  font-size: 12px;
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.pickup-edit-section .picker-select {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+}
+
+.pickup-edit-section .picker-select:focus {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 1px rgba(76, 175, 80, 0.2);
+}
+
+.edit-actions button:hover {
+  opacity: 0.9;
+} /* Date value styling to match existing design */
+.picker-value.date-value {
+  background-color: #fff2e6;
+  color: #ff6b35;
+  border-color: #ff6b35;
+  font-weight: 500;
+}
+
+/* Time value styling to match existing design */
+.picker-value.time-value {
+  background-color: #e8f5e8;
+  color: #4caf50;
+  border-color: #4caf50;
+  font-weight: 500;
+}
+
+.picker-select.date-select:focus {
+  border-color: #ff6b35;
+  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
+}
+
+.picker-select.time-select:focus {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
