@@ -10,6 +10,7 @@ import { uploadImageToStorage } from "../services/storageService";
 import { showToast } from "../utils/toast";
 import { placeOrder, createOrderObject } from "../services/orderService";
 import { clearCart } from "../store/slices/cartSlice";
+import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 
 export default function PaymentPage() {
   const [uploadPreview, setUploadPreview] = useState(null);
@@ -18,6 +19,10 @@ export default function PaymentPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [isDateTimePickerOpen, setIsDateTimePickerOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [modalSelectedDate, setModalSelectedDate] = useState(null);
+  const [modalSelectedTime, setModalSelectedTime] = useState(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -53,13 +58,59 @@ export default function PaymentPage() {
 
   // Handle edit pickup time
   const handleEditPickupTime = (item) => {
-    // Navigate to order page with the specific item to edit
-    navigate("/order", {
-      state: {
-        editItem: item.id || item.foodId,
-        returnTo: "/payment",
-      },
-    });
+    setEditingItem(item);
+    setModalSelectedDate(item.selectedDate || item.pickupDetails?.date);
+    setModalSelectedTime(item.pickupDetails?.time);
+    setIsDateTimePickerOpen(true);
+  };
+
+  // Handle DateTimePicker close
+  const handleDateTimePickerClose = () => {
+    setIsDateTimePickerOpen(false);
+    setEditingItem(null);
+    setModalSelectedDate(null);
+    setModalSelectedTime(null);
+  };
+
+  // Handle date change in modal
+  const handleModalDateChange = (date) => {
+    setModalSelectedDate(date);
+  };
+
+  // Handle time change in modal
+  const handleModalTimeChange = (time) => {
+    setModalSelectedTime(time);
+  };
+
+  // Handle pickup details update from modal
+  const handleModalPickupUpdate = () => {
+    if (editingItem && modalSelectedDate && modalSelectedTime) {
+      const pickupDetails = {
+        date: modalSelectedDate,
+        time: modalSelectedTime,
+        display:
+          modalSelectedDate === dayjs().format("YYYY-MM-DD")
+            ? "Pick up today"
+            : `Pick up ${dayjs(modalSelectedDate).format("MMM D ddd")}`,
+        orderType:
+          modalSelectedDate === dayjs().format("YYYY-MM-DD")
+            ? "GO_GRAB"
+            : "PRE_ORDER",
+      };
+
+      // Here you would dispatch an action to update the cart item
+      console.log("Updating pickup details for item:", editingItem);
+      console.log("New pickup details:", pickupDetails);
+
+      showToast.success(
+        `Pickup time updated to ${pickupDetails.display} at ${pickupDetails.time}`
+      );
+
+      // Close the modal
+      handleDateTimePickerClose();
+    } else {
+      showToast.error("Please select both date and time");
+    }
   };
 
   // Group cart items by pickup date and time
@@ -433,7 +484,12 @@ export default function PaymentPage() {
                             </div>
                           </div>
                         </div>
-                        <div className="edit-icon" role="button" tabIndex={0}>
+                        <div
+                          className="edit-icon"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleEditPickupTime(item)}
+                        >
                           <img src={Edit} alt="Edit pickup time" />
                         </div>
                       </div>
@@ -477,6 +533,7 @@ export default function PaymentPage() {
                               className="edit-icon"
                               role="button"
                               tabIndex={0}
+                              onClick={() => handleEditPickupTime(item)}
                             >
                               <img src={Edit} alt="Edit pickup time" />
                             </div>
@@ -554,6 +611,102 @@ export default function PaymentPage() {
           </div>
         </div>
       </div>
+
+      {/* DateTimePicker Modal */}
+      {isDateTimePickerOpen && editingItem && (
+        <div className="modal-overlay" onClick={handleDateTimePickerClose}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Edit Pickup Time</h3>
+              <button
+                className="modal-close-btn"
+                onClick={handleDateTimePickerClose}
+                aria-label="Close modal"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="modal-content">
+              <div className="editing-item-info">
+                <h4>{editingItem.food?.name || "Food Item"}</h4>
+                <p>
+                  Current pickup: {editingItem.displayPickupTime} at{" "}
+                  {editingItem.displayPickupClock}
+                </p>
+              </div>
+
+              <div className="date-time-picker-container">
+                {/* Date Picker */}
+                <div className="picker-field">
+                  <label className="picker-label">Select Pickup Date:</label>
+                  <input
+                    type="date"
+                    className="picker-input"
+                    value={modalSelectedDate || ""}
+                    onChange={(e) => handleModalDateChange(e.target.value)}
+                    min={dayjs().format("YYYY-MM-DD")}
+                    max={dayjs().add(7, "days").format("YYYY-MM-DD")}
+                  />
+                </div>
+
+                {/* Time Picker */}
+                <div className="picker-field">
+                  <label className="picker-label">Select Pickup Time:</label>
+                  <div className="time-slots-container">
+                    {[
+                      "9:00 AM",
+                      "9:30 AM",
+                      "10:00 AM",
+                      "10:30 AM",
+                      "11:00 AM",
+                      "11:30 AM",
+                      "12:00 PM",
+                      "12:30 PM",
+                      "1:00 PM",
+                      "1:30 PM",
+                      "2:00 PM",
+                      "2:30 PM",
+                      "3:00 PM",
+                      "3:30 PM",
+                      "4:00 PM",
+                      "4:30 PM",
+                      "5:00 PM",
+                      "5:30 PM",
+                      "6:00 PM",
+                      "6:30 PM",
+                    ].map((time) => (
+                      <button
+                        key={time}
+                        className={`time-slot ${
+                          modalSelectedTime === time ? "selected" : ""
+                        }`}
+                        onClick={() => handleModalTimeChange(time)}
+                      >
+                        {time}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn-secondary"
+                onClick={handleDateTimePickerClose}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={handleModalPickupUpdate}
+                disabled={!modalSelectedDate || !modalSelectedTime}
+              >
+                Update Pickup Time
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
