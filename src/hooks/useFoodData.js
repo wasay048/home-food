@@ -12,25 +12,25 @@ import {
 /**
  * Helper function to format numbers into readable format (1K, 1M, 1B)
  */
-function formatCount(count) {
-  if (!count || count < 1000) {
-    return count?.toString() || "0";
-  }
+// function formatCount(count) {
+//   if (!count || count < 1000) {
+//     return count?.toString() || "0";
+//   }
 
-  if (count >= 1000000000) {
-    return Math.floor(count / 1000000000) + "B";
-  }
+//   if (count >= 1000000000) {
+//     return Math.floor(count / 1000000000) + "B";
+//   }
 
-  if (count >= 1000000) {
-    return Math.floor(count / 1000000) + "M";
-  }
+//   if (count >= 1000000) {
+//     return Math.floor(count / 1000000) + "M";
+//   }
 
-  if (count >= 1000) {
-    return Math.floor(count / 1000) + "K";
-  }
+//   if (count >= 1000) {
+//     return Math.floor(count / 1000) + "K";
+//   }
 
-  return count.toString();
-}
+//   return count.toString();
+// }
 /**
  * Enhanced hook to fetch food item and kitchen data with aggregated kitchen reviews
  */

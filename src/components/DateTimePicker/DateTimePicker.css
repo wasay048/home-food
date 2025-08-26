@@ -93,16 +93,6 @@ ld {
 }
 
 /* Responsive styling */
-@media (min-width: 768px) {
-  .date-time-picker {
-    flex-direction: row;
-    align-items: end;
-  }
-
-  .picker-field {
-    flex: 1;
-  }
-}
 
 /* Error and disabled states */
 .date-time-picker.disabled {
@@ -202,9 +192,7 @@ ld {
 
 /* Compact layout for listing page */
 .pickup-time-section {
-  
   padding-top: 0px;
-  
 }
 
 .pickup-time-section .date-time-picker {

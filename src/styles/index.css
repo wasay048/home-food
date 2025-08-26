@@ -122,6 +122,8 @@ body,
   width: max-content;
   margin-bottom: 20px;
   border: 1px solid #eaedf3;
+  max-width: 100%;
+  width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -137,8 +139,11 @@ body,
   align-items: center;
   gap: 6px;
 }
+.product-detail .review-info .left.flex-0 {
+  flex-shrink: 0;
+}
 .product-detail .review-info .left .text {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--bs-body-color);
   margin-bottom: 0px;
 }
@@ -942,7 +947,15 @@ body,
   overflow: hidden;
   margin-bottom: 18px;
 }
-
+.success-image-wrapper {
+  text-align: center;
+}
+.success-image-wrapper img {
+  max-width: 120px;
+  display: block;
+  margin: auto;
+  margin-bottom: 20px;
+}
 .interactive-map {
   width: 100%;
   height: 100%;
@@ -1020,12 +1033,14 @@ body,
 .menu-listing .menu-list .left .data .title {
   font-size: 12px;
   font-weight: bold;
+  text-align: left;
   margin-bottom: 4px;
   color: var(--bs-body-color);
 }
 .menu-listing .menu-list .left .data .text {
   font-size: 11px;
   font-weight: 400;
+  text-align: left;
   margin-bottom: 4px;
   color: #7e8ca0;
   display: -webkit-box;
@@ -1038,6 +1053,7 @@ body,
 .menu-listing .menu-list .left .data .price {
   font-size: 12px;
   font-weight: bold;
+  text-align: left;
   color: #3fc045;
 }
 .menu-listing .menu-list .quantity-warpper {
@@ -1670,6 +1686,7 @@ body,
 .action-button.secondary {
   background-color: #ffffff;
   color: #3fc045;
+  text-decoration: none;
   border: 2px solid #3fc045;
 }
 
@@ -1698,6 +1715,59 @@ body,
   .success-actions {
     gap: 10px;
   }
+}
+
+/* Success Page Ordered Items - Updated to match OrderPage structure */
+.success-image-wrapper + h2.small-title {
+  margin-top: 24px;
+}
+.quantity-text,
+.pickup-time-display {
+  font-size: 13px;
+  font-weight: 600;
+}
+.success-image-wrapper .menu-listing .quantity-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #3fc045;
+  margin-bottom: 4px;
+}
+
+.success-image-wrapper .pickup-time-display {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+/* Success Page Order Details Card styling */
+.order-summary-card {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.order-summary-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #212226;
+}
+
+.order-detail-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.detail-label {
+  color: #666;
+}
+
+.detail-value {
+  font-weight: 500;
+  color: #212226;
 }
 
 /* Mobile responsive for upload */

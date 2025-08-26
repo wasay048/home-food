@@ -4,15 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import dayjs from "dayjs";
 import Edit from "../assets/images/edit.svg";
-import Map from "../assets/images/map.png";
-import {
-  Copy,
-  Upload,
-  X,
-  Image as ImageIcon,
-  CheckCircle,
-  AlertCircle,
-} from "lucide-react";
+
+import { Copy, X, Image as ImageIcon } from "lucide-react";
 import { uploadImageToStorage } from "../services/storageService";
 import { showToast } from "../utils/toast";
 import { placeOrder, createOrderObject } from "../services/orderService";
@@ -303,6 +296,39 @@ export default function PaymentPage() {
             totalAmount: paymentCalculation.totalPayment,
             kitchenName: kitchenInfo.name,
             pickupAddress: kitchenInfo.address,
+            orderedItems: cartItems.map((item) => {
+              const pickupDate = item.pickupDetails?.date || item.selectedDate;
+              const orderType = item.pickupDetails?.orderType;
+              const isPreOrderItem =
+                orderType === "PRE_ORDER" ||
+                item.isPreOrder ||
+                (pickupDate && pickupDate !== dayjs().format("YYYY-MM-DD"));
+
+              console.log("🔍 [PaymentPage] Mapping cart item:", {
+                name: item.food?.name,
+                pickupDate,
+                orderType,
+                isPreOrderItem,
+                originalIsPreOrder: item.isPreOrder,
+              });
+
+              return {
+                id: item.foodId || item.id,
+                foodItemId: item.foodId || item.id,
+                name: item.food?.name || "Unknown Item",
+                description:
+                  item.food?.description ||
+                  "This dish features tender, juicy flavors",
+                imageUrl: item.food?.imageUrl || item.food?.image,
+                price: item.food?.cost || item.food?.price || "0.00",
+                quantity: item.quantity || 1,
+                pickupDate: pickupDate,
+                pickupTime: item.pickupDetails?.time,
+                isPreOrder: isPreOrderItem,
+                orderType: orderType,
+                isFromPreorder: item.isFromPreorder || isPreOrderItem,
+              };
+            }),
           },
         });
       }, 2000);
@@ -321,40 +347,7 @@ export default function PaymentPage() {
           <div className="padding-20 order-page">
             <h4 className="medium-title mb-12">Pickup Address</h4>
             <p className="body-text-med mb-20">{kitchenInfo.address}</p>
-            <div className="map-container">
-              <div className="interactive-map">
-                {/* For demo purposes, using a styled fallback map */}
-                <div className="map-fallback">
-                  <img
-                    src={Map}
-                    alt="Kitchen location map"
-                    style={{
-                      width: "100%",
-                      height: "200px",
-                      objectFit: "cover",
-                      borderRadius: "12px",
-                    }}
-                  />
-                  <div className="map-overlay">
-                    <div className="map-pin">
-                      <div className="pin-icon">📍</div>
-                      <span className="pin-label">{kitchenInfo.name}</span>
-                    </div>
-                  </div>
-                </div>
-                {/* Uncomment below for real Google Maps integration */}
-                {/* <iframe
-                  src={`https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${kitchenInfo.latitude},${kitchenInfo.longitude}&zoom=15`}
-                  width="100%"
-                  height="200"
-                  style={{ border: 0, borderRadius: "12px" }}
-                  allowFullScreen=""
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title="Kitchen Location"
-                /> */}
-              </div>
-            </div>
+
             <div className="hr mb-18"></div>
 
             {/* <div className="payment-method mb-20"> ... */}
@@ -440,17 +433,7 @@ export default function PaymentPage() {
                             </div>
                           </div>
                         </div>
-                        <div
-                          className="edit-icon"
-                          onClick={() => handleEditPickupTime(item)}
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              handleEditPickupTime(item);
-                            }
-                          }}
-                        >
+                        <div className="edit-icon" role="button" tabIndex={0}>
                           <img src={Edit} alt="Edit pickup time" />
                         </div>
                       </div>
@@ -492,14 +475,8 @@ export default function PaymentPage() {
                             </div>
                             <div
                               className="edit-icon"
-                              onClick={() => handleEditPickupTime(item)}
                               role="button"
                               tabIndex={0}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                  handleEditPickupTime(item);
-                                }
-                              }}
                             >
                               <img src={Edit} alt="Edit pickup time" />
                             </div>
@@ -539,56 +516,6 @@ export default function PaymentPage() {
                       <div className="upload-status-overlay">
                         <div className="upload-spinner"></div>
                         <p>Uploading to Firebase...</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="file-info">
-                    <div className="file-details">
-                      <p className="file-name">{uploadedFile?.name}</p>
-                      <p className="file-size">
-                        {uploadedFile &&
-                          (uploadedFile.size / 1024 / 1024).toFixed(2)}{" "}
-                        MB
-                      </p>
-                    </div>
-
-                    {/* Upload Status */}
-                    <div className="upload-status">
-                      {isUploading && (
-                        <div className="status-item uploading">
-                          <Upload size={16} />
-                          <span>Uploading...</span>
-                        </div>
-                      )}
-
-                      {firebaseImageUrl && !isUploading && (
-                        <div className="status-item success">
-                          <CheckCircle size={16} />
-                          <span>Uploaded to Firebase</span>
-                        </div>
-                      )}
-
-                      {uploadError && (
-                        <div className="status-item error">
-                          <AlertCircle size={16} />
-                          <span>Upload failed</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Firebase URL */}
-                    {firebaseImageUrl && (
-                      <div className="firebase-url">
-                        <p className="url-label">Firebase Storage URL:</p>
-                        <a
-                          href={firebaseImageUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="url-link"
-                        >
-                          View uploaded image
-                        </a>
                       </div>
                     )}
                   </div>

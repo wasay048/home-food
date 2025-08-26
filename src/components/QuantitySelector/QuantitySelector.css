@@ -50,7 +50,7 @@
 .quantity-selector__buttons {
   display: flex;
   align-items: center;
-  background-color: #191a26;
+  background-color: #000;
   border-radius: 25px;
   padding: 4px;
   gap: 4px;
@@ -62,7 +62,8 @@
   border: none;
   border-radius: 50%;
   background-color: transparent;
-  color: white;
+  color: #111;
+  background-color: white;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -81,7 +82,9 @@
 }
 
 .quantity-btn:disabled {
-  opacity: 0.5;
+  /* opacity: 0.5; */
+  background-color: #ddd;
+  /* opacity: 0.6; */
   cursor: not-allowed;
 }
 
@@ -94,10 +97,10 @@
   background-color: #f0f0f0;
 }
 
-.quantity-btn--decrement {
-  background-color: transparent;
+/* .quantity-btn--decrement {
+  background-color: white;
   color: white;
-}
+} */
 
 .quantity-btn svg {
   width: 12px;
@@ -114,11 +117,11 @@
 }
 .menu-listing .menu-list .listing-page-picker .picker-select {
   padding: 4px 5px;
-    font-size: 9px;
-    border-radius: 6px;
-    border: 1px solid #e0e0e0;
-    background: #f8f9fa;
-    min-height: 20px;
+  font-size: 9px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  background: #f8f9fa;
+  min-height: 20px;
 }
 .quantity-selector--small .quantity-selector__controls {
   gap: 8px;
@@ -135,7 +138,7 @@
 
 .quantity-selector--small .quantity-selector__buttons {
   padding: 2px;
-  gap: 2px;
+  gap: 8px;
 }
 
 .quantity-selector--small .quantity-btn {
@@ -184,12 +187,14 @@
 
 .quantity-selector--large .quantity-selector__buttons {
   padding: 2px;
-  gap: 2px;
+  gap: 12px;
 }
 
 .quantity-selector--large .quantity-btn {
   width: 32px;
   height: 32px;
+  background-color: white;
+  color: #111;
 }
 
 .quantity-selector--large .quantity-btn svg {

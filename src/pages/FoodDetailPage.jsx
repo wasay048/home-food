@@ -7,6 +7,8 @@ import { useFoodDetailRedux } from "../hooks/useFoodDetailRedux";
 import MobileLoader from "../components/Loader/MobileLoader";
 import { LazyImage } from "../components/LazyImage/LazyImage";
 import StarRating from "../components/StarRating/StarRating";
+import Order1 from "../assets/images/order1.png";
+import Order2 from "../assets/images/order2.png";
 import {
   debugReviewsQuery,
   testFirestoreConnection,
@@ -15,6 +17,123 @@ import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
 import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import "../styles/FoodDetailPage.css";
+
+// Custom Slider Component
+const CustomSlider = ({ isLiked, handleLikeToggle }) => {
+  const sliderImages = [Order1, Order2, Order1, Order2]; // Repeat images for continuous loop
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAutoSliding, setIsAutoSliding] = useState(true);
+
+  // Auto-slide functionality
+  useEffect(() => {
+    if (!isAutoSliding) return;
+
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % sliderImages.length);
+    }, 2000); // 2 seconds
+
+    return () => clearInterval(interval);
+  }, [isAutoSliding, sliderImages.length]);
+
+  const goToPrevious = () => {
+    setIsAutoSliding(false);
+    setCurrentIndex((prevIndex) =>
+      prevIndex === 0 ? sliderImages.length - 1 : prevIndex - 1
+    );
+    // Resume auto-sliding after 3 seconds
+    setTimeout(() => setIsAutoSliding(true), 3000);
+  };
+
+  const goToNext = () => {
+    setIsAutoSliding(false);
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % sliderImages.length);
+    // Resume auto-sliding after 3 seconds
+    setTimeout(() => setIsAutoSliding(true), 3000);
+  };
+
+  return (
+    <div className="custom-slider">
+      <div className="slider-container">
+        <div
+          className="slider-track"
+          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+        >
+          {sliderImages.map((image, index) => (
+            <div key={index} className="slider-slide">
+              <img src={image} alt={`Order ${(index % 2) + 1}`} />
+            </div>
+          ))}
+        </div>
+
+        {/* Heart Icon */}
+        <div
+          className={`icon heart-icon ${isLiked ? "liked" : ""}`}
+          onClick={handleLikeToggle}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 18 18"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M9.80568 16.3852C9.53252 16.4816 9.08261 16.4816 8.80945 16.3852C6.47955 15.5898 1.27344 12.2717 1.27344 6.64781C1.27344 4.16527 3.27393 2.15674 5.74041 2.15674C7.20262 2.15674 8.49612 2.86374 9.30756 3.95638C10.119 2.86374 11.4205 2.15674 12.8747 2.15674C15.3412 2.15674 17.3417 4.16527 17.3417 6.64781C17.3417 12.2717 12.1356 15.5898 9.80568 16.3852Z"
+              stroke={isLiked ? "#FF5555" : "#FF5555"}
+              fill={isLiked ? "#FF5555" : "transparent"}
+              strokeWidth="1.20512"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+
+        {/* Previous Button */}
+        <button className="slider-btn slider-prev" onClick={goToPrevious}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path
+              d="M12.5 15L7.5 10L12.5 5"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+
+        {/* Next Button */}
+        <button className="slider-btn slider-next" onClick={goToNext}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path
+              d="M7.5 5L12.5 10L7.5 15"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+
+        {/* Dots Indicator */}
+        <div className="slider-dots">
+          {sliderImages.slice(0, 2).map((_, index) => (
+            <button
+              key={index}
+              className={`slider-dot ${
+                currentIndex % 2 === index ? "active" : ""
+              }`}
+              onClick={() => {
+                setIsAutoSliding(false);
+                setCurrentIndex(index);
+                setTimeout(() => setIsAutoSliding(true), 3000);
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function FoodDetailPage() {
   const [searchParams] = useSearchParams();
@@ -232,8 +351,22 @@ export default function FoodDetailPage() {
         console.log("✅ Success:", result.message);
         // Show success toast
         showToast.cart(result.message);
-        // Redirect to foods page after 1 second
-        navigate("/foods", { replace: true });
+        // Redirect to foods page after 1 second, passing current page state
+        const currentPageParams = new URLSearchParams({
+          kitchenId: kitchenId || "",
+          foodId: foodId || "",
+          ...(selectedDate && { date: selectedDate }),
+        }).toString();
+        navigate("/foods", {
+          replace: true,
+          state: {
+            from: {
+              pathname: location.pathname,
+              search: location.search,
+              fullUrl: `/share?${currentPageParams}`,
+            },
+          },
+        });
       } else {
         console.log("ℹ️ Info:", result.message);
         // Show info toast for duplicate items
@@ -399,7 +532,7 @@ export default function FoodDetailPage() {
             <h2 className="title text-center">{food?.name}</h2>
             <h2 className="text text-center">By {food?.kitchenName}</h2>
             <div className="review-info">
-              <div className="left">
+              <div className="left flex-0">
                 <div>
                   <svg
                     width="15"
@@ -409,8 +542,8 @@ export default function FoodDetailPage() {
                     xmlns="http://www.w3.org/2000/svg"
                   >
                     <path
-                      fill-rule="evenodd"
-                      clip-rule="evenodd"
+                      fillRule="evenodd"
+                      clipRule="evenodd"
                       d="M13.7499 4.80322L9.97336 4.26881L8.28761 0.940677C8.12458 0.667862 7.82468 0.5 7.50028 0.5C7.17588 0.5 6.87597 0.667862 6.71295 0.940677L5.02719 4.26966L1.25064 4.80322C0.920725 4.84924 0.64636 5.07363 0.543084 5.38188C0.439808 5.69013 0.525567 6.02868 0.764246 6.25497L3.49628 8.84616L2.85154 12.5053C2.79531 12.8246 2.93026 13.1472 3.19965 13.3375C3.46905 13.5279 3.82617 13.553 4.12089 13.4022L7.50028 11.6739L10.8779 13.4005C11.1726 13.5513 11.5298 13.5262 11.7992 13.3358C12.0685 13.1455 12.2035 12.8229 12.1473 12.5036L11.5025 8.84446L14.2363 6.25497C14.4744 6.02885 14.56 5.69094 14.4572 5.38312C14.3543 5.0753 14.0809 4.85087 13.7517 4.80407L13.7499 4.80322Z"
                       fill="#FBBC04"
                     />
@@ -445,8 +578,8 @@ export default function FoodDetailPage() {
                     <path
                       d="M12.6481 11.3335C13.5778 12.6592 14.0225 13.3652 13.7576 13.9334C13.731 13.9904 13.6999 14.0454 13.6646 14.098C13.2816 14.6668 12.2916 14.6668 10.3118 14.6668H6.68811C4.7083 14.6668 3.71839 14.6668 3.33536 14.098C3.29999 14.0454 3.26888 13.9904 3.24232 13.9334C2.97742 13.3652 3.42213 12.6592 4.35181 11.3335"
                       stroke="#3FC045"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
                     <path
                       d="M9.33831 11.6626C9.11344 11.8791 8.81291 12.0002 8.50017 12.0002C8.18737 12.0002 7.88684 11.8791 7.66197 11.6626C5.60291 9.66736 2.8435 7.4385 4.18918 4.20265C4.91677 2.45304 6.66333 1.3335 8.50017 1.3335C10.337 1.3335 12.0835 2.45305 12.8111 4.20265C14.1551 7.43443 11.4024 9.67423 9.33831 11.6626Z"
@@ -459,35 +592,20 @@ export default function FoodDetailPage() {
                 </div>
               </div>
             </div>
-            <div className="product-image">
-              <div
-                className={`icon heart-icon ${isLiked ? "liked" : ""}`}
-                onClick={handleLikeToggle}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 18 18"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M9.80568 16.3852C9.53252 16.4816 9.08261 16.4816 8.80945 16.3852C6.47955 15.5898 1.27344 12.2717 1.27344 6.64781C1.27344 4.16527 3.27393 2.15674 5.74041 2.15674C7.20262 2.15674 8.49612 2.86374 9.30756 3.95638C10.119 2.86374 11.4205 2.15674 12.8747 2.15674C15.3412 2.15674 17.3417 4.16527 17.3417 6.64781C17.3417 12.2717 12.1356 15.5898 9.80568 16.3852Z"
-                    stroke={isLiked ? "#FF5555" : "#FF5555"}
-                    fill={isLiked ? "#FF5555" : "transparent"}
-                    strokeWidth="1.20512"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
+
+            <CustomSlider
+              isLiked={isLiked}
+              handleLikeToggle={handleLikeToggle}
+            />
+
+            {/* <div className="product-image">
               <LazyImage
                 src={food?.imageUrl}
                 alt={food?.name || "Product"}
                 fallbackSrc={ProductImage}
                 className=""
               />
-            </div>
+            </div> */}
             <div className="quantity-warpper">
               <div className="price">
                 <sup>$</sup>
@@ -587,7 +705,7 @@ export default function FoodDetailPage() {
                 marginBottom: "16px",
               }}
             />
-             <div className="add-to-cart-action mt-2">
+            <div className="add-to-cart-action mt-2">
               <button
                 className={`button ${
                   !availabilityStatus.isAvailable ? "sold-out" : ""
@@ -612,28 +730,44 @@ export default function FoodDetailPage() {
                   viewBox="0 0 24 24"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
-                  onClick={() => navigate("/foods", { replace: true })}
+                  onClick={() => {
+                    const currentPageParams = new URLSearchParams({
+                      kitchenId: kitchenId || "",
+                      foodId: foodId || "",
+                      ...(selectedDate && { date: selectedDate }),
+                    }).toString();
+                    navigate("/foods", {
+                      replace: true,
+                      state: {
+                        from: {
+                          pathname: location.pathname,
+                          search: location.search,
+                          fullUrl: `/share?${currentPageParams}`,
+                        },
+                      },
+                    });
+                  }}
                 >
                   <path
                     d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z"
                     stroke="white"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
                   <path
                     d="M3 6H21"
                     stroke="white"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
                   <path
                     d="M16 10C16 11.0609 15.5786 12.0783 14.8284 12.8284C14.0783 13.5786 13.0609 14 12 14C10.9391 14 9.92172 13.5786 9.17157 12.8284C8.42143 12.0783 8 11.0609 8 10"
                     stroke="white"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
                 </svg>
               </div>
@@ -919,7 +1053,6 @@ export default function FoodDetailPage() {
                 </div>
               )}
             </div>
-           
           </div>
         </div>
       </div>

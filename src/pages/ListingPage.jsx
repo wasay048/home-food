@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
-import qrCode from '../assets/images/home-food-qr.svg'
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import qrCode from "../assets/images/home-food-qr.svg";
 import dayjs from "dayjs";
 import {
   useKitchenWithFoods,
   useAllKitchensWithFoods,
 } from "../hooks/useKitchenListing";
 import { useGenericCart } from "../hooks/useGenericCart";
-import Edit from "../assets/images/edit.svg";
+// import Edit from "../assets/images/edit.svg";
 import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
 import MobileLoader from "../components/Loader/MobileLoader";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
@@ -17,8 +17,37 @@ export default function ListingPage() {
   const location = useLocation();
   const { kitchenId } = useParams(); // Get kitchenId from URL if available
 
-  // Get the referrer URL from location state or use "/" as fallback
-  const backUrl = location.state?.from?.pathname || "/";
+  // Function to go back to previous page in history
+  const handleGoBack = () => {
+    // Check if we have state from FoodDetailPage with the exact params
+    if (location.state?.from?.fullUrl) {
+      console.log(
+        "Going back to FoodDetailPage with params:",
+        location.state.from.fullUrl
+      );
+      navigate(location.state.from.fullUrl);
+      return;
+    }
+
+    // Check if we have any location state indicating where we came from
+    if (location.state?.from?.pathname) {
+      console.log(
+        "Going back to:",
+        location.state.from.pathname + (location.state.from.search || "")
+      );
+      navigate(
+        location.state.from.pathname + (location.state.from.search || "")
+      );
+      return;
+    }
+
+    // Fallback: try browser history first, then home
+    try {
+      navigate(-1);
+    } catch (error) {
+      navigate("/");
+    }
+  };
 
   // Use the generic cart hook for all cart operations
   const { cartItems, getCartQuantity, handleQuantityChange } = useGenericCart();
@@ -245,20 +274,8 @@ export default function ListingPage() {
 
   const availablePreorderDates = getAvailablePreorderDates();
 
-  if (loading) {
-    return (
-      <div className="container">
-        <div className="mobile-container">
-          <MobileLoader
-            isLoading={loading}
-            text="Loading food details..."
-            overlay={true}
-            size="medium"
-          />
-        </div>
-      </div>
-    );
-  }
+  // Check if data is fully loaded
+  const isDataLoaded = !loading && kitchen && foods.length > 0;
 
   if (error) {
     return (
@@ -272,12 +289,31 @@ export default function ListingPage() {
     );
   }
 
+  // Show loader if still loading OR if data is not ready
+  if (loading || !isDataLoaded) {
+    return (
+      <div className="container">
+        <div className="mobile-container">
+          <MobileLoader
+            isLoading={true}
+            text="Loading menu items..."
+            overlay={true}
+            size="medium"
+          />
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="container">
       <div className="mobile-container">
         <div className="padding-20">
           <div className="back-link-title">
-            <Link className="back-link" to={backUrl}>
+            <button
+              className="back-link"
+              onClick={handleGoBack}
+              style={{ border: "none", background: "none", cursor: "pointer" }}
+            >
               <svg
                 width="9"
                 height="14"
@@ -290,7 +326,7 @@ export default function ListingPage() {
                   fill="#212226"
                 />
               </svg>
-            </Link>
+            </button>
             <div className="title">More offers from HomeFresh</div>
           </div>
 
@@ -298,19 +334,6 @@ export default function ListingPage() {
           <h2 className="small-title mb-2">
             {kitchen?.name || "Coco&apos;s Kitchen"}
           </h2>
-
-          {/* Debug Info - Show when no items found */}
-          {/* {loading === false && foods && foods?.length === 0 && (
-            <div className="text-center py-4">
-              <p>No food items found for this kitchen.</p>
-              <p className="text-muted">
-                Kitchen ID: {currentKitchenId || "No kitchen found"}
-              </p>
-              {kitchen && (
-                <p className="text-muted">Kitchen Name: {kitchen.name}</p>
-              )}
-            </div>
-          )} */}
 
           {/* Go & Grab Section */}
           {goGrabItems.length > 0 && (
@@ -418,8 +441,8 @@ export default function ListingPage() {
                       food.id,
                       dateInfo.dateString
                     );
-                    const availableTimes = food.scheduleItem
-                      ?.availableTimes || ["6:22 PM"];
+                    // const availableTimes = food.scheduleItem
+                    //   ?.availableTimes || ["6:22 PM"];
 
                     return (
                       <div
@@ -509,7 +532,7 @@ export default function ListingPage() {
             );
           })}
 
-          {/* Continue to Cart Button */}
+          {/* Continue to Cart Button - Only show when data is loaded */}
           {cartItems.length > 0 && (
             <button
               className="action-button mb-16"
