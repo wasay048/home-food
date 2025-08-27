@@ -5,7 +5,7 @@ export const WECHAT_CONFIG = {
   // Use non-www domain to match WeChat Console configuration
   REDIRECT_URI: "https://homefreshfoods.ai/wechat/callback",
   REDIRECT_URI_DEV: "http://localhost:5173/wechat/callback",
-  SCOPE: "snsapi_base", // Get user info including avatar and nickname
+  SCOPE: "snsapi_userinfo", // Get user info including avatar and nickname
   // WeChat OAuth URLs
   // Use different URLs based on device type
   WEB_AUTHORIZE_URL: "https://open.weixin.qq.com/connect/oauth2/authorize",

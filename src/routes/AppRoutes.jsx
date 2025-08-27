@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import HomePage from "../pages/HomePage";
 import LoginPage from "../pages/LoginPage";
 import WeChatCallbackPage from "../pages/WeChatCallbackPage";
+import WeChatDebugPage from "../pages/WeChatDebugPage";
 import ListingPage from "../pages/ListingPage";
 import LandingPage from "../pages/LandingPage";
 import FoodDetailPage from "../pages/FoodDetailPage";
@@ -27,6 +28,7 @@ export default function AppRoutes() {
       <Route path="/success" element={<SuccessPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/wechat/callback" element={<WeChatCallbackPage />} />
+      <Route path="/wechat/debug" element={<WeChatDebugPage />} />
 
       {/* Future protected routes */}
       <Route element={<ProtectedRoute />}>
