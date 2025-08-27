@@ -60,7 +60,7 @@ export function AuthProvider({ children }) {
   const signInWithWeChatPopup = useCallback(() => {
     const appId = "wx4a71fe09bb125182";
     const redirect = encodeURIComponent(
-      "https://master.d5tekh3anrrmn.amplifyapp.com/wechat/callback"
+      "https://www.homefreshfoods.ai/wechat/callback"
     );
     const scope = "snsapi_base";
     const state = "we_" + Math.random().toString(36).slice(2);

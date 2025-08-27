@@ -35,7 +35,7 @@ Your WeChat app ID (`wx4a71fe09bb125182`) needs to be properly configured:
 
    ```
    Domain: master.d5tekh3anrrmn.amplifyapp.com
-   Callback URL: https://master.d5tekh3anrrmn.amplifyapp.com/wechat/callback
+   Callback URL: https://www.homefreshfoods.ai/wechat/callback
    ```
 
 2. **WeChat Developer Console**
@@ -53,7 +53,7 @@ Your WeChat app ID (`wx4a71fe09bb125182`) needs to be properly configured:
 WeChat requires a verification file at your domain root:
 
 ```
-https://master.d5tekh3anrrmn.amplifyapp.com/MP_verify_[token].txt
+https://www.homefreshfoods.ai/MP_verify_[token].txt
 ```
 
 ## 🔄 **Testing Process**
@@ -72,7 +72,7 @@ http://localhost:5173/share?kitchenId=...&foodId=...&date=...
 ### Production Testing
 
 ```
-https://master.d5tekh3anrrmn.amplifyapp.com/share/?kitchenId=...&foodId=...&date=...
+https://www.homefreshfoods.ai/share/?kitchenId=...&foodId=...&date=...
 ```
 
 - Same flow but with real domain verification
