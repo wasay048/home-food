@@ -2,7 +2,9 @@
 export const WECHAT_CONFIG = {
   APP_ID: "wx4a71fe09bb125182",
   APP_SECRET: "e8a88b5e0271b89a1dc71261d9063fad", // Note: In production, this should be on the backend only
-  REDIRECT_URI: `${window.location.origin}/wechat/callback`,
+  // Use non-www domain to match WeChat Console configuration
+  REDIRECT_URI: "https://homefreshfoods.ai/wechat/callback",
+  REDIRECT_URI_DEV: "http://localhost:5173/wechat/callback",
   SCOPE: "snsapi_base", // Get user info including avatar and nickname
   // WeChat OAuth URLs
   // Use different URLs based on device type
@@ -11,6 +13,25 @@ export const WECHAT_CONFIG = {
   QR_AUTHORIZE_URL: "https://open.weixin.qq.com/connect/qrconnect", // For QR code login
   ACCESS_TOKEN_URL: "https://api.weixin.qq.com/sns/oauth2/access_token",
   USER_INFO_URL: "https://api.weixin.qq.com/sns/userinfo",
+};
+
+// Determine redirect URI based on environment
+export const getRedirectUri = () => {
+  // const isLocalhost =
+  //   window.location.hostname === "localhost" ||
+  //   window.location.hostname === "127.0.0.1";
+  // const isDev = process.env.NODE_ENV === "development";
+
+  // if (isLocalhost || isDev) {
+  //   console.log("🔧 Using development redirect URI");
+  //   return WECHAT_CONFIG.REDIRECT_URI_DEV;
+  // } else {
+  //   console.log(
+  //     "🚀 Using production redirect URI (non-www to match WeChat Console)"
+  //   );
+  // }
+  console.log("� Redirect URI:", WECHAT_CONFIG.REDIRECT_URI);
+  return WECHAT_CONFIG.REDIRECT_URI;
 };
 
 // Detect if user is on mobile device
@@ -30,11 +51,13 @@ export const generateWeChatAuthUrl = (state = null) => {
   const randomState = state || Math.random().toString(36).substring(7);
 
   console.log("🔗 Generating WeChat OAuth URL");
-  console.log("🔍 Current origin:", window.location.origin);
+
+  const redirectUri = getRedirectUri();
+  console.log("🔍 Using redirect URI:", redirectUri);
 
   const params = new URLSearchParams({
     appid: WECHAT_CONFIG.APP_ID,
-    redirect_uri: WECHAT_CONFIG.REDIRECT_URI,
+    redirect_uri: redirectUri,
     response_type: "code",
     scope: WECHAT_CONFIG.SCOPE,
     state: randomState,

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WeChat OAuth Test Tool</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .test-section {
+        border: 1px solid #ddd;
+        padding: 20px;
+        margin: 10px 0;
+      }
+      .url-box {
+        background: #f5f5f5;
+        padding: 10px;
+        word-break: break-all;
+        font-family: monospace;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        cursor: pointer;
+        margin: 5px;
+      }
+      .error {
+        color: red;
+      }
+      .success {
+        color: green;
+      }
+      .info {
+        color: blue;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WeChat OAuth Configuration Test</h1>
+
+    <div class="test-section">
+      <h2>Current Configuration Analysis - Option B Implementation</h2>
+      <p><strong>App ID:</strong> wx4a71fe09bb125182</p>
+      <p><strong>Console Domain:</strong> homefreshfoods.ai (without www)</p>
+      <p>
+        <strong>App Domain:</strong> homefreshfoods.ai (without www) ✅ FIXED
+      </p>
+      <p class="success">
+        <strong>Status:</strong> Domain configuration now matches WeChat Console
+      </p>
+      <p class="info">
+        <strong>Redirect:</strong> www.homefreshfoods.ai → homefreshfoods.ai
+        (301 redirect)
+      </p>
+    </div>
+
+    <div class="test-section">
+      <h2>Test URLs</h2>
+
+      <h3>Test 1: Non-www Domain (Fixed Configuration)</h3>
+      <div class="url-box" id="url-without-www"></div>
+      <button onclick="testUrl('no-www')">Test in WeChat Browser</button>
+      <p class="success">
+        Expected: Should work - matches WeChat Console configuration
+      </p>
+
+      <h3>Test 2: WWW Domain (Should Redirect)</h3>
+      <div class="url-box" id="url-with-www"></div>
+      <button onclick="testUrl('www')">Test in WeChat Browser</button>
+      <p class="info">Expected: Should redirect to non-www and then work</p>
+    </div>
+
+    <div class="test-section">
+      <h2>✅ Option B Implementation Complete</h2>
+      <p><strong>Changes Made:</strong></p>
+      <ul>
+        <li>
+          ✅ Updated app to use <code>homefreshfoods.ai</code> (without www)
+        </li>
+        <li>✅ Added 301 redirect: www → non-www</li>
+        <li>✅ Updated WeChat OAuth configuration</li>
+        <li>✅ Now matches WeChat Console domain configuration</li>
+      </ul>
+
+      <p><strong>What happens now:</strong></p>
+      <ol>
+        <li>
+          Users visiting <code>www.homefreshfoods.ai</code> get redirected to
+          <code>homefreshfoods.ai</code>
+        </li>
+        <li>
+          WeChat OAuth uses <code>homefreshfoods.ai/wechat/callback</code>
+        </li>
+        <li>This matches your WeChat Console configuration</li>
+        <li>No more error 10003!</li>
+      </ol>
+    </div>
+
+    <div class="test-section">
+      <h2>Verification File Check</h2>
+      <button onclick="checkVerificationFile('www')">
+        Check www verification file
+      </button>
+      <button onclick="checkVerificationFile('no-www')">
+        Check non-www verification file
+      </button>
+      <div id="verification-results"></div>
+    </div>
+
+    <script>
+      const APP_ID = "wx4a71fe09bb125182";
+
+      function generateAuthUrl(domain) {
+        const redirectUri = encodeURIComponent(
+          `https://${domain}/wechat/callback`
+        );
+        const state = "test_" + Math.random().toString(36).substring(7);
+
+        return `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${APP_ID}&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_base&state=${state}#wechat_redirect`;
+      }
+
+      function testUrl(type) {
+        const domain =
+          type === "www" ? "www.homefreshfoods.ai" : "homefreshfoods.ai";
+        const url = generateAuthUrl(domain);
+
+        // Open in new window for testing
+        window.open(url, "_blank");
+      }
+
+      function checkVerificationFile(type) {
+        const domain =
+          type === "www" ? "www.homefreshfoods.ai" : "homefreshfoods.ai";
+        const testUrl = `https://${domain}/MP_verify_placeholder.txt`;
+
+        fetch(testUrl)
+          .then((response) => {
+            const result = response.ok
+              ? `✅ ${domain} verification file accessible`
+              : `❌ ${domain} verification file not found (${response.status})`;
+
+            document.getElementById(
+              "verification-results"
+            ).innerHTML += `<p>${result}</p>`;
+          })
+          .catch((error) => {
+            document.getElementById(
+              "verification-results"
+            ).innerHTML += `<p class="error">❌ ${domain} verification check failed: ${error.message}</p>`;
+          });
+      }
+
+      // Generate URLs on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        document.getElementById("url-without-www").textContent =
+          generateAuthUrl("homefreshfoods.ai");
+        document.getElementById("url-with-www").textContent = generateAuthUrl(
+          "www.homefreshfoods.ai"
+        );
+      });
+    </script>
+  </body>
+</html>

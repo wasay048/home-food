@@ -1,0 +1,15 @@
+<!-- WeChat Domain Verification File -->
+<!-- This is a placeholder file. Replace with actual verification content from WeChat Developer Console -->
+<!-- 
+INSTRUCTIONS:
+1. Go to https://developers.weixin.qq.com/
+2. Login with your WeChat Developer account
+3. Navigate to your app: wx4a71fe09bb125182
+4. Go to "Development" → "Interface Configuration" → "Authorization Callback Domain"
+5. Add domain: www.homefreshfoods.ai
+6. Download the verification file (MP_verify_xxxxxxxx.txt)
+7. Replace this file with the downloaded verification file
+8. Ensure this file is accessible at: https://www.homefreshfoods.ai/MP_verify_xxxxxxxx.txt
+-->
+
+PLACEHOLDER_VERIFICATION_CONTENT

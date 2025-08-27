@@ -2,13 +2,14 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useLogout } from "../hooks/useLogout";
+import WeChatDebugPanel from "../components/WeChatDebugPanel";
 import "./LandingPage.css";
 
 export default function LandingPage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [animatedText, setAnimatedText] = useState("");
   const fullText = "Enjoy delicious meal from your favorite chef.";
-  console.log("Deployed Version 5");
+  console.log("Deployed Version 6");
   // Redux state for debugging persistence
   const { user, isAuthenticated } = useSelector((state) => state.auth);
   const { items: cartItems, totalItems } = useSelector((state) => state.cart);
@@ -179,6 +180,7 @@ export default function LandingPage() {
           </div>
         </footer>
       </div>
+      <WeChatDebugPanel />
     </div>
   );
 }

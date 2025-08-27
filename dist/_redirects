@@ -1,1 +1,5 @@
+# Redirect www to non-www to match WeChat Console configuration
+https://www.homefreshfoods.ai/* https://homefreshfoods.ai/:splat 301!
+
+# Handle SPA routing
 /*    /index.html   200

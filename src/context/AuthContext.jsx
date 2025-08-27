@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux";
 import { performCompleteLogout } from "../store/actions/logoutActions";
 import { setTestUser } from "../store/slices/authSlice";
 import { firebaseApp, firebaseDisabled } from "../services/firebase";
+import { WECHAT_CONFIG, getRedirectUri } from "../config/wechat";
 import {
   getAuth,
   onAuthStateChanged,
@@ -58,13 +59,17 @@ export function AuthProvider({ children }) {
 
   // Placeholder: In real impl, redirect user to WeChat OAuth authorize URL
   const signInWithWeChatPopup = useCallback(() => {
-    const appId = "wx4a71fe09bb125182";
-    const redirect = encodeURIComponent(
-      "https://www.homefreshfoods.ai/wechat/callback"
-    );
-    const scope = "snsapi_base";
+    const appId = WECHAT_CONFIG.APP_ID;
+    const redirect = encodeURIComponent(getRedirectUri());
+    const scope = WECHAT_CONFIG.SCOPE;
     const state = "we_" + Math.random().toString(36).slice(2);
-    window.location.href = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${appId}&redirect_uri=${redirect}&response_type=code&scope=${scope}&state=${state}#wechat_redirect`;
+
+    const authUrl = `${WECHAT_CONFIG.WEB_AUTHORIZE_URL}?appid=${appId}&redirect_uri=${redirect}&response_type=code&scope=${scope}&state=${state}#wechat_redirect`;
+
+    console.log("🔗 [AuthContext] WeChat OAuth URL:", authUrl);
+    console.log("🔍 [AuthContext] Using redirect URI:", getRedirectUri());
+
+    window.location.href = authUrl;
   }, []);
 
   // Placeholder: exchange code with backend to obtain Firebase custom token OR OAuth credential
