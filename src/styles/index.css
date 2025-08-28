@@ -511,6 +511,10 @@ body,
   background-color: #3fc045;
   border: none;
 }
+.add-to-cart-action .sold-out {
+  background-color: #bebdbd;
+  color: #ffffff;
+}
 .add-to-cart-action .icon {
   height: 42px;
   width: 42px;

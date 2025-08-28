@@ -305,18 +305,7 @@ const DateTimePicker = ({
   }
 
   if (availableDates.length === 0) {
-    return (
-      <div className={`date-time-picker no-dates ${className}`} style={style}>
-        <div className="picker-field">
-          <label className="picker-label">{dateLabel}</label>
-          <div className="picker-value error">No dates available</div>
-        </div>
-        <div className="picker-field">
-          <label className="picker-label">{timeLabel}</label>
-          <div className="picker-value error">No times available</div>
-        </div>
-      </div>
-    );
+    return <div className={``} style={style}></div>;
   }
 
   const datePickerProps = showTimeFirst ? {} : { "data-first": true };

@@ -7,8 +7,6 @@ import { useFoodDetailRedux } from "../hooks/useFoodDetailRedux";
 import MobileLoader from "../components/Loader/MobileLoader";
 import { LazyImage } from "../components/LazyImage/LazyImage";
 import StarRating from "../components/StarRating/StarRating";
-import Order1 from "../assets/images/order1.png";
-import Order2 from "../assets/images/order2.png";
 import {
   debugReviewsQuery,
   testFirestoreConnection,
@@ -22,32 +20,29 @@ import "../styles/FoodDetailPage.css";
 // Enhanced Custom Slider Component with better styling
 // Enhanced Custom Slider Component with better styling and error handling
 const CustomSlider = ({ food, isLiked, handleLikeToggle }) => {
+  console.log("🚀 ~ CustomSlider ~ isLiked:", isLiked);
   // Generate slider images based on food data
   const generateSliderImages = () => {
     // Check if imagesUrl array exists and has images
+    console.log("🖼️ [CustomSlider] Checking imagesUrl array:", food);
+
     if (
-      food?.imagesUrl &&
-      Array.isArray(food.imagesUrl) &&
-      food.imagesUrl.length > 0
+      food?.imageUrls &&
+      Array.isArray(food.imageUrls) &&
+      food.imageUrls.length > 0
     ) {
       console.log(
-        "🖼️ [CustomSlider] Using imagesUrl array with",
-        food.imagesUrl.length,
+        "🖼️ [CustomSlider] Using imageUrls array with",
+        food.imageUrls.length,
         "images"
       );
-      // Use actual food images from imagesUrl array
-      return food.imagesUrl;
+      // Use actual food images from imageUrls array
+      return food.imageUrls;
     }
-
-    // Fallback to single imageUrl if imagesUrl doesn't exist
-    if (food?.imageUrl) {
-      console.log("🖼️ [CustomSlider] Using single imageUrl as fallback");
+    // // Fallback to single imageUrl if imagesUrl doesn't exist
+    if (food?.imageUrl && !food?.imageUrls) {
       return [food.imageUrl];
     }
-
-    // Final fallback to default images
-    console.log("🖼️ [CustomSlider] Using default Order images");
-    return [Order1, Order2];
   };
 
   const sliderImages = generateSliderImages() || []; // Ensure it's always an array
@@ -117,26 +112,6 @@ const CustomSlider = ({ food, isLiked, handleLikeToggle }) => {
               className="slider-image"
             />
           </div>
-          {/* Heart Icon */}
-          <div
-            className={`icon heart-icon ${isLiked ? "liked" : ""}`}
-            onClick={handleLikeToggle}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 18 18"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M9.80568 16.3852C9.53252 16.4816 9.08261 16.4816 8.80945 16.3852C6.47955 15.5898 1.27344 12.2717 1.27344 6.64781C1.27344 4.16527 3.27393 2.15674 5.74041 2.15674C7.20262 2.15674 8.49612 2.86374 9.30756 3.95638C10.119 2.86374 11.4205 2.15674 12.8747 2.15674C15.3412 2.15674 17.3417 4.16527 17.3417 6.64781C17.3417 12.2717 12.1356 15.5898 9.80568 16.3852Z"
-                stroke={isLiked ? "#FF5555" : "#FF5555"}
-                fill={isLiked ? "#FF5555" : "transparent"}
-                strokeWidth="1.20512"
-              />
-            </svg>
-          </div>
         </div>
       </div>
     );
@@ -178,8 +153,6 @@ const CustomSlider = ({ food, isLiked, handleLikeToggle }) => {
               stroke={isLiked ? "#FF5555" : "#FF5555"}
               fill={isLiked ? "#FF5555" : "transparent"}
               strokeWidth="1.20512"
-              strokeLinecap="round"
-              strokeLinejoin="round"
             />
           </svg>
         </div>
@@ -586,31 +559,7 @@ export default function FoodDetailPage() {
           description: review.message || "No comment provided",
         }))
       : [];
-  // const reviews = [
-  //   {
-  //     image: User1,
-  //     date: "2025-08-01",
-  //     name: "Liam Hawthorne",
-  //     description:
-  //       "You have to try the Dim Sum here! These dumplings are filled with a burst of flavors that will leave you craving more. Perfect for sharing or enjoying solo! 🥟✨",
-  //   },
-  //   {
-  //     image: User2,
-  //     date: "2025-08-05",
-  //     name: "Sophie Caldwell",
-  //     description:
-  //       "If you're in the mood for pizza, the Margherita Pizza is a must! With its fresh basil and gooey mozzarella, it's a slice of heaven! 🍕😍",
-  //   },
-  //   {
-  //     image: User3,
-  //     date: "2025-08-10",
-  //     name: "Reviewer name",
-  //     description:
-  //       "Craving something spicy? The Beef Tacos are packed with flavor and topped with fresh salsa. A delicious choice for taco lovers! 🌮🌶️",
-  //   },
-  // ];
 
-  // Add this handler function near your other handlers (around line 70)
   const handleLikeToggle = useCallback(() => {
     toggleLike();
     console.log(`[FoodDetailPage] Food ${isLiked ? "unliked" : "liked"}`);
@@ -667,6 +616,7 @@ export default function FoodDetailPage() {
                   </strong>
                 </div>
               </div>
+              <div className="line"></div>
               <div className="left flex-0">
                 <div>
                   <svg
@@ -686,6 +636,7 @@ export default function FoodDetailPage() {
                   <strong>{food?.numOfLike ?? 0}</strong>
                 </div>
               </div>
+              <div className="line"></div>
               <div className="left flex-0">
                 <div>
                   <svg
@@ -747,14 +698,6 @@ export default function FoodDetailPage() {
               handleLikeToggle={handleLikeToggle}
             />
 
-            {/* <div className="product-image">
-              <LazyImage
-                src={food?.imageUrl}
-                alt={food?.name || "Product"}
-                fallbackSrc={ProductImage}
-                className=""
-              />
-            </div> */}
             <div className="quantity-warpper">
               <div className="price">
                 <sup>$</sup>
@@ -865,6 +808,11 @@ export default function FoodDetailPage() {
                     "🔥 handleAddToCart type:",
                     typeof handleAddToCart
                   );
+                  if (!availabilityStatus.isAvailable) {
+                    alert(
+                      "♡ this food to the chef that we want it! When it is added to Go&Grab or Pre-Order, you will be notified."
+                    );
+                  }
                   handleAddToCart(e);
                 }}
                 disabled={!availabilityStatus.isAvailable}

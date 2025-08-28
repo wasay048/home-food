@@ -533,14 +533,20 @@ export default function ListingPage() {
           })}
 
           {/* Continue to Cart Button - Only show when data is loaded */}
-          {cartItems.length > 0 && (
-            <button
-              className="action-button mb-16"
-              onClick={() => navigate("/order")}
-            >
-              Continue to View Cart
-            </button>
-          )}
+          <button
+            className="action-button mb-16"
+            onClick={() => {
+              if (cartItems.length === 0) {
+                alert(
+                  "Oops! Your cart is empty. Add something delicious to get started."
+                );
+              } else {
+                navigate("/order");
+              }
+            }}
+          >
+            Continue to View Cart
+          </button>
 
           {/* QR Code Section */}
           <div className="scanner-bottom mb-16">

@@ -4,7 +4,6 @@ import dayjs from "dayjs";
 import {
   fetchFoodDetail,
   toggleFoodLike,
-  toggleLikeLocally,
   clearCurrentFood,
   checkFoodLikeStatus,
 } from "../store/slices/foodSlice";

@@ -24,7 +24,8 @@ const QuantitySelector = ({
     showAvailabilityInfo,
     showErrorMessages,
   });
-
+  const [showModal, setShowModal] = useState(false);
+  const [modalContent, setModalContent] = useState({ title: "", body: "" });
   const [quantity, setQuantity] = useState(initialQuantity);
   const [availabilityStatus, setAvailabilityStatus] = useState({
     isAvailable: true,
@@ -526,6 +527,27 @@ const QuantitySelector = ({
         maxAvailable: availabilityStatus.maxAvailable,
       });
 
+      if (availabilityStatus.maxAvailable === 0) {
+        alert(
+          "The item is currently sold out. Please check back later or choose another item."
+        );
+      }
+      if (availabilityStatus.maxAvailable === 3) {
+        alert("Limited stock available!");
+      }
+      if (newQuantity === availabilityStatus.maxAvailable) {
+        // Replace alert with modal
+        alert(
+          `Currently only ${availabilityStatus.maxAvailable} items are available.`
+        );
+        // setModalContent({
+        //   title: "Available Items",
+        //   body: `Currently only ${availabilityStatus.maxAvailable} items are available.`,
+        // });
+        // setShowModal(true);
+        // return; // Prevent further processing if needed
+      }
+
       const validQuantity = Math.max(
         minQuantity,
         Math.min(newQuantity, availabilityStatus.maxAvailable)
@@ -573,7 +595,7 @@ const QuantitySelector = ({
 
     // Handle errors
     if (availabilityStatus.message && !availabilityStatus.isAvailable) {
-      onError(availabilityStatus.message);
+      // onError(availabilityStatus.message);
     }
   }, [availabilityStatus, onAvailabilityChange, onWarning, onError]);
 
@@ -605,6 +627,9 @@ const QuantitySelector = ({
       );
       handleQuantityChange(quantity + 1);
     } else {
+      alert(
+        "The item is currently sold out. Please check back later or choose another item."
+      );
       console.log("🔥 INCREMENT BLOCKED:", {
         disabled,
         isAvailable: availabilityStatus.isAvailable,
@@ -643,6 +668,25 @@ const QuantitySelector = ({
 
   return (
     <div className={containerClasses}>
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{modalContent.title}</h3>
+              <button
+                className="modal-close"
+                onClick={() => setShowModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>{modalContent.body}</p>
+              <button onClick={() => setShowModal(false)}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="quantity-selector__controls">
         <div className="quantity-selector__display">
           <span className="quantity-number">{quantity}</span>
@@ -676,11 +720,11 @@ const QuantitySelector = ({
             type="button"
             className="quantity-btn quantity-btn--increment"
             onClick={increment}
-            disabled={
-              disabled ||
-              !availabilityStatus.isAvailable ||
-              quantity >= availabilityStatus.maxAvailable
-            }
+            // disabled={
+            //   disabled ||
+            //   !availabilityStatus.isAvailable ||
+            //   quantity >= availabilityStatus.maxAvailable
+            // }
             aria-label="Increase quantity"
           >
             <svg

@@ -101,8 +101,6 @@ export const handleGenericAddToCart = async (
           );
         }
 
-        showToast.success(message);
-
         return {
           success: true,
           isExisting: true,
@@ -155,9 +153,6 @@ export const handleGenericAddToCart = async (
 
     // Add to cart using the provided action
     const result = await dispatch(addToCartAction(cartItemData));
-
-    // Show success message
-    showToast.cart(`Added ${food.name} to cart!`);
 
     return {
       success: true,
@@ -219,8 +214,6 @@ export const handleGenericRemoveFromCart = async (
         })
       );
 
-      showToast.info(`Removed ${quantity} ${food.name} from cart`);
-
       return {
         success: true,
         message: `Removed ${quantity} ${food.name} from cart`,
@@ -228,7 +221,6 @@ export const handleGenericRemoveFromCart = async (
     } else {
       // Remove the entire item from cart
       await dispatch(removeFromCartAction(cartItem.id));
-      showToast.info(`Removed ${food.name} from cart`);
 
       return {
         success: true,

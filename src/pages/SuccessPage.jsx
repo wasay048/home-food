@@ -128,10 +128,6 @@ export default function SuccessPage() {
           <div className="success-image-wrapper pt-5">
             <img src={Success} alt="Success" />
             <h2 className="title">Your order has been successfully placed</h2>
-            <p className="text mb-20">
-              Your order is being worked on. It will take 20-30 min to get ready
-              for pick up.
-            </p>
           </div>
 
           {/* Ordered Items Sections - Similar to OrderPage structure */}
