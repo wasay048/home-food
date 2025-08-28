@@ -1,16 +1,17 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import dayjs from "dayjs";
 import Edit from "../assets/images/edit.svg";
-
+import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import { Copy, X, Image as ImageIcon } from "lucide-react";
 import { uploadImageToStorage } from "../services/storageService";
 import { showToast } from "../utils/toast";
 import { placeOrder, createOrderObject } from "../services/orderService";
 import { clearCart } from "../store/slices/cartSlice";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
+import { useGenericCart } from "../hooks/useGenericCart";
 
 export default function PaymentPage() {
   const [uploadPreview, setUploadPreview] = useState(null);
@@ -23,6 +24,10 @@ export default function PaymentPage() {
   const [editingItem, setEditingItem] = useState(null);
   const [modalSelectedDate, setModalSelectedDate] = useState(null);
   const [modalSelectedTime, setModalSelectedTime] = useState(null);
+
+  const [showWeChatDialog, setShowWeChatDialog] = useState(false);
+
+  const { handleQuantityChange } = useGenericCart();
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -30,6 +35,8 @@ export default function PaymentPage() {
   const cartItems = useSelector((state) => state.cart.items);
   const currentKitchen = useSelector((state) => state.food.currentKitchen);
   const currentUser = useSelector((state) => state.auth.user);
+
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   // Get kitchen information from cart items
   const kitchenInfo = useMemo(() => {
     if (currentKitchen) {
@@ -44,6 +51,7 @@ export default function PaymentPage() {
             kitchen.address || "120 Lane San Francisco, East Falmouth MA",
           latitude: kitchen.location?.lat || kitchen.latitude || 41.5742,
           longitude: kitchen.location?.lng || kitchen.longitude || -70.6109,
+          preorderSchedule: kitchen?.preorderSchedule || null,
         };
       }
     }
@@ -82,32 +90,50 @@ export default function PaymentPage() {
     setModalSelectedTime(time);
   };
 
+  const handleWeChatDialogClose = useCallback(() => {
+    setShowWeChatDialog(false);
+  }, []);
+
   // Handle pickup details update from modal
-  const handleModalPickupUpdate = () => {
+  const handleModalPickupUpdate = async () => {
     if (editingItem && modalSelectedDate && modalSelectedTime) {
+      const isPreOrder = modalSelectedDate !== dayjs().format("YYYY-MM-DD");
+
       const pickupDetails = {
         date: modalSelectedDate,
         time: modalSelectedTime,
-        display:
-          modalSelectedDate === dayjs().format("YYYY-MM-DD")
-            ? "Pick up today"
-            : `Pick up ${dayjs(modalSelectedDate).format("MMM D ddd")}`,
-        orderType:
-          modalSelectedDate === dayjs().format("YYYY-MM-DD")
-            ? "GO_GRAB"
-            : "PRE_ORDER",
+        display: isPreOrder
+          ? `Pick up ${dayjs(modalSelectedDate).format("MMM D ddd")}`
+          : "Pick up today",
+        orderType: isPreOrder ? "PRE_ORDER" : "GO_GRAB",
       };
 
-      // Here you would dispatch an action to update the cart item
-      console.log("Updating pickup details for item:", editingItem);
-      console.log("New pickup details:", pickupDetails);
+      console.log("🔄 Updating pickup details for item:", editingItem);
+      console.log("🔄 New pickup details:", pickupDetails);
 
-      showToast.success(
-        `Pickup time updated to ${pickupDetails.display} at ${pickupDetails.time}`
-      );
+      try {
+        // Update the cart item with new pickup details
+        await handleQuantityChange({
+          food: editingItem.food,
+          kitchen: kitchenInfo,
+          newQuantity: editingItem.quantity,
+          currentQuantity: editingItem.quantity,
+          selectedDate: modalSelectedDate,
+          selectedTime: modalSelectedTime,
+          specialInstructions: editingItem.specialInstructions || "",
+          isPreOrder: isPreOrder,
+        });
 
-      // Close the modal
-      handleDateTimePickerClose();
+        showToast.success(
+          `Pickup time updated to ${pickupDetails.display} at ${pickupDetails.time}`
+        );
+
+        // Close the modal
+        handleDateTimePickerClose();
+      } catch (error) {
+        console.error("Error updating pickup details:", error);
+        showToast.error("Failed to update pickup time");
+      }
     } else {
       showToast.error("Please select both date and time");
     }
@@ -302,15 +328,17 @@ export default function PaymentPage() {
         return;
       }
 
+      // Check authentication FIRST before other validations
+      if (!isAuthenticated || !currentUser) {
+        console.log("🔒 Authentication required for placing order");
+        setShowWeChatDialog(true);
+        return;
+      }
+
       if (!firebaseImageUrl) {
         showToast.error(
           "Please upload a payment confirmation screenshot before placing your order."
         );
-        return;
-      }
-
-      if (!currentUser) {
-        showToast.error("Please log in to place an order.");
         return;
       }
 
@@ -606,7 +634,11 @@ export default function PaymentPage() {
               onClick={handlePlaceOrder}
               disabled={isPlacingOrder || isUploading || cartItems.length === 0}
             >
-              {isPlacingOrder ? "Placing Order..." : "Place My Order"}
+              {isPlacingOrder
+                ? "Placing Order..."
+                : !isAuthenticated
+                ? "Login to Place Order"
+                : "Place My Order"}
             </button>
           </div>
         </div>
@@ -636,57 +668,24 @@ export default function PaymentPage() {
               </div>
 
               <div className="date-time-picker-container">
-                {/* Date Picker */}
-                <div className="picker-field">
-                  <label className="picker-label">Select Pickup Date:</label>
-                  <input
-                    type="date"
-                    className="picker-input"
-                    value={modalSelectedDate || ""}
-                    onChange={(e) => handleModalDateChange(e.target.value)}
-                    min={dayjs().format("YYYY-MM-DD")}
-                    max={dayjs().add(7, "days").format("YYYY-MM-DD")}
-                  />
-                </div>
-
-                {/* Time Picker */}
-                <div className="picker-field">
-                  <label className="picker-label">Select Pickup Time:</label>
-                  <div className="time-slots-container">
-                    {[
-                      "9:00 AM",
-                      "9:30 AM",
-                      "10:00 AM",
-                      "10:30 AM",
-                      "11:00 AM",
-                      "11:30 AM",
-                      "12:00 PM",
-                      "12:30 PM",
-                      "1:00 PM",
-                      "1:30 PM",
-                      "2:00 PM",
-                      "2:30 PM",
-                      "3:00 PM",
-                      "3:30 PM",
-                      "4:00 PM",
-                      "4:30 PM",
-                      "5:00 PM",
-                      "5:30 PM",
-                      "6:00 PM",
-                      "6:30 PM",
-                    ].map((time) => (
-                      <button
-                        key={time}
-                        className={`time-slot ${
-                          modalSelectedTime === time ? "selected" : ""
-                        }`}
-                        onClick={() => handleModalTimeChange(time)}
-                      >
-                        {time}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {/* Use the DateTimePicker component instead of custom inputs */}
+                <DateTimePicker
+                  food={editingItem.food}
+                  kitchen={kitchenInfo}
+                  orderType={
+                    editingItem.orderType ||
+                    editingItem.pickupDetails?.orderType ||
+                    "GO_GRAB"
+                  }
+                  selectedDate={modalSelectedDate}
+                  selectedTime={modalSelectedTime}
+                  onDateChange={handleModalDateChange}
+                  onTimeChange={handleModalTimeChange}
+                  disabled={false}
+                  className="payment-modal-picker"
+                  dateLabel="Select Pickup Date:"
+                  timeLabel="Select Pickup Time:"
+                />
               </div>
             </div>
             <div className="modal-footer">
@@ -706,6 +705,9 @@ export default function PaymentPage() {
             </div>
           </div>
         </div>
+      )}
+      {showWeChatDialog && (
+        <WeChatAuthDialog onClose={handleWeChatDialogClose} />
       )}
     </>
   );

@@ -1,179 +1,5 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 import { REHYDRATE } from "redux-persist";
-
-// Async thunk for adding item to cart
-export const addToCart = createAsyncThunk(
-  "cart/addToCart",
-  async (
-    {
-      foodId,
-      kitchenId,
-      quantity,
-      selectedDate,
-      orderType,
-      food,
-      specialInstructions,
-      pickupDetails,
-    },
-    { getState }
-  ) => {
-    const { auth } = getState();
-    const userId = auth.user?.id;
-
-    if (!userId) {
-      throw new Error("User not authenticated");
-    }
-
-    // TODO: Implement actual cart API calls when backend is ready
-    console.log("Adding to cart:", {
-      foodId,
-      kitchenId,
-      quantity,
-      selectedDate,
-      orderType,
-      specialInstructions,
-      pickupDetails,
-      userId,
-    });
-
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    return {
-      id: `cart-item-${Date.now()}`,
-      foodId,
-      kitchenId,
-      userId,
-      quantity,
-      selectedDate,
-      orderType,
-      specialInstructions: specialInstructions || "", // Store special instructions
-      food: food || null, // Store food data for display
-      pickupDetails: pickupDetails || {
-        date: selectedDate,
-        time: null,
-        display:
-          orderType === "GO_GRAB" ? "Pick up today" : `Pick up ${selectedDate}`,
-        orderType: orderType,
-      },
-      addedAt: new Date().toISOString(),
-    };
-  }
-);
-
-// Async thunk for removing item from cart
-export const removeFromCart = createAsyncThunk(
-  "cart/removeFromCart",
-  async (cartItemId, { getState }) => {
-    const { auth } = getState();
-    const userId = auth.user?.id;
-
-    if (!userId) {
-      throw new Error("User not authenticated");
-    }
-
-    // TODO: Implement actual remove API call
-    console.log("Removing from cart:", { cartItemId, userId });
-
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    return cartItemId;
-  }
-);
-
-// Async thunk for updating cart item quantity
-export const updateCartQuantity = createAsyncThunk(
-  "cart/updateQuantity",
-  async ({ cartItemId, quantity }, { getState }) => {
-    const { auth } = getState();
-    const userId = auth.user?.id;
-
-    if (!userId) {
-      throw new Error("User not authenticated");
-    }
-
-    // TODO: Implement actual update API call
-    console.log("Updating cart quantity:", { cartItemId, quantity, userId });
-
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    return { cartItemId, quantity };
-  }
-);
-
-// Async thunk for updating cart item (quantity and special instructions)
-export const updateCartItem = createAsyncThunk(
-  "cart/updateItem",
-  async ({ cartItemId, quantity, specialInstructions }, { getState }) => {
-    const { auth } = getState();
-    const userId = auth.user?.id;
-
-    if (!userId) {
-      throw new Error("User not authenticated");
-    }
-
-    // TODO: Implement actual update API call
-    console.log("Updating cart item:", {
-      cartItemId,
-      quantity,
-      specialInstructions,
-      userId,
-    });
-
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    return { cartItemId, quantity, specialInstructions };
-  }
-);
-
-// Async thunk for updating pickup details (date and time)
-export const updatePickupDetails = createAsyncThunk(
-  "cart/updatePickupDetails",
-  async ({ cartItemId, pickupDate, pickupTime, orderType }, { getState }) => {
-    const { auth } = getState();
-    const userId = auth.user?.id;
-
-    if (!userId) {
-      throw new Error("User not authenticated");
-    }
-
-    // TODO: Implement actual update API call
-    console.log("Updating pickup details:", {
-      cartItemId,
-      pickupDate,
-      pickupTime,
-      orderType,
-      userId,
-    });
-
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    return { cartItemId, pickupDate, pickupTime, orderType };
-  }
-);
-
-// Async thunk for fetching user's cart
-export const fetchCart = createAsyncThunk(
-  "cart/fetchCart",
-  async (_, { getState }) => {
-    const { auth } = getState();
-    const userId = auth.user?.id;
-
-    if (!userId) {
-      throw new Error("User not authenticated");
-    }
-
-    // TODO: Implement actual fetch cart API call
-    console.log("Fetching cart for user:", userId);
-
-    // For now, return empty cart
-    return [];
-  }
-);
 
 const cartSlice = createSlice({
   name: "cart",
@@ -186,54 +12,128 @@ const cartSlice = createSlice({
     lastUpdated: null,
   },
   reducers: {
-    clearCart: (state) => {
-      state.items = [];
-      state.totalItems = 0;
-      state.totalAmount = 0;
-      state.lastUpdated = new Date().toISOString();
-    },
-    clearError: (state) => {
-      state.error = null;
-    },
-    calculateTotals: (state) => {
-      state.totalItems = state.items.reduce(
-        (total, item) => total + item.quantity,
-        0
+    // Add item to cart (synchronous since no backend)
+    addToCart: (state, action) => {
+      console.log("🛒 Adding to cart:", action.payload);
+
+      const newItem = action.payload;
+
+      // Find existing item with same foodId, selectedDate, specialInstructions, and orderType
+      const existingItemIndex = state.items.findIndex(
+        (item) =>
+          item.foodId === newItem.foodId &&
+          item.selectedDate === newItem.selectedDate &&
+          (item.specialInstructions || "") ===
+            (newItem.specialInstructions || "") &&
+          item.orderType === newItem.orderType
       );
 
-      // Calculate total amount if food data is available
-      state.totalAmount = state.items.reduce((total, item) => {
-        const itemCost = item.food?.cost || 0;
-        return total + parseFloat(itemCost) * item.quantity;
-      }, 0);
+      if (existingItemIndex !== -1) {
+        // Update existing item quantity
+        const oldQuantity = state.items[existingItemIndex].quantity;
+        state.items[existingItemIndex].quantity += newItem.quantity || 1;
+        state.items[existingItemIndex].updatedAt = new Date().toISOString();
 
-      state.lastUpdated = new Date().toISOString();
-    },
-    // Local actions for immediate UI updates
-    addItemLocally: (state, action) => {
-      const { foodId, quantity, selectedDate } = action.payload;
-      const existingItem = state.items.find(
-        (item) => item.foodId === foodId && item.selectedDate === selectedDate
-      );
-
-      if (existingItem) {
-        existingItem.quantity += quantity;
+        console.log("📦 Updated existing cart item quantity:", {
+          foodId: newItem.foodId,
+          selectedDate: newItem.selectedDate,
+          oldQuantity,
+          newQuantity: state.items[existingItemIndex].quantity,
+          addedQuantity: newItem.quantity || 1,
+        });
       } else {
-        state.items.push(action.payload);
+        // Add new item with proper structure
+        const itemToAdd = {
+          id: `cart-item-${Date.now()}-${Math.random()}`,
+          foodId: newItem.foodId,
+          kitchenId: newItem.kitchenId,
+          userId: newItem.userId || "local_user",
+          quantity: newItem.quantity || 1,
+          selectedDate: newItem.selectedDate || null,
+          selectedTime: newItem.selectedTime || null,
+          orderType: newItem.orderType || "GO_GRAB",
+          specialInstructions: newItem.specialInstructions || "",
+          food: newItem.food || null,
+          kitchen: newItem.kitchen || null,
+          pickupDetails: newItem.pickupDetails || {
+            date: newItem.selectedDate,
+            time: newItem.selectedTime,
+            display:
+              newItem.orderType === "GO_GRAB"
+                ? "Pick up today"
+                : `Pick up ${newItem.selectedDate}`,
+            orderType: newItem.orderType || "GO_GRAB",
+          },
+          isPreOrder: newItem.isPreOrder || false,
+          addedAt: new Date().toISOString(),
+        };
+
+        state.items.push(itemToAdd);
+        console.log("📦 Added new cart item:", itemToAdd);
       }
 
       cartSlice.caseReducers.calculateTotals(state);
     },
 
-    // Update pickup details locally for immediate UI feedback
-    updatePickupDetailsLocally: (state, action) => {
+    // Remove item from cart (synchronous)
+    removeFromCart: (state, action) => {
+      const cartItemId = action.payload;
+      console.log("🗑️ Removing from cart:", cartItemId);
+
+      const initialLength = state.items.length;
+      state.items = state.items.filter((item) => item.id !== cartItemId);
+
+      console.log("🗑️ Removed cart item:", {
+        itemId: cartItemId,
+        itemsRemoved: initialLength - state.items.length,
+        remainingItems: state.items.length,
+      });
+
+      cartSlice.caseReducers.calculateTotals(state);
+    },
+
+    // Update cart item (quantity and special instructions)
+    updateCartItem: (state, action) => {
+      const { cartItemId, quantity, specialInstructions } = action.payload;
+      console.log("📝 Updating cart item:", action.payload);
+
+      const itemIndex = state.items.findIndex((item) => item.id === cartItemId);
+
+      if (itemIndex !== -1) {
+        if (quantity !== undefined) {
+          state.items[itemIndex].quantity = quantity;
+        }
+        if (specialInstructions !== undefined) {
+          state.items[itemIndex].specialInstructions = specialInstructions;
+        }
+        state.items[itemIndex].updatedAt = new Date().toISOString();
+
+        console.log("📝 Updated cart item:", {
+          itemId: cartItemId,
+          newQuantity: quantity,
+          specialInstructions,
+        });
+
+        cartSlice.caseReducers.calculateTotals(state);
+      } else {
+        console.error("❌ Cart item not found for update:", cartItemId);
+      }
+    },
+
+    // Update pickup details (date and time)
+    updatePickupDetails: (state, action) => {
       const { cartItemId, pickupDate, pickupTime, orderType } = action.payload;
+      console.log("📅 Updating pickup details:", action.payload);
+
       const item = state.items.find((item) => item.id === cartItemId);
 
       if (item) {
         // Update selected date and order type
         if (pickupDate !== undefined) {
           item.selectedDate = pickupDate;
+        }
+        if (pickupTime !== undefined) {
+          item.selectedTime = pickupTime;
         }
         if (orderType !== undefined) {
           item.orderType = orderType;
@@ -258,143 +158,101 @@ const cartSlice = createSlice({
           item.pickupDetails.orderType = orderType;
         }
 
-        state.lastUpdated = new Date().toISOString();
+        item.updatedAt = new Date().toISOString();
+        console.log("📅 Updated pickup details for item:", cartItemId);
+      } else {
+        console.error(
+          "❌ Cart item not found for pickup details update:",
+          cartItemId
+        );
       }
+    },
+
+    // Clear entire cart
+    clearCart: (state) => {
+      console.log("🗑️ Clearing entire cart");
+      state.items = [];
+      state.totalItems = 0;
+      state.totalAmount = 0;
+      state.lastUpdated = new Date().toISOString();
+    },
+
+    // Clear errors
+    clearError: (state) => {
+      state.error = null;
+    },
+
+    // Calculate totals helper
+    calculateTotals: (state) => {
+      state.totalItems = state.items.reduce(
+        (total, item) => total + (item.quantity || 1),
+        0
+      );
+
+      // Calculate total amount if food data is available
+      state.totalAmount = state.items.reduce((total, item) => {
+        const itemCost = item.food?.cost || 0;
+        const cost =
+          typeof itemCost === "string" ? parseFloat(itemCost) : itemCost;
+        return total + cost * (item.quantity || 1);
+      }, 0);
+
+      state.lastUpdated = new Date().toISOString();
+
+      console.log("🧮 Calculated totals:", {
+        totalItems: state.totalItems,
+        totalAmount: state.totalAmount,
+        itemCount: state.items.length,
+      });
+    },
+
+    // Set loading state manually if needed
+    setLoading: (state, action) => {
+      state.loading = action.payload;
+    },
+
+    // Set error manually if needed
+    setError: (state, action) => {
+      state.error = action.payload;
     },
   },
   extraReducers: (builder) => {
     builder
-      // Add to cart
-      .addCase(addToCart.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(addToCart.fulfilled, (state, action) => {
-        state.loading = false;
-
-        const newItem = action.payload;
-        const existingItem = state.items.find(
-          (item) =>
-            item.foodId === newItem.foodId &&
-            item.selectedDate === newItem.selectedDate &&
-            item.specialInstructions === newItem.specialInstructions
-        );
-
-        if (existingItem) {
-          existingItem.quantity += newItem.quantity;
-        } else {
-          state.items.push(newItem);
-        }
-
-        cartSlice.caseReducers.calculateTotals(state);
-      })
-      .addCase(addToCart.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message;
-      })
-
-      // Remove from cart
-      .addCase(removeFromCart.pending, (state) => {
-        state.loading = true;
-      })
-      .addCase(removeFromCart.fulfilled, (state, action) => {
-        state.loading = false;
-        state.items = state.items.filter((item) => item.id !== action.payload);
-        cartSlice.caseReducers.calculateTotals(state);
-      })
-      .addCase(removeFromCart.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message;
-      })
-
-      // Update quantity
-      .addCase(updateCartQuantity.fulfilled, (state, action) => {
-        const { cartItemId, quantity } = action.payload;
-        const item = state.items.find((item) => item.id === cartItemId);
-        if (item) {
-          item.quantity = quantity;
-        }
-        cartSlice.caseReducers.calculateTotals(state);
-      })
-
-      // Update cart item (quantity and special instructions)
-      .addCase(updateCartItem.fulfilled, (state, action) => {
-        const { cartItemId, quantity, specialInstructions } = action.payload;
-        const item = state.items.find((item) => item.id === cartItemId);
-        if (item) {
-          item.quantity = quantity;
-          if (specialInstructions !== undefined) {
-            item.specialInstructions = specialInstructions;
-          }
-        }
-        cartSlice.caseReducers.calculateTotals(state);
-      })
-
-      // Update pickup details (date and time)
-      .addCase(updatePickupDetails.fulfilled, (state, action) => {
-        const { cartItemId, pickupDate, pickupTime, orderType } =
-          action.payload;
-        const item = state.items.find((item) => item.id === cartItemId);
-        if (item) {
-          // Update selected date and order type
-          if (pickupDate !== undefined) {
-            item.selectedDate = pickupDate;
-          }
-          if (orderType !== undefined) {
-            item.orderType = orderType;
-          }
-
-          // Update pickup details object
-          if (!item.pickupDetails) {
-            item.pickupDetails = {};
-          }
-
-          if (pickupDate !== undefined) {
-            item.pickupDetails.date = pickupDate;
-            item.pickupDetails.display =
-              orderType === "GO_GRAB"
-                ? "Pick up today"
-                : `Pick up ${pickupDate}`;
-          }
-
-          if (pickupTime !== undefined) {
-            item.pickupDetails.time = pickupTime;
-          }
-
-          if (orderType !== undefined) {
-            item.pickupDetails.orderType = orderType;
-          }
-        }
-        cartSlice.caseReducers.calculateTotals(state);
-      })
-
-      // Fetch cart
-      .addCase(fetchCart.fulfilled, (state, action) => {
-        state.items = action.payload;
-        cartSlice.caseReducers.calculateTotals(state);
-      })
-
       // Handle rehydration from persistence
       .addCase(REHYDRATE, (state, action) => {
         if (action.payload?.cart) {
+          console.log(
+            "💾 Rehydrating cart from persistence:",
+            action.payload.cart
+          );
+
           // Merge persisted cart state
-          return {
+          const rehydratedState = {
             ...state,
             ...action.payload.cart,
             loading: false,
             error: null,
           };
+
+          // Recalculate totals after rehydration
+          cartSlice.caseReducers.calculateTotals(rehydratedState);
+
+          return rehydratedState;
         }
       });
   },
 });
 
 export const {
+  addToCart,
+  removeFromCart,
+  updateCartItem,
+  updatePickupDetails,
   clearCart,
   clearError,
   calculateTotals,
-  addItemLocally,
-  updatePickupDetailsLocally,
+  setLoading,
+  setError,
 } = cartSlice.actions;
 
 export default cartSlice.reducer;

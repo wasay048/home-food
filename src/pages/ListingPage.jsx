@@ -374,24 +374,43 @@ export default function ListingPage() {
                             selectedDate={null}
                             size="small"
                             initialQuantity={cartQty}
-                            onQuantityChange={async (newQuantity) => {
-                              const currentQty = getCartQuantity(food.id);
-                              const selectedDate = pickupDates[food.id];
-                              const selectedTime = pickupTimes[food.id];
-                              const isToday = selectedDate
-                                ? dayjs(selectedDate).isSame(dayjs(), "day")
-                                : true;
+                            minQuantity={0}
+                            onQuantityChange={(newQuantity) => {
+                              try {
+                                const currentQty = getCartQuantity(food.id);
+                                const selectedDate = pickupDates[food.id];
+                                const selectedTime = pickupTimes[food.id];
+                                const isToday = selectedDate
+                                  ? dayjs(selectedDate).isSame(dayjs(), "day")
+                                  : true;
 
-                              await handleQuantityChange({
-                                food,
-                                kitchen,
-                                newQuantity,
-                                currentQuantity: currentQty,
-                                selectedDate: selectedDate,
-                                selectedTime: selectedTime,
-                                specialInstructions: "",
-                                isPreOrder: !isToday,
-                              });
+                                console.log(
+                                  "🛒 ListingPage Go&Grab quantity change:",
+                                  {
+                                    foodId: food.id,
+                                    newQuantity,
+                                    currentQty,
+                                  }
+                                );
+
+                                handleQuantityChange({
+                                  // Removed await
+                                  food,
+                                  kitchen,
+                                  newQuantity,
+                                  currentQuantity: currentQty,
+                                  selectedDate: selectedDate,
+                                  selectedTime: selectedTime,
+                                  specialInstructions: "",
+                                  isPreOrder: !isToday,
+                                });
+                              } catch (error) {
+                                console.error(
+                                  "Error updating quantity:",
+                                  error
+                                );
+                                showToast.error("Failed to update cart");
+                              }
                             }}
                           />
                         </div>
@@ -480,24 +499,45 @@ export default function ListingPage() {
                               selectedDate={dateInfo.dateString}
                               size="small"
                               initialQuantity={cartQty}
-                              onQuantityChange={async (newQuantity) => {
-                                const currentQty = getCartQuantity(
-                                  food.id,
-                                  dateInfo.dateString
-                                );
-                                const selectedTime =
-                                  pickupTimes[`${food.id}_preorder`];
+                              minQuantity={0}
+                              onQuantityChange={(newQuantity) => {
+                                // Removed async
+                                try {
+                                  const currentQty = getCartQuantity(
+                                    food.id,
+                                    dateInfo.dateString
+                                  );
+                                  const selectedTime =
+                                    pickupTimes[`${food.id}_preorder`];
 
-                                await handleQuantityChange({
-                                  food,
-                                  kitchen,
-                                  newQuantity,
-                                  currentQuantity: currentQty,
-                                  selectedDate: dateInfo.dateString,
-                                  selectedTime: selectedTime,
-                                  specialInstructions: "",
-                                  isPreOrder: true,
-                                });
+                                  console.log(
+                                    "🛒 ListingPage Pre-Order quantity change:",
+                                    {
+                                      foodId: food.id,
+                                      date: dateInfo.dateString,
+                                      newQuantity,
+                                      currentQty,
+                                    }
+                                  );
+
+                                  handleQuantityChange({
+                                    // Removed await
+                                    food,
+                                    kitchen,
+                                    newQuantity,
+                                    currentQuantity: currentQty,
+                                    selectedDate: dateInfo.dateString,
+                                    selectedTime: selectedTime,
+                                    specialInstructions: "",
+                                    isPreOrder: true,
+                                  });
+                                } catch (error) {
+                                  console.error(
+                                    "Error updating pre-order quantity:",
+                                    error
+                                  );
+                                  showToast.error("Failed to update cart");
+                                }
                               }}
                             />
                           </div>

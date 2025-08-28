@@ -527,61 +527,44 @@ const QuantitySelector = ({
         maxAvailable: availabilityStatus.maxAvailable,
       });
 
-      if (availabilityStatus.maxAvailable === 0) {
-        alert(
-          "The item is currently sold out. Please check back later or choose another item."
-        );
-      }
-      if (availabilityStatus.maxAvailable === 3) {
-        alert("Limited stock available!");
-      }
-      if (newQuantity === availabilityStatus.maxAvailable) {
-        // Replace alert with modal
-        alert(
-          `Currently only ${availabilityStatus.maxAvailable} items are available.`
-        );
-        // setModalContent({
-        //   title: "Available Items",
-        //   body: `Currently only ${availabilityStatus.maxAvailable} items are available.`,
-        // });
-        // setShowModal(true);
-        // return; // Prevent further processing if needed
-      }
+      // Allow quantity 0 for removing items from cart
+      if (newQuantity < 0 || newQuantity > availabilityStatus.maxAvailable) {
+        console.log("🔥 Invalid quantity, not updating");
 
-      const validQuantity = Math.max(
-        minQuantity,
-        Math.min(newQuantity, availabilityStatus.maxAvailable)
-      );
-
-      console.log("🔥 Valid quantity calculated:", validQuantity);
-
-      if (validQuantity !== quantity) {
-        console.log("🔥 Setting new quantity:", validQuantity);
-        setQuantity(validQuantity);
-
-        // Call parent callbacks
-        console.log("🔥 Calling parent onQuantityChange with:", validQuantity);
-        onQuantityChange(validQuantity);
-
-        // Handle warnings and errors
+        // Show appropriate messages but don't update quantity
         if (newQuantity > availabilityStatus.maxAvailable) {
-          const errorMsg = `Maximum available quantity is ${availabilityStatus.maxAvailable}`;
-          onError(errorMsg);
-        } else if (newQuantity < minQuantity) {
-          const errorMsg = `Minimum quantity is ${minQuantity}`;
-          onError(errorMsg);
+          if (availabilityStatus.maxAvailable === 0) {
+            alert(
+              "The item is currently sold out. Please check back later or choose another item."
+            );
+          } else {
+            alert(
+              `Currently only ${availabilityStatus.maxAvailable} items are available.`
+            );
+          }
+          onError(
+            `Maximum available quantity is ${availabilityStatus.maxAvailable}`
+          );
+        } else if (newQuantity < 0) {
+          onError(`Quantity cannot be negative`);
         }
+
+        return; // Don't update quantity or call parent
+      }
+
+      // Only update if quantity actually changed
+      if (newQuantity !== quantity) {
+        console.log("🔥 Setting new quantity:", newQuantity);
+        setQuantity(newQuantity);
+
+        // Call parent callback with the new quantity
+        console.log("🔥 Calling parent onQuantityChange with:", newQuantity);
+        onQuantityChange(newQuantity);
       } else {
         console.log("🔥 Quantity unchanged, skipping update");
       }
     },
-    [
-      quantity,
-      availabilityStatus.maxAvailable,
-      minQuantity,
-      onQuantityChange,
-      onError,
-    ]
+    [quantity, availabilityStatus.maxAvailable, onQuantityChange, onError]
   );
 
   // Call availability change callback when status changes
@@ -599,61 +582,99 @@ const QuantitySelector = ({
     }
   }, [availabilityStatus, onAvailabilityChange, onWarning, onError]);
 
-  // Reset quantity when initialQuantity changes (but only on initial mount)
   useEffect(() => {
-    if (
-      initialQuantity !== quantity &&
-      initialQuantity >= minQuantity &&
-      quantity === 1
-    ) {
-      console.log(
-        "🔥 INITIAL QUANTITY EFFECT: Setting quantity to:",
-        initialQuantity
-      );
+    console.log("🔄 QuantitySelector initialQuantity effect:", {
+      initialQuantity,
+      currentQuantity: quantity,
+      foodId: food?.id,
+      selectedDate,
+    });
+
+    // Always sync with the parent's initial quantity
+    if (initialQuantity !== quantity) {
+      console.log("🔄 Syncing quantity:", initialQuantity);
       setQuantity(initialQuantity);
     }
-  }, [initialQuantity, minQuantity]);
+  }, [initialQuantity]);
+
+  // Fix the increment function
 
   const increment = useCallback(() => {
     console.log("🔥 INCREMENT CLICKED!", {
       disabled,
       availabilityStatus: availabilityStatus.isAvailable,
-      quantity,
+      currentQuantity: quantity,
+      maxAvailable: availabilityStatus.maxAvailable,
     });
-    if (!disabled && availabilityStatus.isAvailable) {
-      console.log(
-        "🔥 INCREMENT: Calling handleQuantityChange with:",
-        quantity + 1
-      );
-      handleQuantityChange(quantity + 1);
-    } else {
+
+    if (disabled || !availabilityStatus.isAvailable) {
       alert(
         "The item is currently sold out. Please check back later or choose another item."
       );
-      console.log("🔥 INCREMENT BLOCKED:", {
-        disabled,
-        isAvailable: availabilityStatus.isAvailable,
-      });
+      console.log("🔥 INCREMENT BLOCKED: Item not available");
+      return;
     }
+
+    const newQuantity = quantity + 1;
+
+    // Check if we're at the limit before calling handleQuantityChange
+    if (newQuantity > availabilityStatus.maxAvailable) {
+      console.log("🔥 INCREMENT BLOCKED: At maximum quantity");
+      if (availabilityStatus.maxAvailable === 0) {
+        alert(
+          "The item is currently sold out. Please check back later or choose another item."
+        );
+      } else {
+        alert(
+          `Currently only ${availabilityStatus.maxAvailable} items are available.`
+        );
+      }
+      return;
+    }
+
+    console.log(
+      "🔥 INCREMENT: Calling handleQuantityChange with:",
+      newQuantity
+    );
+    handleQuantityChange(newQuantity);
   }, [
     disabled,
     availabilityStatus.isAvailable,
+    availabilityStatus.maxAvailable,
     quantity,
     handleQuantityChange,
   ]);
 
+  // Fix the decrement function
+
+  // Fix the decrement function to allow 0
+
   const decrement = useCallback(() => {
-    console.log("🔥 DECREMENT CLICKED!", { disabled, quantity, minQuantity });
-    if (!disabled && quantity > minQuantity) {
-      console.log(
-        "🔥 DECREMENT: Calling handleQuantityChange with:",
-        quantity - 1
-      );
-      handleQuantityChange(quantity - 1);
-    } else {
-      console.log("🔥 DECREMENT BLOCKED:", { disabled, quantity, minQuantity });
+    console.log("🔥 DECREMENT CLICKED!", {
+      disabled,
+      currentQuantity: quantity,
+      minQuantity,
+    });
+
+    if (disabled) {
+      console.log("🔥 DECREMENT BLOCKED: Component disabled");
+      return;
     }
-  }, [disabled, quantity, minQuantity, handleQuantityChange]);
+
+    const newQuantity = quantity - 1;
+
+    // Allow going to 0 to remove item from cart
+    if (newQuantity < 0) {
+      console.log("🔥 DECREMENT BLOCKED: Cannot go below 0");
+      return;
+    }
+
+    console.log(
+      "🔥 DECREMENT: Calling handleQuantityChange with:",
+      newQuantity
+    );
+    handleQuantityChange(newQuantity);
+  }, [disabled, quantity, handleQuantityChange]);
 
   // CSS classes based on size and state
   const containerClasses = [
@@ -697,7 +718,7 @@ const QuantitySelector = ({
             type="button"
             className="quantity-btn quantity-btn--decrement"
             onClick={decrement}
-            disabled={disabled || quantity <= minQuantity}
+            disabled={disabled || quantity <= 0}
             aria-label="Decrease quantity"
           >
             <svg
