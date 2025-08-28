@@ -19,40 +19,131 @@ import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import "../styles/FoodDetailPage.css";
 
 // Custom Slider Component
-const CustomSlider = ({ isLiked, handleLikeToggle }) => {
-  const sliderImages = [Order1, Order2, Order1, Order2]; // Repeat images for continuous loop
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAutoSliding, setIsAutoSliding] = useState(true);
+// Enhanced Custom Slider Component with better styling
+// Enhanced Custom Slider Component with better styling and error handling
+const CustomSlider = ({ food, isLiked, handleLikeToggle }) => {
+  // Generate slider images based on food data
+  const generateSliderImages = () => {
+    // Check if imagesUrl array exists and has images
+    if (
+      food?.imagesUrl &&
+      Array.isArray(food.imagesUrl) &&
+      food.imagesUrl.length > 0
+    ) {
+      console.log(
+        "🖼️ [CustomSlider] Using imagesUrl array with",
+        food.imagesUrl.length,
+        "images"
+      );
+      // Use actual food images from imagesUrl array
+      return food.imagesUrl;
+    }
 
-  // Auto-slide functionality
+    // Fallback to single imageUrl if imagesUrl doesn't exist
+    if (food?.imageUrl) {
+      console.log("🖼️ [CustomSlider] Using single imageUrl as fallback");
+      return [food.imageUrl];
+    }
+
+    // Final fallback to default images
+    console.log("🖼️ [CustomSlider] Using default Order images");
+    return [Order1, Order2];
+  };
+
+  const sliderImages = generateSliderImages() || []; // Ensure it's always an array
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAutoSliding, setIsAutoSliding] = useState(false);
+
+  // Auto-slide functionality with proper null checks
   useEffect(() => {
-    if (!isAutoSliding) return;
+    // Add null checks for sliderImages
+    if (!isAutoSliding || !sliderImages || sliderImages.length <= 1) return;
 
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % sliderImages.length);
     }, 2000); // 2 seconds
 
     return () => clearInterval(interval);
-  }, [isAutoSliding, sliderImages.length]);
+  }, [isAutoSliding, sliderImages]); // Remove .length from dependency array
+
+  // Initialize auto-sliding only when we have multiple images
+  useEffect(() => {
+    if (sliderImages && sliderImages.length > 1) {
+      setIsAutoSliding(false);
+    }
+  }, [sliderImages]);
+
+  // Pause auto-sliding on user interaction
+  const pauseAutoSliding = () => {
+    setIsAutoSliding(false);
+    // Resume after 3 seconds
+    setTimeout(() => {
+      if (sliderImages && sliderImages.length > 1) {
+        setIsAutoSliding(false);
+      }
+    }, 3000);
+  };
 
   const goToPrevious = () => {
-    setIsAutoSliding(false);
+    if (!sliderImages || sliderImages.length === 0) return;
+    pauseAutoSliding();
     setCurrentIndex((prevIndex) =>
       prevIndex === 0 ? sliderImages.length - 1 : prevIndex - 1
     );
-    // Resume auto-sliding after 3 seconds
-    setTimeout(() => setIsAutoSliding(true), 3000);
   };
 
   const goToNext = () => {
-    setIsAutoSliding(false);
+    if (!sliderImages || sliderImages.length === 0) return;
+    pauseAutoSliding();
     setCurrentIndex((prevIndex) => (prevIndex + 1) % sliderImages.length);
-    // Resume auto-sliding after 3 seconds
-    setTimeout(() => setIsAutoSliding(true), 3000);
   };
 
+  const goToSlide = (index) => {
+    if (!sliderImages || sliderImages.length === 0) return;
+    pauseAutoSliding();
+    setCurrentIndex(index);
+  };
+
+  // Early return if no images available
+  if (!sliderImages || sliderImages.length === 0) {
+    return (
+      <div className="custom-slider">
+        <div className="slider-container">
+          <div className="slider-slide">
+            <LazyImage
+              src={ProductImage}
+              alt="No image available"
+              fallbackSrc={ProductImage}
+              className="slider-image"
+            />
+          </div>
+          {/* Heart Icon */}
+          <div
+            className={`icon heart-icon ${isLiked ? "liked" : ""}`}
+            onClick={handleLikeToggle}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M9.80568 16.3852C9.53252 16.4816 9.08261 16.4816 8.80945 16.3852C6.47955 15.5898 1.27344 12.2717 1.27344 6.64781C1.27344 4.16527 3.27393 2.15674 5.74041 2.15674C7.20262 2.15674 8.49612 2.86374 9.30756 3.95638C10.119 2.86374 11.4205 2.15674 12.8747 2.15674C15.3412 2.15674 17.3417 4.16527 17.3417 6.64781C17.3417 12.2717 12.1356 15.5898 9.80568 16.3852Z"
+                stroke={isLiked ? "#FF5555" : "#FF5555"}
+                fill={isLiked ? "#FF5555" : "transparent"}
+                strokeWidth="1.20512"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="custom-slider">
+    <div className={`custom-slider ${isAutoSliding ? "auto-sliding" : ""}`}>
       <div className="slider-container">
         <div
           className="slider-track"
@@ -60,7 +151,12 @@ const CustomSlider = ({ isLiked, handleLikeToggle }) => {
         >
           {sliderImages.map((image, index) => (
             <div key={index} className="slider-slide">
-              <img src={image} alt={`Order ${(index % 2) + 1}`} />
+              <LazyImage
+                src={image}
+                alt={`${food?.name || "Food"} Image ${index + 1}`}
+                fallbackSrc={ProductImage}
+                className="slider-image"
+              />
             </div>
           ))}
         </div>
@@ -88,48 +184,59 @@ const CustomSlider = ({ isLiked, handleLikeToggle }) => {
           </svg>
         </div>
 
-        {/* Previous Button */}
-        <button className="slider-btn slider-prev" onClick={goToPrevious}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path
-              d="M12.5 15L7.5 10L12.5 5"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+        {/* Previous Button - only show if there are multiple images */}
+        {sliderImages.length > 1 && (
+          <button
+            className="slider-btn slider-prev"
+            onClick={goToPrevious}
+            aria-label="Previous image"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path
+                d="M12.5 15L7.5 10L12.5 5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        )}
 
-        {/* Next Button */}
-        <button className="slider-btn slider-next" onClick={goToNext}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path
-              d="M7.5 5L12.5 10L7.5 15"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+        {/* Next Button - only show if there are multiple images */}
+        {sliderImages.length > 1 && (
+          <button
+            className="slider-btn slider-next"
+            onClick={goToNext}
+            aria-label="Next image"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path
+                d="M7.5 5L12.5 10L7.5 15"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        )}
 
-        {/* Dots Indicator */}
-        <div className="slider-dots">
-          {sliderImages.slice(0, 2).map((_, index) => (
-            <button
-              key={index}
-              className={`slider-dot ${
-                currentIndex % 2 === index ? "active" : ""
-              }`}
-              onClick={() => {
-                setIsAutoSliding(false);
-                setCurrentIndex(index);
-                setTimeout(() => setIsAutoSliding(true), 3000);
-              }}
-            />
-          ))}
-        </div>
+        {/* Dots Indicator - only show if there are multiple images */}
+        {sliderImages.length > 1 && (
+          <div className="slider-dots">
+            {sliderImages.map((_, index) => (
+              <button
+                key={index}
+                className={`slider-dot ${
+                  currentIndex === index ? "active" : ""
+                }`}
+                onClick={() => goToSlide(index)}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -558,7 +665,48 @@ export default function FoodDetailPage() {
                         ).toFixed(1)
                       : "No ratings yet"}
                   </strong>
-                  {` ${kitchen?.ratingCount}+ reviews`}
+                </div>
+              </div>
+              <div className="left flex-0">
+                <div>
+                  <svg
+                    width="14"
+                    height="12"
+                    viewBox="0 0 14 12"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M7.41337 11.8736C7.18671 11.9536 6.81337 11.9536 6.58671 11.8736C4.65337 11.2136 0.333374 8.46023 0.333374 3.79356C0.333374 1.73356 1.99337 0.0668945 4.04004 0.0668945C5.25337 0.0668945 6.32671 0.653561 7.00004 1.56023C7.67337 0.653561 8.75337 0.0668945 9.96004 0.0668945C12.0067 0.0668945 13.6667 1.73356 13.6667 3.79356C13.6667 8.46023 9.34671 11.2136 7.41337 11.8736Z"
+                      fill="#FF5555"
+                    />
+                  </svg>
+                </div>
+                <div className="text">
+                  <strong>{food?.numOfLike ?? 0}</strong>
+                </div>
+              </div>
+              <div className="left flex-0">
+                <div>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M13.3067 5.9731C12.86 5.47977 12.1867 5.1931 11.2534 5.0931V4.58644C11.2534 3.6731 10.8667 2.7931 10.1867 2.17977C9.50003 1.5531 8.6067 1.25977 7.68003 1.34644C6.0867 1.49977 4.7467 3.03977 4.7467 4.70644V5.0931C3.81337 5.1931 3.14003 5.47977 2.69337 5.9731C2.0467 6.6931 2.0667 7.6531 2.14003 8.31977L2.6067 12.0331C2.7467 13.3331 3.27337 14.6664 6.14003 14.6664H9.86003C12.7267 14.6664 13.2534 13.3331 13.3934 12.0398L13.86 8.3131C13.9334 7.6531 13.9534 6.6931 13.3067 5.9731ZM7.77337 2.2731C8.44003 2.2131 9.07337 2.41977 9.5667 2.86644C10.0534 3.30644 10.3267 3.9331 10.3267 4.58644V5.0531H5.67337V4.70644C5.67337 3.51977 6.65337 2.37977 7.77337 2.2731ZM8.00003 12.3864C6.6067 12.3864 5.47337 11.2531 5.47337 9.85977C5.47337 8.46644 6.6067 7.3331 8.00003 7.3331C9.39337 7.3331 10.5267 8.46644 10.5267 9.85977C10.5267 11.2531 9.39337 12.3864 8.00003 12.3864Z"
+                      fill="#3FC045"
+                    />
+                    <path
+                      d="M7.62 11.0933C7.49334 11.0933 7.36667 11.0466 7.26667 10.9466L6.60667 10.2866C6.41334 10.0933 6.41334 9.7733 6.60667 9.57997C6.8 9.38664 7.12 9.38664 7.31334 9.57997L7.63334 9.89997L8.7 8.9133C8.9 8.72664 9.22 8.73997 9.40667 8.93997C9.59334 9.13997 9.58 9.45997 9.38 9.64664L7.96 10.96C7.86 11.0466 7.74 11.0933 7.62 11.0933Z"
+                      fill="#3FC045"
+                    />
+                  </svg>
+                </div>
+                <div className="text">
+                  <strong>{food?.numOfSoldItem ?? 0}</strong>
                 </div>
               </div>
               <div className="line"></div>
@@ -594,6 +742,7 @@ export default function FoodDetailPage() {
             </div>
 
             <CustomSlider
+              food={food}
               isLiked={isLiked}
               handleLikeToggle={handleLikeToggle}
             />

@@ -173,28 +173,52 @@
 }
 
 /* Custom Slider Styles */
+/* Custom Slider Styles - Updated to ensure arrows and dots are visible */
+/* Custom Slider Styles - Updated positioning */
 .custom-slider {
-  margin: 20px 0;
+  position: relative;
+  width: 100%;
+  height: 200px;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
 }
 
 .slider-container {
   position: relative;
   width: 100%;
-  height: 210px;
+  height: 100%;
   overflow: hidden;
   border-radius: 12px;
 }
 
-/* Heart Icon in Slider */
-.slider-container .custom-slider .heart-icon {
+.slider-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s ease-in-out;
+}
+
+.slider-slide {
+  min-width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.slider-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+/* Heart Icon Styling - Moved to right side to avoid overlap */
+.custom-slider .heart-icon {
   position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 15;
+  top: 12px;
+  left: 12px; /* Changed from left to right */
   background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
   border-radius: 50%;
   width: 36px;
   height: 36px;
@@ -202,52 +226,29 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  z-index: 20; /* Higher z-index than arrows */
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .custom-slider .heart-icon:hover {
   background: rgba(255, 255, 255, 1);
   transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .custom-slider .heart-icon.liked {
-  /* background: rgba(255, 85, 85, 0.1); */
-  color: red;
-  background-color: #f5f5f5;
+  background: rgba(255, 85, 85, 0.1);
+  border: 2px solid #ff5555;
 }
 
-.custom-slider .heart-icon.liked:hover {
-  background: rgba(255, 85, 85, 0.2);
-}
-
-.slider-track {
-  display: flex;
-  transition: transform 0.5s ease-in-out;
-  height: 100%;
-}
-
-.slider-slide {
-  min-width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.slider-slide img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 12px;
-}
-
+/* Slider Navigation Buttons - Fixed positioning */
 .slider-btn {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   border: none;
   border-radius: 50%;
   width: 40px;
@@ -256,16 +257,26 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 15; /* Lower than heart icon but higher than content */
   transition: all 0.3s ease;
-  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   color: #333;
+  font-size: 0; /* Hide any text */
 }
 
 .slider-btn:hover {
   background: rgba(255, 255, 255, 1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.slider-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.slider-btn:focus {
+  outline: 2px solid #3fc045;
+  outline-offset: 2px;
 }
 
 .slider-prev {
@@ -276,62 +287,125 @@
   right: 12px;
 }
 
+/* Ensure SVG icons are visible */
+.slider-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+  stroke: currentColor;
+  fill: none;
+}
+
+/* Slider Dots Indicator - Fixed positioning */
 .slider-dots {
   position: absolute;
-  bottom: 16px;
+  bottom: 16px; /* Increased from 12px for better visibility */
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   gap: 8px;
-  z-index: 10;
+  z-index: 15;
+  background: rgba(0, 0, 0, 0.3); /* Added background for better visibility */
+  padding: 8px 12px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
 }
 
 .slider-dot {
-  width: 10px;
-  height: 10px;
+  width: 10px; /* Increased from 8px */
+  height: 10px; /* Increased from 8px */
   border-radius: 50%;
   border: none;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.6);
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
+.slider-dot:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: scale(1.2);
+}
+
 .slider-dot.active {
   background: #3fc045;
+  width: 16px; /* Increased from 12px */
+  height: 10px; /* Keep height same */
+  border-radius: 5px; /* Adjusted for new width */
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
 }
 
-.slider-dot:hover {
-  background: rgba(255, 255, 255, 0.8);
-}
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .custom-slider {
+    height: 160px;
+  }
 
-/* Mobile responsive for slider */
-@media (max-width: 480px) {
-  .slider-container {
-    height: 200px;
+  .custom-slider .heart-icon {
+    width: 32px;
+    height: 32px;
+    top: 10px;
+    right: 10px;
   }
 
   .slider-btn {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .slider-btn svg {
+    width: 18px;
+    height: 18px;
   }
 
   .slider-prev {
-    left: 8px;
+    left: 10px;
   }
 
   .slider-next {
-    right: 8px;
+    right: 10px;
   }
 
   .slider-dots {
     bottom: 12px;
+    padding: 6px 10px;
   }
 
-  .custom-slider .heart-icon {
-    top: 12px;
-    right: 12px;
-    width: 32px;
-    height: 32px;
+  .slider-dot {
+    width: 8px;
+    height: 8px;
   }
+
+  .slider-dot.active {
+    width: 12px;
+    height: 8px;
+    border-radius: 4px;
+  }
+}
+
+/* Animation for auto-sliding */
+.custom-slider.auto-sliding .slider-track {
+  transition: transform 0.8s ease-in-out;
+}
+
+/* Loading state for images */
+.slider-slide img[data-loading="true"] {
+  opacity: 0.7;
+  filter: blur(2px);
+}
+
+.slider-slide img[data-loaded="true"] {
+  opacity: 1;
+  filter: none;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+/* Override any conflicting styles from FoodDetailPage.css */
+.custom-slider .slider-btn {
+  display: flex !important;
+  position: absolute !important;
+}
+
+.custom-slider .slider-dots {
+  display: flex !important;
+  position: absolute !important;
 }

@@ -217,8 +217,8 @@ ld {
   }
 
   .pickup-time-section {
-    margin-top: 6px;
-    padding-top: 6px;
+    margin-top: 0px;
+    padding-top: 0%;
   }
 }
 
