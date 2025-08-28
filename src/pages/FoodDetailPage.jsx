@@ -418,14 +418,14 @@ export default function FoodDetailPage() {
 
     // Show feedback to user with toast notifications
     if (result) {
-      if (result.requiresAuth) {
-        // User needs to authenticate - show WeChat dialog
-        console.log("🔒 Authentication required - showing WeChat dialog");
-        console.log("🔒 Setting showWeChatDialog to true");
-        setShowWeChatDialog(true);
-        console.log("🔒 showWeChatDialog state should now be true");
-        return;
-      }
+      // if (result.requiresAuth) {
+      //   // User needs to authenticate - show WeChat dialog
+      //   console.log("🔒 Authentication required - showing WeChat dialog");
+      //   console.log("🔒 Setting showWeChatDialog to true");
+      //   setShowWeChatDialog(true);
+      //   console.log("🔒 showWeChatDialog state should now be true");
+      //   return;
+      // }
 
       if (result.success) {
         console.log("✅ Success:", result.message);
@@ -463,12 +463,12 @@ export default function FoodDetailPage() {
     pickupTime,
     addToCartAction,
     navigate,
-    setShowWeChatDialog,
+    // setShowWeChatDialog,
   ]);
 
-  const handleWeChatDialogClose = useCallback(() => {
-    setShowWeChatDialog(false);
-  }, []);
+  // const handleWeChatDialogClose = useCallback(() => {
+  //   setShowWeChatDialog(false);
+  // }, []);
 
   // Sync selectedQuantity with cart quantity when cart changes
   useEffect(() => {

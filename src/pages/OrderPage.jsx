@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import dayjs from "dayjs";
@@ -8,6 +8,7 @@ import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
 
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
 import { useGenericCart } from "../hooks/useGenericCart";
+import { getCartQuantity } from "../utils/cartUtils";
 
 export default function OrderPage() {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export default function OrderPage() {
   const cartItems = useSelector((state) => state.cart.items);
 
   // Use generic cart hook for reliable quantity updates
-  const { handleQuantityChange } = useGenericCart();
+  const { getCartQuantity, handleQuantityChange } = useGenericCart();
 
   // State for tracking which items are in edit mode for pickup date/time
   const [editModeItems, setEditModeItems] = useState(new Set());
@@ -59,6 +60,12 @@ export default function OrderPage() {
     return map;
   }, [foods]);
 
+  const getItemCartQuantity = useCallback(
+    (foodId, selectedDate = null) => {
+      return getCartQuantity(foodId, selectedDate);
+    },
+    [getCartQuantity]
+  );
   // Helper function to get enriched food data with availability
   const getEnrichedFoodData = (cartItem) => {
     const fullFoodData = foodDataMap.get(cartItem.foodId);
@@ -114,8 +121,7 @@ export default function OrderPage() {
         item.pickupDetails?.orderType ||
         item.orderType ||
         (item.isPreOrder ? "PRE_ORDER" : "GO_GRAB");
-
-      if (orderType === "GO_GRAB") {
+      if (orderType === "GO_GRAB" || orderType === "Go&Grab") {
         // Go&Grab items - immediate pickup today
         groups.grabAndGo.push({
           ...item,
@@ -127,6 +133,7 @@ export default function OrderPage() {
         });
       } else if (
         orderType === "PRE_ORDER" ||
+        orderType === "Pre-Order" ||
         item.isPreOrder ||
         item.selectedDate
       ) {
@@ -207,15 +214,35 @@ export default function OrderPage() {
   }, [cartItems, foodDataMap]);
 
   // Helper to get cart quantity for a food item
-  const getCartQuantity = (foodId, selectedDate = null) => {
-    return cartItems
-      .filter(
-        (item) =>
-          item.foodId === foodId &&
-          (!selectedDate || item.selectedDate === selectedDate)
-      )
-      .reduce((total, item) => total + item.quantity, 0);
-  };
+  // Update the getCartQuantity function
+
+  // Helper to get cart quantity for a food item
+  // const getCartQuantity = useCallback(
+  //   (foodId, selectedDate = null) => {
+  //     const matchingItems = cartItems.filter((item) => {
+  //       const matchesFood = item.foodId === foodId;
+  //       const matchesDate = selectedDate
+  //         ? item.selectedDate === selectedDate
+  //         : !item.selectedDate && !item.isPreOrder;
+  //       return matchesFood && matchesDate;
+  //     });
+
+  //     const totalQuantity = matchingItems.reduce(
+  //       (total, item) => total + (item.quantity || 1),
+  //       0
+  //     );
+
+  //     console.log("📊 getCartQuantity:", {
+  //       foodId,
+  //       selectedDate,
+  //       matchingItems: matchingItems.length,
+  //       totalQuantity,
+  //     });
+
+  //     return totalQuantity;
+  //   },
+  //   [cartItems]
+  // );
 
   // Handle remove all
   const handleRemoveAll = () => {
@@ -228,10 +255,7 @@ export default function OrderPage() {
     return dayjs(dateString).format("MMM D ddd");
   };
 
-  const totalItemsCount = cartItems.reduce(
-    (total, item) => total + item.quantity,
-    0
-  );
+  const totalItemsCount = cartItems?.length || 0;
 
   return (
     <div className="container">
@@ -286,7 +310,7 @@ export default function OrderPage() {
                   <h2 className="small-title mb-20">Go&Grab</h2>
                   <div className="menu-listing">
                     {groupedCartItems.grabAndGo.map((item, index) => {
-                      const cartQty = getCartQuantity(item.foodId);
+                      const cartQty = getItemCartQuantity(item.foodId);
                       return (
                         <div
                           key={`grab-${item.foodId}-${index}`}
@@ -328,18 +352,26 @@ export default function OrderPage() {
                                 selectedDate={null}
                                 size="small"
                                 initialQuantity={cartQty}
-                                onQuantityChange={async (newQuantity) => {
-                                  const currentQty = getCartQuantity(
-                                    item.foodId
+                                minQuantity={0}
+                                onQuantityChange={(newQuantity) => {
+                                  // Removed async
+                                  console.log(
+                                    "🛒 OrderPage Go&Grab quantity change:",
+                                    {
+                                      foodId: item.foodId,
+                                      newQuantity,
+                                      currentQty: cartQty,
+                                    }
                                   );
+
                                   const enrichedFood =
                                     getEnrichedFoodData(item);
-
-                                  await handleQuantityChange({
+                                  handleQuantityChange({
+                                    // Removed await
                                     food: enrichedFood,
                                     kitchen: kitchen || item.kitchen,
                                     newQuantity,
-                                    currentQuantity: currentQty,
+                                    currentQuantity: cartQty,
                                     selectedDate: null,
                                     specialInstructions:
                                       item.specialInstructions || "",
@@ -365,7 +397,7 @@ export default function OrderPage() {
                     </h2>
                     <div className="menu-listing">
                       {items.map((item, index) => {
-                        const cartQty = getCartQuantity(item.foodId, date);
+                        const cartQty = getItemCartQuantity(item.foodId, date);
                         return (
                           <div
                             key={`preorder-${item.foodId}-${date}-${index}`}
@@ -407,19 +439,26 @@ export default function OrderPage() {
                                   selectedDate={date}
                                   size="small"
                                   initialQuantity={cartQty}
-                                  onQuantityChange={async (newQuantity) => {
-                                    const currentQty = getCartQuantity(
-                                      item.foodId,
-                                      date
+                                  minQuantity={0}
+                                  onQuantityChange={(newQuantity) => {
+                                    // Removed async
+                                    console.log(
+                                      "🛒 OrderPage Pre-Order quantity change:",
+                                      {
+                                        foodId: item.foodId,
+                                        date,
+                                        newQuantity,
+                                        currentQty: cartQty,
+                                      }
                                     );
+
                                     const enrichedFood =
                                       getEnrichedFoodData(item);
-
-                                    await handleQuantityChange({
+                                    handleQuantityChange({
                                       food: enrichedFood,
                                       kitchen: kitchen || item.kitchen,
                                       newQuantity,
-                                      currentQuantity: currentQty,
+                                      currentQuantity: cartQty,
                                       selectedDate: date,
                                       specialInstructions:
                                         item.specialInstructions || "",

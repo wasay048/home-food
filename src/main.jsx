@@ -23,7 +23,7 @@ createRoot(document.getElementById("root")).render(
               reverseOrder={false}
               gutter={8}
               toastOptions={{
-                duration: 4000,
+                duration: 3000,
                 style: {
                   background: "#fff",
                   color: "#333",

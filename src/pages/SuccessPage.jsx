@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
 import Success from "../assets/images/success.svg";
+import qrCode from "../assets/images/home-food-qr.svg";
 
 export default function SuccessPage() {
   const location = useLocation();
@@ -44,10 +45,7 @@ export default function SuccessPage() {
 
       // Check multiple ways an item could be identified as pre-order
       const isPreOrderItem =
-        item.isPreOrder ||
-        item.isFromPreorder ||
-        (item.pickupDate && item.pickupDate !== "today") ||
-        item.orderType === "PRE_ORDER";
+        item.orderType === "PRE_ORDER" || item.orderType === "Pre-Order";
 
       if (isPreOrderItem && item.pickupDate) {
         const dateKey = item.pickupDate;
@@ -310,13 +308,23 @@ export default function SuccessPage() {
             </div>
           )}
 
-          <div className="success-actions">
+          <div className="success-actions mb-16">
             {/* <Link to="/order" className="action-button secondary mb-12">
               View Order Details
             </Link> */}
             <Link to="/" className="action-button">
               Back to Home
             </Link>
+          </div>
+          <div className="scanner-bottom mb-16">
+            <div className="text">
+              Order can be viewed in the <strong>HomeFresh</strong> app,
+              available in the iOS App Store. The app also sends reminders on
+              the morning of each scheduled pickup.
+            </div>
+            <div className="qr">
+              <img src={qrCode} alt="QR Code" />
+            </div>
           </div>
         </div>
       </div>

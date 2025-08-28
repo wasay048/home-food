@@ -7,7 +7,7 @@ import {
   clearCurrentFood,
   checkFoodLikeStatus,
 } from "../store/slices/foodSlice";
-import { addToCart, updateCartQuantity } from "../store/slices/cartSlice";
+import { addToCart, updateCartItem } from "../store/slices/cartSlice"; // Changed from updateCartQuantity to updateCartItem
 import { fetchFoodReviews, addFoodReview } from "../store/slices/reviewsSlice";
 import {
   fetchKitchenStats,
@@ -24,7 +24,7 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
   const [likeStatusChecked, setLikeStatusChecked] = useState(false);
 
   // Selectors
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
 
   const {
     currentFood: food,
@@ -119,10 +119,10 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
   }, [dispatch, foodId, kitchenId, currentFoodReviews, isFoodReviewsLoading]);
 
   const toggleLike = useCallback(() => {
-    if (!isAuthenticated) {
-      console.warn("User must be logged in to like food");
-      return;
-    }
+    // if (!isAuthenticated) {
+    //   console.warn("User must be logged in to like food");
+    //   return;
+    // }
 
     if (!kitchenId) {
       console.warn("Kitchen ID is required to like food");
@@ -149,7 +149,7 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
     dispatch,
     foodId,
     kitchenId,
-    isAuthenticated,
+    // isAuthenticated,
     isLiked,
     likedFoods,
     user?.id,
@@ -192,14 +192,14 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
 
   const addToCartAction = useCallback(
     (orderData) => {
-      if (!isAuthenticated) {
-        console.warn("User must be logged in to add to cart");
-        return {
-          success: false,
-          message: "User must be logged in to add to cart",
-          requiresAuth: true, // Add this flag for WeChat dialog
-        };
-      }
+      // if (!isAuthenticated) {
+      //   console.warn("User must be logged in to add to cart");
+      //   return {
+      //     success: false,
+      //     message: "User must be logged in to add to cart",
+      //     requiresAuth: true, // Add this flag for WeChat dialog
+      //   };
+      // }
 
       // Find exact matching cart item (same food, date, and special instructions)
       const exactCartItem = findExactCartItem(orderData);
@@ -207,20 +207,26 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
       // Check if exact same item exists and if quantity is the same
       if (exactCartItem) {
         console.log(
-          "Item already exists with same quantity:",
-          exactCartItem.quantity
+          "Item already exists, updating quantity:",
+          exactCartItem.quantity,
+          "to",
+          orderData.quantity
         );
+
+        // Update the existing item's quantity
         dispatch(
-          updateCartQuantity({
+          updateCartItem({
             cartItemId: exactCartItem.id,
             quantity: orderData.quantity,
+            specialInstructions: orderData.specialInstructions,
           })
         );
+
         return {
-          success: false,
-          message:
-            "This item already exists in the cart with the same quantity and specifications",
+          success: true,
+          message: "Cart item quantity updated successfully",
           existingQuantity: exactCartItem.quantity,
+          newQuantity: orderData.quantity,
         };
       }
 
@@ -236,9 +242,14 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
         quantity: orderData.quantity,
         orderType: orderData.orderType,
         selectedDate: orderData.selectedDate,
+        selectedTime: orderData.selectedTime,
         specialInstructions: orderData.specialInstructions || "",
         // Add pickup details for proper cart organization
         pickupDetails,
+        // Determine if this is a pre-order
+        isPreOrder:
+          orderData.selectedDate &&
+          !dayjs(orderData.selectedDate).isSame(dayjs(), "day"),
         // Include complete food object with all fields
         food: food
           ? {
@@ -287,9 +298,8 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
       dispatch,
       foodId,
       kitchenId,
-      isAuthenticated,
+      // isAuthenticated,
       findExactCartItem,
-      updateCartQuantity,
       food,
       kitchen,
       generatePickupDetails,
@@ -298,10 +308,10 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
 
   const updateCartItemQuantity = useCallback(
     (newQuantity) => {
-      if (!isAuthenticated) {
-        console.warn("User must be logged in to update cart");
-        return;
-      }
+      // if (!isAuthenticated) {
+      //   console.warn("User must be logged in to update cart");
+      //   return;
+      // }
 
       const cartItem = cartItems.find(
         (item) => item.foodId === foodId && item.kitchenId === kitchenId
@@ -312,20 +322,25 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
           cartItemId: cartItem.id,
           quantity: newQuantity,
         });
+
+        // Use updateCartItem instead of updateCartQuantity
         dispatch(
-          updateCartQuantity({ cartItemId: cartItem.id, quantity: newQuantity })
+          updateCartItem({
+            cartItemId: cartItem.id,
+            quantity: newQuantity,
+          })
         );
       }
     },
-    [dispatch, foodId, kitchenId, isAuthenticated, cartItems]
+    [dispatch, foodId, kitchenId, cartItems]
   );
 
   const addReview = useCallback(
     (reviewData) => {
-      if (!isAuthenticated) {
-        console.warn("User must be logged in to add review");
-        return;
-      }
+      // if (!isAuthenticated) {
+      //   console.warn("User must be logged in to add review");
+      //   return;
+      // }
 
       return dispatch(
         addFoodReview({
@@ -335,7 +350,7 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
         })
       );
     },
-    [dispatch, foodId, kitchenId, isAuthenticated]
+    [dispatch, foodId, kitchenId]
   );
 
   const clearData = useCallback(() => {
@@ -357,7 +372,7 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
 
   // Check like status when food loads and user is authenticated
   useEffect(() => {
-    if (foodId && kitchenId && isAuthenticated && food) {
+    if (foodId && kitchenId && food) {
       console.log("🔍 Checking like status for food:", {
         foodId,
         kitchenId,
@@ -367,12 +382,13 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
         console.log("✅ Like status checked:", result);
         setLikeStatusChecked(true);
       });
-    } else if (!isAuthenticated) {
-      // If not authenticated, we know the status (not liked)
-      console.log("🔍 Not authenticated, setting like status as checked");
-      setLikeStatusChecked(true);
     }
-  }, [dispatch, foodId, kitchenId, isAuthenticated, food, user?.id]);
+    //  else if (!isAuthenticated) {
+    //   // If not authenticated, we know the status (not liked)
+    //   console.log("🔍 Not authenticated, setting like status as checked");
+    //   setLikeStatusChecked(true);
+    // }
+  }, [dispatch, foodId, kitchenId, food, user?.id]);
 
   // Computed values
   const loading = foodLoading || isCurrentKitchenStatsLoading;
@@ -405,7 +421,7 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
 
     // User state
     user,
-    isAuthenticated,
+    // isAuthenticated,
 
     // Actions
     toggleLike,

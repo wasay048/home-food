@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import dayjs from "dayjs";
 import "./DateTimePicker.css";
 
@@ -26,9 +32,10 @@ const DateTimePicker = ({
   timeLabel = "Pick up time:",
   style = {},
 }) => {
+  console.log("kitchen", kitchen);
   const [internalDate, setInternalDate] = useState(selectedDate);
   const [internalTime, setInternalTime] = useState(selectedTime);
-
+  const dateInputRef = useRef(null);
   // Sync with external props
   useEffect(() => {
     setInternalDate(selectedDate);
@@ -38,103 +45,122 @@ const DateTimePicker = ({
     setInternalTime(selectedTime);
   }, [selectedTime]);
 
+  const openDatePicker = useCallback(() => {
+    if (disabled || orderType === "PRE_ORDER") return;
+
+    if (dateInputRef.current) {
+      dateInputRef.current.focus();
+
+      // Try different methods to open the picker
+      if (dateInputRef.current.showPicker) {
+        // Modern browsers
+        dateInputRef.current.showPicker();
+      } else {
+        // Fallback: trigger click event
+        dateInputRef.current.click();
+      }
+    }
+  }, [disabled, orderType]);
   // Calculate available dates based on order type
+  // Update the availableDates useMemo dependencies
+
   const availableDates = useMemo(() => {
     const today = dayjs().startOf("day");
 
     console.log("🗓️ DateTimePicker - Calculating available dates:", {
       orderType,
       today: today.format("YYYY-MM-DD"),
+      selectedDate,
       foodId: food?.id,
     });
 
     if (orderType === "GO_GRAB") {
-      // Go&Grab: Only today is available (no past or future dates)
-      return [
-        {
-          date: today.format("YYYY-MM-DD"),
-          display: `${today.format("MMM D, YYYY")} (Today)`,
-          dayjs: today,
-          isToday: true,
+      // Go&Grab: Generate available dates from today onwards (7 days)
+      const dates = [];
+
+      for (let i = 0; i < 7; i++) {
+        const date = today.add(i, "day");
+        const dateString = date.format("YYYY-MM-DD");
+
+        let displayText;
+        if (i === 0) {
+          displayText = `${date.format("MMM D, YYYY")} (Today)`;
+        } else if (i === 1) {
+          displayText = `${date.format("MMM D, YYYY")} (Tomorrow)`;
+        } else {
+          const dayOfWeek = date.format("dddd");
+          displayText = `${dayOfWeek}, ${date.format("MMM D, YYYY")}`;
+        }
+
+        dates.push({
+          date: dateString,
+          display: displayText,
+          dayjs: date,
+          isToday: i === 0,
           isAvailable: true,
-        },
-      ];
+        });
+      }
+
+      return dates;
     } else if (orderType === "PRE_ORDER") {
-      // Pre-Order: Use kitchen's preorder schedule
-      if (!kitchen?.preorderSchedule?.dates) {
+      // Pre-Order: Only enable the selected date from parent
+      if (!selectedDate) {
+        console.log(
+          "🚫 DateTimePicker - No selectedDate provided for PRE_ORDER"
+        );
         return [];
       }
 
-      const scheduleEntries = Object.entries(kitchen.preorderSchedule.dates);
-      const dates = [];
+      const selectedDateObj = dayjs(selectedDate);
 
-      scheduleEntries.forEach(([dateString, scheduleItems]) => {
-        const date = dayjs(dateString);
+      // Create a single date entry for the selected date
+      const isToday = selectedDateObj.isSame(today, "day");
+      const isTomorrow = selectedDateObj.isSame(today.add(1, "day"), "day");
 
-        // Skip past dates (before today)
-        if (date.isBefore(today, "day")) {
-          return;
-        }
+      let displayText;
+      if (isToday) {
+        displayText = `${selectedDateObj.format("MMM D, YYYY")} (Today)`;
+      } else if (isTomorrow) {
+        displayText = `${selectedDateObj.format("MMM D, YYYY")} (Tomorrow)`;
+      } else {
+        const dayOfWeek = selectedDateObj.format("dddd");
+        displayText = `${dayOfWeek}, ${selectedDateObj.format("MMM D, YYYY")}`;
+      }
 
-        // Check if this food item is available on this date
-        const foodAvailable = scheduleItems.some(
-          (item) => item.foodItemId === food?.id
-        );
+      const singleDateEntry = {
+        date: selectedDate,
+        display: displayText,
+        dayjs: selectedDateObj,
+        isToday: isToday,
+        isAvailable: true,
+      };
 
-        if (foodAvailable) {
-          const dayOfWeek = date.format("dddd"); // Monday, Tuesday, etc.
-          const isToday = date.isSame(today, "day");
-          const isTomorrow = date.isSame(today.add(1, "day"), "day");
-
-          let displayText;
-          if (isToday) {
-            displayText = `${date.format("MMM D, YYYY")} (Today)`;
-          } else if (isTomorrow) {
-            displayText = `${date.format("MMM D, YYYY")} (Tomorrow)`;
-          } else {
-            displayText = `${dayOfWeek}, ${date.format("MMM D, YYYY")}`;
-          }
-
-          dates.push({
-            date: dateString,
-            display: displayText,
-            dayjs: date,
-            isToday: isToday,
-            isAvailable: true,
-            scheduleItems: scheduleItems.filter(
-              (item) => item.foodItemId === food?.id
-            ),
-          });
-        }
+      console.log("🗓️ DateTimePicker - Pre-order single date enabled:", {
+        date: singleDateEntry.date,
+        display: singleDateEntry.display,
+        isToday: singleDateEntry.isToday,
+        hasKitchenSchedule: !!kitchen?.preorderSchedule?.dates?.[selectedDate],
       });
 
-      // Sort dates chronologically
-      const sortedDates = dates.sort((a, b) => a.dayjs.diff(b.dayjs));
-
-      console.log(
-        "🗓️ DateTimePicker - Pre-order dates found:",
-        sortedDates.map((d) => ({
-          date: d.date,
-          display: d.display,
-          isToday: d.isToday,
-        }))
-      );
-
-      return sortedDates;
+      return [singleDateEntry];
     }
 
     return [];
-  }, [orderType, kitchen, food]);
+  }, [orderType, selectedDate, food?.id]); // Simplified dependencies
 
   // Calculate available time slots for selected date
+  // Update the availableTimeSlots calculation for PRE_ORDER
+
+  // Update the availableTimeSlots calculation to handle date format conversion
+
   const availableTimeSlots = useMemo(() => {
     if (!internalDate) return [];
-
+    console.log("orderType", orderType);
     if (orderType === "GO_GRAB") {
       // Go&Grab: Use kitchen operation hours for today
       const today = dayjs();
       const selectedDate = dayjs(internalDate);
-
+      console.log("selectedDate", selectedDate);
       // Generate time slots from now + 30 minutes to kitchen closing
       // Default kitchen hours: 9 AM to 9 PM
       const kitchenOpenHour = 9; // 9 AM
@@ -180,14 +206,79 @@ const DateTimePicker = ({
 
       return timeSlots;
     } else if (orderType === "PRE_ORDER") {
-      // Pre-Order: Use specific time slots from schedule
-      const dateData = availableDates.find((d) => d.date === internalDate);
+      console.log("selectedDate", selectedDate);
+      console.log("selectedDate", kitchen?.preorderSchedule?.dates);
+      // Pre-Order: Use specific time slots from kitchen schedule for the selected date
+      if (!selectedDate || !kitchen?.preorderSchedule?.dates) {
+        console.log("🚫 DateTimePicker - No schedule data found");
+        return [];
+      }
 
-      if (!dateData?.scheduleItems?.length) return [];
+      // Convert selectedDate format from "8/29/2025" to "2025-08-29" to match kitchen schedule
+      let scheduleDate;
+      try {
+        // Parse the selectedDate which could be in format "8/29/2025" or "2025-08-29"
+        const parsedDate = dayjs(selectedDate);
+        scheduleDate = parsedDate.format("YYYY-MM-DD");
+        console.log("scheduleDate", scheduleDate);
+      } catch (error) {
+        console.error(
+          "🚫 DateTimePicker - Error parsing selectedDate:",
+          selectedDate,
+          error
+        );
+        return [];
+      }
+
+      console.log("🔄 DateTimePicker - Converting date formats:", {
+        originalSelectedDate: selectedDate,
+        convertedScheduleDate: scheduleDate,
+        availableScheduleDates: Object.keys(kitchen.preorderSchedule.dates),
+      });
+
+      if (!kitchen.preorderSchedule.dates[scheduleDate]) {
+        console.log(
+          "🚫 DateTimePicker - No schedule data found for converted date:",
+          scheduleDate,
+          "Available dates:",
+          Object.keys(kitchen.preorderSchedule.dates)
+        );
+        return [];
+      }
+
+      const scheduleItems = kitchen.preorderSchedule.dates[scheduleDate];
+
+      // Filter schedule items for this specific food
+      const foodScheduleItems = scheduleItems.filter(
+        (item) => item.foodItemId === food?.id
+      );
+
+      if (foodScheduleItems.length === 0) {
+        console.log(
+          "🚫 DateTimePicker - No schedule items found for this food on date:",
+          scheduleDate,
+          "Food ID:",
+          food?.id,
+          "Available items:",
+          scheduleItems.map((item) => ({
+            id: item.foodItemId,
+            name: item.nameOfFood,
+          }))
+        );
+        return [];
+      }
 
       const timeSlots = [];
 
-      dateData.scheduleItems.forEach((scheduleItem) => {
+      foodScheduleItems.forEach((scheduleItem) => {
+        console.log("📋 Processing schedule item:", {
+          foodItemId: scheduleItem.foodItemId,
+          nameOfFood: scheduleItem.nameOfFood,
+          availableTimes: scheduleItem.availableTimes,
+          hasAvailableTimes: !!scheduleItem.availableTimes,
+          isArray: Array.isArray(scheduleItem.availableTimes),
+        });
+
         if (
           scheduleItem.availableTimes &&
           Array.isArray(scheduleItem.availableTimes)
@@ -220,12 +311,41 @@ const DateTimePicker = ({
                   isAvailable: true,
                   scheduleItem,
                   isRecommended: offset === 0, // Mark exact scheduled time as recommended
+                  originalTime: time, // Keep track of original scheduled time
                 });
               }
             }
 
             timeSlots.push(...timeOptions);
           });
+        } else if (scheduleItem.time) {
+          // Handle single time property (fallback)
+          const scheduledTime = dayjs(
+            `2000-01-01 ${scheduleItem.time}`,
+            "YYYY-MM-DD h:mm A"
+          );
+
+          // Generate time slots around the scheduled time
+          for (let offset = -30; offset <= 30; offset += 15) {
+            const timeSlot = scheduledTime.add(offset, "minutes");
+            const timeValue = timeSlot.format("h:mm A");
+            const hour = timeSlot.hour();
+
+            if (
+              hour >= 8 &&
+              hour <= 22 &&
+              !timeSlots.find((slot) => slot.value === timeValue)
+            ) {
+              timeSlots.push({
+                value: timeValue,
+                display: timeValue + (offset === 0 ? " (Recommended)" : ""),
+                isAvailable: true,
+                scheduleItem,
+                isRecommended: offset === 0,
+                originalTime: scheduleItem.time,
+              });
+            }
+          }
         }
       });
 
@@ -237,20 +357,29 @@ const DateTimePicker = ({
       });
 
       console.log(
-        "⏰ DateTimePicker - Pre-order time slots:",
-        sortedTimeSlots.map((t) => ({
-          value: t.value,
-          display: t.display,
-          isRecommended: t.isRecommended,
-        }))
+        "⏰ DateTimePicker - Pre-order time slots for date:",
+        scheduleDate,
+        {
+          originalSelectedDate: selectedDate,
+          convertedScheduleDate: scheduleDate,
+          totalScheduleItems: scheduleItems.length,
+          foodScheduleItems: foodScheduleItems.length,
+          availableTimeSlots: sortedTimeSlots.length,
+          timeSlots: sortedTimeSlots.map((t) => ({
+            value: t.value,
+            display: t.display,
+            isRecommended: t.isRecommended,
+            originalTime: t.originalTime,
+          })),
+        }
       );
 
       return sortedTimeSlots;
     }
 
     return [];
-  }, [internalDate, orderType, availableDates, kitchen]);
-
+  }, [internalDate, orderType, selectedDate, kitchen, food]);
+  console.log("available time slots", availableTimeSlots);
   // Handle date selection
   const handleDateChange = useCallback(
     (dateValue) => {
@@ -279,7 +408,11 @@ const DateTimePicker = ({
       const firstDate = availableDates[0].date;
       handleDateChange(firstDate);
     }
-  }, [orderType, internalDate, availableDates, handleDateChange]);
+    // For PRE_ORDER, don't auto-select - use the selectedDate from parent
+    if (orderType === "PRE_ORDER" && selectedDate && !internalDate) {
+      setInternalDate(selectedDate);
+    }
+  }, [orderType, internalDate, availableDates, selectedDate, handleDateChange]);
 
   // Auto-select first available time when date is selected
   useEffect(() => {
@@ -312,28 +445,88 @@ const DateTimePicker = ({
   const timePickerProps = showTimeFirst ? { "data-first": true } : {};
 
   return (
-    <div className={`date-time-picker ${className}`} style={style}>
+    <div
+      className={`date-time-picker ${className}`}
+      style={style}
+      data-order-type={orderType}
+    >
       <div className="picker-field" {...datePickerProps}>
         <label className="picker-label">{dateLabel}</label>
-        <select
-          className="picker-select date-select"
-          value={internalDate || ""}
-          onChange={(e) => handleDateChange(e.target.value)}
-          disabled={disabled || availableDates.length === 0}
-        >
-          <option value="" disabled>
-            Select date
-          </option>
-          {availableDates.map((dateOption) => (
-            <option
-              key={dateOption.date}
-              value={dateOption.date}
-              disabled={!dateOption.isAvailable}
-            >
-              {dateOption.display}
-            </option>
-          ))}
-        </select>
+        <div className="date-input-wrapper">
+          <input
+            type="date"
+            ref={dateInputRef}
+            className="picker-select date-select date-input"
+            value={internalDate || ""}
+            onChange={(e) => handleDateChange(e.target.value)}
+            disabled={disabled || availableDates.length === 0}
+            min={
+              orderType === "PRE_ORDER" && selectedDate
+                ? selectedDate // For pre-order, min is the selected date
+                : dayjs().format("YYYY-MM-DD") // For Go&Grab, min is today
+            }
+            max={
+              orderType === "PRE_ORDER" && selectedDate
+                ? selectedDate // For pre-order, max is also the selected date (only this date allowed)
+                : availableDates.length > 0
+                ? availableDates[availableDates.length - 1].date
+                : dayjs().add(7, "day").format("YYYY-MM-DD")
+            }
+            readOnly={orderType === "PRE_ORDER"} // Make date field read-only for pre-order
+          />
+          <div
+            className="date-display-text"
+            onClick={() => {
+              // Trigger the date input when clicking on the display text
+              if (!disabled && orderType !== "PRE_ORDER") {
+                const dateInput = document.querySelector(
+                  ".date-input-wrapper .date-input"
+                );
+                if (dateInput) {
+                  dateInput.focus();
+                  dateInput.showPicker?.(); // For browsers that support showPicker
+                }
+              }
+            }}
+          >
+            {internalDate
+              ? availableDates.find((d) => d.date === internalDate)?.display ||
+                dayjs(internalDate).format("MMM D, YYYY")
+              : orderType === "PRE_ORDER"
+              ? "Date pre-selected"
+              : "Select date"}
+          </div>
+          <svg
+            className="picker-arrow"
+            width="12"
+            height="8"
+            viewBox="0 0 12 8"
+            fill="none"
+            style={{
+              opacity: orderType === "PRE_ORDER" ? 0.5 : 1, // Dim arrow for pre-order
+            }}
+            onClick={() => {
+              // Trigger the date input when clicking on the arrow
+              if (!disabled && orderType !== "PRE_ORDER") {
+                const dateInput = document.querySelector(
+                  ".date-input-wrapper .date-input"
+                );
+                if (dateInput) {
+                  dateInput.focus();
+                  dateInput.showPicker?.(); // For browsers that support showPicker
+                }
+              }
+            }}
+          >
+            <path
+              d="M1 1L6 6L11 1"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
       </div>
 
       <div className="picker-field" {...timePickerProps}>
@@ -342,9 +535,9 @@ const DateTimePicker = ({
           className="picker-select time-select"
           value={internalTime || ""}
           onChange={(e) => handleTimeChange(e.target.value)}
-          disabled={
-            disabled || !internalDate || availableTimeSlots.length === 0
-          }
+          // disabled={
+          //   disabled || !internalDate || availableTimeSlots.length === 0
+          // }
         >
           <option value="" disabled>
             Select time
