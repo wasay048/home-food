@@ -10,6 +10,7 @@
     "lint": "eslint . --ext .js,.jsx"
   },
   "dependencies": {
+    "@popperjs/core": "^2.11.8",
     "@reduxjs/toolkit": "^2.8.2",
     "bootstrap": "^5.3.3",
     "dayjs": "^1.11.13",

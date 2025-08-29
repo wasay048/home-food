@@ -1,13 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
+import React, { useEffect, useState, useContext } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { authenticateWithWeChat } from "../store/slices/authSlice";
+import AuthContext from "../context/AuthContext";
 import { showToast } from "../utils/toast";
 
 const WeChatCallbackPage = () => {
   const [searchParams] = useSearchParams();
-  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { handleWeChatCallback } = useContext(AuthContext);
   const [status, setStatus] = useState("processing"); // processing, success, error
 
   useEffect(() => {
@@ -65,7 +64,7 @@ const WeChatCallbackPage = () => {
 
         // Regular WeChat authentication
         setStatus("processing");
-        const result = await dispatch(authenticateWithWeChat(code)).unwrap();
+        const result = await handleWeChatCallback(code);
 
         console.log("✅ WeChat authentication successful:", result);
         setStatus("success");
@@ -110,7 +109,7 @@ const WeChatCallbackPage = () => {
     };
 
     handleWeChatCallback();
-  }, [searchParams, dispatch, navigate]);
+  }, [searchParams, handleWeChatCallback, navigate]);
 
   return (
     <div className="wechat-callback-page">

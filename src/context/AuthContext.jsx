@@ -39,6 +39,21 @@ export function AuthProvider({ children }) {
           localStorage.removeItem("test_user_session");
         }
       }
+
+      // Check for existing WeChat user session
+      const wechatSession = localStorage.getItem("wechat_user");
+      if (wechatSession) {
+        try {
+          const wechatUser = JSON.parse(wechatSession);
+          setUser(wechatUser);
+          dispatch(setTestUser(wechatUser)); // Use same action for consistency
+          console.log("🔄 Restored WeChat user session:", wechatUser);
+        } catch (e) {
+          console.warn("Failed to restore WeChat session:", e);
+          localStorage.removeItem("wechat_user");
+        }
+      }
+
       setInitializing(false);
       return;
     }
@@ -72,35 +87,74 @@ export function AuthProvider({ children }) {
     window.location.href = authUrl;
   }, []);
 
-  // Placeholder: exchange code with backend to obtain Firebase custom token OR OAuth credential
+  // Handle WeChat OAuth callback - Frontend-only implementation
   const handleWeChatCallback = useCallback(
     async (code) => {
-      // You would call your backend: `${API}/auth/wechat?code=${code}` to get a custom token
-      console.log("WeChat code obtained:", code);
-      // Example using custom token
-      // const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/wechat?code=${code}`);
-      // const { customToken } = await res.json();
-      // await signInWithCustomToken(auth, customToken);
+      try {
+        console.log("🔄 Exchanging WeChat code for user info...");
 
-      // If using generic OAuthProvider (not typical for official WeChat), placeholder:
-      const provider = new OAuthProvider("wechat"); // may need custom provider via backend
-      const credential = provider.credential({
-        accessToken: "placeholder_access_token",
-      });
-      if (!firebaseDisabled && auth) {
-        await signInWithCredential(auth, credential).catch((err) => {
-          console.warn(
-            "WeChat credential sign-in failed (expected in placeholder):",
-            err.message
-          );
-        });
-      } else {
-        console.info(
-          "Auth disabled: skipping credential sign-in (placeholder)"
+        // Import WECHAT_API here to avoid circular dependencies
+        const { WECHAT_API } = await import("../config/wechat");
+
+        // Step 1: Exchange code for access token
+        const tokenData = await WECHAT_API.getAccessToken(code);
+
+        if (tokenData.errcode) {
+          throw new Error(`WeChat API Error: ${tokenData.errmsg}`);
+        }
+
+        console.log("✅ Got access token:", tokenData);
+
+        // Step 2: Get user information
+        const userInfo = await WECHAT_API.getUserInfo(
+          tokenData.access_token,
+          tokenData.openid
         );
+
+        if (userInfo.errcode) {
+          throw new Error(`WeChat User Info Error: ${userInfo.errmsg}`);
+        }
+
+        console.log("✅ Got user info:", userInfo);
+
+        // Step 3: Create user object
+        const wechatUser = {
+          id: `wechat_${userInfo.openid}`,
+          uid: userInfo.openid,
+          openid: userInfo.openid,
+          name: userInfo.nickname,
+          displayName: userInfo.nickname,
+          avatar: userInfo.headimgurl,
+          photoURL: userInfo.headimgurl,
+          country: userInfo.country,
+          province: userInfo.province,
+          city: userInfo.city,
+          sex: userInfo.sex,
+          language: userInfo.language,
+          isAuthenticated: true,
+          authMethod: "wechat",
+          wechatOpenId: userInfo.openid,
+          accessToken: tokenData.access_token,
+          createdAt: new Date().toISOString(),
+        };
+
+        // Step 4: Store user data in localStorage
+        localStorage.setItem('wechat_user', JSON.stringify(wechatUser));
+
+        // Step 5: Update React state
+        setUser(wechatUser);
+
+        // Step 6: Update Redux store
+        dispatch(setTestUser(wechatUser));
+
+        console.log("✅ WeChat authentication successful:", wechatUser);
+        return wechatUser;
+      } catch (error) {
+        console.error("❌ WeChat authentication failed:", error);
+        throw error;
       }
     },
-    [auth]
+    [dispatch]
   );
 
   // TEMPORARY: Bypass WeChat auth for testing purposes
@@ -151,8 +205,9 @@ export function AuthProvider({ children }) {
         await fbSignOut(auth);
       }
 
-      // Clear test user session
+      // Clear all user sessions
       localStorage.removeItem("test_user_session");
+      localStorage.removeItem("wechat_user");
       setUser(null);
 
       // Then perform complete logout with Redux persist clearing
@@ -165,8 +220,9 @@ export function AuthProvider({ children }) {
       if (!firebaseDisabled && auth) {
         await fbSignOut(auth);
       }
-      // Clear test session even if logout fails
+      // Clear all sessions even if logout fails
       localStorage.removeItem("test_user_session");
+      localStorage.removeItem("wechat_user");
       setUser(null);
     }
   }, [auth, dispatch]);
