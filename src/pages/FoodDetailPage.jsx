@@ -816,7 +816,7 @@ export default function FoodDetailPage() {
                   handleAddToCart(e);
                 }}
                 disabled={!availabilityStatus.isAvailable}
-                style={{ pointerEvents: "auto", zIndex: 1000 }}
+                style={{ pointerEvents: "auto" }}
               >
                 {!availabilityStatus.isAvailable ? "Sold Out" : "Add to Cart"}
               </button>
