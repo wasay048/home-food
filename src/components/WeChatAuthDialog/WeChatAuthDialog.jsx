@@ -1,6 +1,7 @@
 import React, { useContext } from "react";
 import {
-  generateWeChatAuthUrl,
+  generateWeChatAuthUrlWeb,
+  generateWeChatAuthUrlMobile,
   isMobileDevice,
   isWeChatBrowser,
 } from "../../config/wechat";
