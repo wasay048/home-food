@@ -40,10 +40,11 @@ const WeChatAuthDialog = ({ onClose }) => {
       sessionStorage.setItem("wechat_pending_cart_action", "true");
 
       // Generate auth URL
-      const authUrl = generateWeChatAuthUrl();
-      console.log("🔗 Generated auth URL:", authUrl);
-
+      // const authUrl = generateWeChatAuthUrl();
+      // console.log("🔗 Generated auth URL:", authUrl);
+      let authUrl = generateWeChatAuthUrlWeb()
       if (isWeChat) {
+        authUrl = generateWeChatAuthUrlWeb();
         // Already in WeChat browser - direct redirect
         console.log("📱 WeChat browser detected - direct redirect");
         window.location.href = authUrl;
@@ -54,6 +55,7 @@ const WeChatAuthDialog = ({ onClose }) => {
         // On mobile, directly try to redirect to WeChat OAuth
         // WeChat will handle the app opening automatically if installed
         // If not installed, it will show the appropriate download page
+        authUrl = generateWeChatAuthUrlMobile();
         window.location.href = authUrl;
       } else {
         // Desktop - direct redirect
@@ -64,7 +66,7 @@ const WeChatAuthDialog = ({ onClose }) => {
       console.error("❌ Error in WeChat authentication:", error);
 
       // Simple fallback
-      const authUrl = generateWeChatAuthUrl();
+      const authUrl = generateWeChatAuthUrlWeb();
       window.location.href = authUrl;
     }
   };

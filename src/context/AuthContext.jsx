@@ -79,7 +79,7 @@ export function AuthProvider({ children }) {
     const scope = WECHAT_CONFIG.SCOPE;
     const state = "we_" + Math.random().toString(36).slice(2);
 
-    const authUrl = `${WECHAT_CONFIG.WEB_AUTHORIZE_URL}?appid=${appId}&redirect_uri=${redirect}&response_type=code&scope=${scope}&state=${state}#wechat_redirect`;
+    const authUrl = `${WECHAT_CONFIG.QR_AUTHORIZE_URL}?appid=${appId}&redirect_uri=${redirect}&response_type=code&scope=${scope}&state=${state}#wechat_redirect`;
 
     console.log("🔗 [AuthContext] WeChat OAuth URL:", authUrl);
     console.log("🔍 [AuthContext] Using redirect URI:", getRedirectUri());

@@ -3,7 +3,7 @@ export const WECHAT_CONFIG = {
   APP_ID: "wx4a71fe09bb125182",
   APP_SECRET: "e8a88b5e0271b89a1dc71261d9063fad", // Note: In production, this should be on the backend only
   // Use non-www domain to match WeChat Console configuration
-  REDIRECT_URI: "https://www.homefreshfoods.ai",
+  REDIRECT_URI: "https://www.homefreshfoods.ai/wechat/callback",
   REDIRECT_URI_DEV: "http://localhost:5173/wechat/callback",
   SCOPE: "snsapi_userinfo", // Get user info including avatar and nickname
   // WeChat OAuth URLs
@@ -47,7 +47,7 @@ export const isWeChatBrowser = () => {
 };
 
 // Generate WeChat OAuth URL - Simplified and Reliable
-export const generateWeChatAuthUrl = (state = null) => {
+export const generateWeChatAuthUrlWeb = (state = null) => {
   const randomState = state || Math.random().toString(36).substring(7);
 
   console.log("🔗 Generating WeChat OAuth URL");
@@ -64,7 +64,33 @@ export const generateWeChatAuthUrl = (state = null) => {
   });
 
   // Use the standard WeChat OAuth URL that works for both mobile and web
-  const baseUrl = WECHAT_CONFIG.WEB_AUTHORIZE_URL;
+  const baseUrl = WECHAT_CONFIG.QR_AUTHORIZE_URL;
+  const authUrl = `${baseUrl}?${params.toString()}#wechat_redirect`;
+
+  console.log("🔗 Final WeChat OAuth URL:", authUrl);
+  console.log("📋 OAuth parameters:", Object.fromEntries(params));
+
+  return authUrl;
+}; // WeChat API endpoints
+
+export const generateWeChatAuthUrlMobile = (state = null) => {
+  const randomState = state || Math.random().toString(36).substring(7);
+
+  console.log("🔗 Generating WeChat OAuth URL");
+
+  const redirectUri = getRedirectUri();
+  console.log("🔍 Using redirect URI:", redirectUri);
+
+  const params = new URLSearchParams({
+    appid: WECHAT_CONFIG.APP_ID,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: WECHAT_CONFIG.SCOPE,
+    state: randomState,
+  });
+
+  // Use the standard WeChat OAuth URL that works for both mobile and web
+  const baseUrl = WECHAT_CONFIG.MOBILE_AUTHORIZE_URL;
   const authUrl = `${baseUrl}?${params.toString()}#wechat_redirect`;
 
   console.log("🔗 Final WeChat OAuth URL:", authUrl);
