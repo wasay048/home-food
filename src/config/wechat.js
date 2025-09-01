@@ -3,7 +3,7 @@ export const WECHAT_CONFIG = {
   APP_ID: "wx4a71fe09bb125182",
   APP_SECRET: "e8a88b5e0271b89a1dc71261d9063fad", // Note: In production, this should be on the backend only
   // Use non-www domain to match WeChat Console configuration
-  REDIRECT_URI: "https://www.homefreshfoods.ai/wechat/callback",
+  REDIRECT_URI: "https://www.homefreshfoods.ai",
   REDIRECT_URI_DEV: "http://localhost:5173/wechat/callback",
   SCOPE: "snsapi_userinfo", // Get user info including avatar and nickname
   // WeChat OAuth URLs
@@ -72,6 +72,7 @@ export const generateWeChatAuthUrl = (state = null) => {
 
   return authUrl;
 }; // WeChat API endpoints
+
 export const WECHAT_API = {
   // Get access token using authorization code
   getAccessToken: async (code) => {
