@@ -76,7 +76,7 @@ export function AuthProvider({ children }) {
   const signInWithWeChatPopup = useCallback(() => {
     const appId = WECHAT_CONFIG.APP_ID;
     const redirect = encodeURIComponent(getRedirectUri());
-    const scope = WECHAT_CONFIG.SCOPE;
+    const scope = WECHAT_CONFIG.WEB_SCOPE;
     const state = "we_" + Math.random().toString(36).slice(2);
 
     const authUrl = `${WECHAT_CONFIG.QR_AUTHORIZE_URL}?appid=${appId}&redirect_uri=${redirect}&response_type=code&scope=${scope}&state=${state}#wechat_redirect`;
