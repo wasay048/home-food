@@ -91,7 +91,7 @@ export const generateWeChatAuthUrlMobile = (state = null) => {
   });
 
   // Use the standard WeChat OAuth URL that works for both mobile and web
-  const baseUrl = WECHAT_CONFIG.MOBILE_AUTHORIZE_URL;
+  const baseUrl = WECHAT_CONFIG.QR_AUTHORIZE_URL;
   const authUrl = `${baseUrl}?${params.toString()}#wechat_redirect`;
 
   console.log("🔗 Final WeChat OAuth URL:", authUrl);
