@@ -7,6 +7,7 @@ export const WECHAT_CONFIG = {
   REDIRECT_URI_DEV: "http://localhost:5173/wechat/callback",
   SCOPE: "snsapi_userinfo", // Get user info including avatar and nickname
   // WeChat OAuth URLs
+  WEB_SCOPE: "snsapi_login",
   // Use different URLs based on device type
   WEB_AUTHORIZE_URL: "https://open.weixin.qq.com/connect/oauth2/authorize",
   MOBILE_AUTHORIZE_URL: "https://open.weixin.qq.com/connect/oauth2/authorize",
@@ -59,7 +60,7 @@ export const generateWeChatAuthUrlWeb = (state = null) => {
     appid: WECHAT_CONFIG.APP_ID,
     redirect_uri: redirectUri,
     response_type: "code",
-    scope: WECHAT_CONFIG.SCOPE,
+    scope: WECHAT_CONFIG.WEB_SCOPE,
     state: randomState,
   });
 

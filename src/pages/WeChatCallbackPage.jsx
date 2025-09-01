@@ -2,6 +2,7 @@ import React, { useEffect, useState, useContext } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AuthContext from "../context/AuthContext";
 import { showToast } from "../utils/toast";
+import { WECHAT_API } from "../config/wechat";
 
 const WeChatCallbackPage = () => {
   const [searchParams] = useSearchParams();
@@ -64,7 +65,7 @@ const WeChatCallbackPage = () => {
 
         // Regular WeChat authentication
         setStatus("processing");
-        const result = await handleWeChatCallback(code);
+        const result = await handleWeChatCodeExchange(code, state);
 
         console.log("✅ WeChat authentication successful:", result);
         setStatus("success");
@@ -111,6 +112,31 @@ const WeChatCallbackPage = () => {
     handleWeChatCallback();
   }, [searchParams, handleWeChatCallback, navigate]);
 
+
+  const handleWeChatCodeExchange = async (code, state) => {
+    // Exchange code for access token
+    try {
+
+        const wechatToken = await WECHAT_API.getAccessToken(code);
+        
+        console.log("Access token response:", wechatToken.access_token);
+        if (wechatToken.access_token) {
+          // Fetch user info
+          const userInfo = await WECHAT_API.getUserInfo(wechatToken.access_token, state);
+          if (userInfo) {
+            // Dispatch user info to Redux store
+            dispatch({
+              type: "auth/authenticateWithWeChat/fulfilled",
+              payload: userInfo,
+            });
+          }
+      } else {
+        console.error("Failed to obtain access token");
+      }
+    } catch(error) {
+      console.log("error", error);
+    }
+  };
   return (
     <div className="wechat-callback-page">
       <div className="container py-5">
