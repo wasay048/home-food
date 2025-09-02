@@ -43,7 +43,7 @@ const WeChatAuthDialog = ({ onClose }) => {
       // Generate auth URL
       // const authUrl = generateWeChatAuthUrl();
       // console.log("🔗 Generated auth URL:", authUrl);
-      let authUrl = generateWeChatAuthUrlWeb()
+      let authUrl = generateWeChatAuthUrlWeb();
       if (isWeChat) {
         authUrl = generateWeChatAuthUrlWeb();
         // Already in WeChat browser - direct redirect

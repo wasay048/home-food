@@ -64,15 +64,22 @@ export const generateWeChatAuthUrlWeb = (state = null) => {
     state: randomState,
   });
 
-  // Use the standard WeChat OAuth URL that works for both mobile and web
-  const baseUrl = WECHAT_CONFIG.QR_AUTHORIZE_URL;
+  // Use MOBILE_AUTHORIZE_URL if in WeChat browser, otherwise use QR_AUTHORIZE_URL
+  const baseUrl = isWeChatBrowser()
+    ? WECHAT_CONFIG.MOBILE_AUTHORIZE_URL
+    : WECHAT_CONFIG.QR_AUTHORIZE_URL;
+
   const authUrl = `${baseUrl}?${params.toString()}#wechat_redirect`;
 
   console.log("🔗 Final WeChat OAuth URL:", authUrl);
   console.log("📋 OAuth parameters:", Object.fromEntries(params));
+  console.log(
+    "🌐 Browser type:",
+    isWeChatBrowser() ? "WeChat Browser" : "External Browser"
+  );
 
   return authUrl;
-}; // WeChat API endpoints
+};
 
 export const generateWeChatAuthUrlMobile = (state = null) => {
   const randomState = state || Math.random().toString(36).substring(7);
@@ -90,15 +97,22 @@ export const generateWeChatAuthUrlMobile = (state = null) => {
     state: randomState,
   });
 
-  // Use the standard WeChat OAuth URL that works for both mobile and web
-  const baseUrl = WECHAT_CONFIG.QR_AUTHORIZE_URL;
+  // Use MOBILE_AUTHORIZE_URL if in WeChat browser, otherwise use QR_AUTHORIZE_URL
+  const baseUrl = isWeChatBrowser()
+    ? WECHAT_CONFIG.MOBILE_AUTHORIZE_URL
+    : WECHAT_CONFIG.QR_AUTHORIZE_URL;
+
   const authUrl = `${baseUrl}?${params.toString()}#wechat_redirect`;
 
   console.log("🔗 Final WeChat OAuth URL:", authUrl);
   console.log("📋 OAuth parameters:", Object.fromEntries(params));
+  console.log(
+    "🌐 Browser type:",
+    isWeChatBrowser() ? "WeChat Browser" : "External Browser"
+  );
 
   return authUrl;
-}; // WeChat API endpoints
+};
 
 export const WECHAT_API = {
   // Get access token using authorization code
