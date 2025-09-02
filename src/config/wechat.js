@@ -60,7 +60,7 @@ export const generateWeChatAuthUrlWeb = (state = null) => {
     appid: WECHAT_CONFIG.APP_ID,
     redirect_uri: redirectUri,
     response_type: "code",
-    scope: WECHAT_CONFIG.WEB_SCOPE,
+    scope: WECHAT_CONFIG.SCOPE,
     state: randomState,
   });
 
@@ -93,7 +93,7 @@ export const generateWeChatAuthUrlMobile = (state = null) => {
     appid: WECHAT_CONFIG.APP_ID,
     redirect_uri: redirectUri,
     response_type: "code",
-    scope: WECHAT_CONFIG.WEB_SCOPE,
+    scope: WECHAT_CONFIG.SCOPE,
     state: randomState,
   });
 
