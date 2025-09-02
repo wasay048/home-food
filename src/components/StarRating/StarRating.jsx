@@ -94,7 +94,6 @@ const StarRating = ({
       <div className="stars-container" style={{ gap: gap }}>
         {renderStars()}
       </div>
-
       {(showRating || reviewCount) && (
         <div className="rating-info">
           {showRating && (
