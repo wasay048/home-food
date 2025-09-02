@@ -350,37 +350,19 @@ export default function FoodDetailPage() {
   }, [selectedDate, food, kitchen]);
 
   // Update handleQuantityChange to use useGenericCart
-  const handleQuantityChangeGeneric = useCallback(
-    (newQuantity) => {
-      console.log(`[FoodDetailPage] Quantity changed to: ${newQuantity}`);
-      setSelectedQuantity(newQuantity);
+  const handleQuantityChangeGeneric = useCallback((newQuantity) => {
+    console.log(`[FoodDetailPage] Quantity changed to: ${newQuantity}`);
 
-      // Use useGenericCart's handleQuantityChange for consistency
-      if (food && kitchen) {
-        handleCartQuantityChange({
-          food,
-          kitchen,
-          newQuantity,
-          currentQuantity: cartQuantity,
-          selectedDate: pickupDate || selectedDate,
-          selectedTime: pickupTime,
-          specialInstructions: specialInstructions.trim(),
-          isPreOrder: orderType === "PRE_ORDER",
-        });
-      }
-    },
-    [
-      food,
-      kitchen,
-      cartQuantity,
-      pickupDate,
-      selectedDate,
-      pickupTime,
-      specialInstructions,
-      orderType,
-      handleCartQuantityChange,
-    ]
-  );
+    // ✅ FIXED: Only update local state - QuantitySelector handles cart operations
+    setSelectedQuantity(newQuantity);
+
+    // ✅ NOTE: QuantitySelector already calls handleCartQuantityChange internally
+    // No need to call it again here to prevent double operations
+
+    console.log(
+      `[FoodDetailPage] Local quantity state updated to: ${newQuantity}`
+    );
+  }, []);
 
   console.log("FoodDetailPage data:", {
     food,
@@ -429,57 +411,69 @@ export default function FoodDetailPage() {
     console.log(`[FoodDetailPage] Add to Cart button clicked!`);
     console.log(`[FoodDetailPage] Availability status:`, availabilityStatus);
     console.log(`[FoodDetailPage] Selected quantity:`, selectedQuantity);
+    console.log(`[FoodDetailPage] Cart quantity:`, cartQuantity);
     console.log(`[FoodDetailPage] Special instructions:`, specialInstructions);
 
+    // Check availability
     if (!availabilityStatus.isAvailable) {
       showToast.error("This item is currently unavailable");
       return;
     }
-    console.log("selectedQuantity", selectedQuantity);
-    if (selectedQuantity === 0) {
-      alert("Please select a quantity greater than zero to add to cart.");
+
+    // ✅ IMPROVED: Check if item is already in cart
+    if (cartQuantity === 0) {
+      alert("Please use the quantity selector to add items to cart first.");
       return;
     }
 
-    // Use useGenericCart's handleQuantityChange to add/update item
-    if (food && kitchen) {
-      handleCartQuantityChange({
-        food,
-        kitchen,
-        newQuantity: selectedQuantity,
-        currentQuantity: cartQuantity,
-        selectedDate: pickupDate || selectedDate,
-        selectedTime: pickupTime,
-        specialInstructions: specialInstructions.trim(),
-        isPreOrder: orderType === "PRE_ORDER",
-      });
+    // ✅ NEW: Update special instructions if item is already in cart
+    if (cartQuantity > 0 && specialInstructions.trim()) {
+      console.log(
+        `[FoodDetailPage] Updating special instructions for existing cart item`
+      );
 
-      // showToast.cart(`Added ${selectedQuantity} item(s) to cart!`);
+      if (food && kitchen) {
+        handleCartQuantityChange({
+          food,
+          kitchen,
+          newQuantity: cartQuantity, // Keep same quantity
+          currentQuantity: cartQuantity,
+          selectedDate: pickupDate || selectedDate,
+          selectedTime: pickupTime,
+          specialInstructions: specialInstructions.trim(),
+          isPreOrder: orderType === "PRE_ORDER",
+        });
 
-      // Navigate back to foods page
-      const currentPageParams = new URLSearchParams({
-        kitchenId: kitchenId || "",
-        foodId: foodId || "",
-        ...(selectedDate && { date: selectedDate }),
-      }).toString();
-      navigate("/foods", {
-        replace: true,
-        state: {
-          from: {
-            pathname: location.pathname,
-            search: location.search,
-            fullUrl: `/share?${currentPageParams}`,
-          },
-        },
-      });
+        showToast.success("Special instructions updated!");
+      }
     }
+
+    // ✅ SUCCESS: Navigate back to foods page
+    console.log(`[FoodDetailPage] Navigating back to foods page`);
+
+    const currentPageParams = new URLSearchParams({
+      kitchenId: kitchenId || "",
+      foodId: foodId || "",
+      ...(selectedDate && { date: selectedDate }),
+    }).toString();
+
+    navigate("/foods", {
+      replace: true,
+      state: {
+        from: {
+          pathname: location.pathname,
+          search: location.search,
+          fullUrl: `/share?${currentPageParams}`,
+        },
+      },
+    });
   }, [
     availabilityStatus,
+    cartQuantity,
     selectedQuantity,
     specialInstructions,
     food,
     kitchen,
-    cartQuantity,
     pickupDate,
     selectedDate,
     pickupTime,
@@ -653,7 +647,7 @@ export default function FoodDetailPage() {
                           parseInt(kitchen?.rating) /
                             parseInt(kitchen?.ratingCount)
                         ).toFixed(1)
-                      : "No ratings yet"}
+                      : "0"}
                   </strong>
                 </div>
               </div>
@@ -899,9 +893,7 @@ export default function FoodDetailPage() {
                   <div className="overall-reviews">
                     <div className="left">
                       <div className="bold">
-                        {displayRating > 0
-                          ? displayRating.toFixed(1)
-                          : "No ratings yet"}
+                        {displayRating > 0 ? displayRating.toFixed(1) : "0"}
                       </div>
                       <StarRating
                         rating={displayRating}

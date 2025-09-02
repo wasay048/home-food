@@ -12,12 +12,214 @@ export const useGenericCart = () => {
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.cart.items);
 
-  // Function to get cart quantity for a specific food item
+  // ✅ CONSOLIDATED: Single function to calculate availability (moved from QuantitySelector)
+  const calculateAvailability = useCallback(
+    (food, kitchen, selectedDate = null, maxQuantity = 99) => {
+      console.log("🔍 AVAILABILITY CALCULATION START");
+      console.log("DEBUG - Availability calculation:", {
+        foodId: food?.id,
+        foodName: food?.name,
+        kitchenId: kitchen?.id,
+        kitchenName: kitchen?.name,
+        selectedDate,
+        hasFood: !!food,
+        hasKitchen: !!kitchen,
+        hasPreorderSchedule: !!kitchen?.preorderSchedule?.dates,
+        maxQuantity,
+      });
+
+      // CASE 1: No food object provided
+      if (!food) {
+        console.log("DEBUG - CASE 1: No food object");
+        return {
+          isAvailable: false,
+          maxAvailable: 0,
+          orderType: selectedDate ? "PRE_ORDER" : "GO_GRAB",
+          message: "Food item not found",
+          warning: null,
+          actualCheckingDate: selectedDate,
+        };
+      }
+
+      const today = dayjs().startOf("day");
+
+      // Get current Go&Grab availability
+      const numAvailable =
+        food.availability?.numAvailable || food.numAvailable || 0;
+      console.log("DEBUG - Go&Grab availability check:", { numAvailable });
+
+      // CASE 2: Go&Grab items with availability > 0 (HIGHEST PRIORITY)
+      // This case ignores date completely - if items are available, it's Go&Grab
+      if (numAvailable > 0) {
+        console.log(
+          "DEBUG - CASE 2: Items available for Go&Grab, ignoring date validation"
+        );
+        return {
+          isAvailable: true,
+          maxAvailable: Math.min(numAvailable, maxQuantity),
+          orderType: "GO_GRAB", // Force Go&Grab when items are available
+          message: null,
+          warning: numAvailable < 5 ? `Only ${numAvailable} left` : null,
+          actualCheckingDate: null, // No date restriction for Go&Grab
+        };
+      }
+
+      // CASE 3: Selected date provided, but need to validate it's not in the past
+      if (selectedDate) {
+        const orderDate = dayjs(selectedDate).startOf("day");
+
+        // CASE 3A: Past date selected - ignore Pre-Order, fall back to current availability
+        if (orderDate.isBefore(today)) {
+          console.log(
+            "DEBUG - CASE 3A: Selected date is in the past, ignoring Pre-Order check:",
+            {
+              selectedDate,
+              today: today.format("YYYY-MM-DD"),
+              isPast: true,
+            }
+          );
+
+          // Check if we have current availability for Go&Grab
+          if (numAvailable > 0) {
+            console.log(
+              "DEBUG - CASE 3A: Has current availability, allowing Go&Grab"
+            );
+            return {
+              isAvailable: true,
+              maxAvailable: Math.min(numAvailable, maxQuantity),
+              orderType: "GO_GRAB",
+              message: null,
+              warning: numAvailable < 5 ? `Only ${numAvailable} left` : null,
+              actualCheckingDate: null,
+            };
+          } else {
+            console.log("DEBUG - CASE 3A: No current availability, sold out");
+            return {
+              isAvailable: false,
+              maxAvailable: 0,
+              orderType: "GO_GRAB",
+              message: "Sold Out",
+              warning: null,
+              actualCheckingDate: null,
+            };
+          }
+        }
+
+        // CASE 3B: Future date selected - check Pre-Order
+        console.log(
+          "DEBUG - CASE 3B: Checking Pre-Order for future date:",
+          selectedDate
+        );
+
+        const orderType = "PRE_ORDER";
+
+        // CASE 3B-1: No preorder schedule exists
+        if (!kitchen?.preorderSchedule?.dates) {
+          console.log("DEBUG - CASE 3B-1: No preorder schedule");
+          return {
+            isAvailable: false,
+            maxAvailable: 0,
+            orderType,
+            message: "Pre-orders not available for this kitchen",
+            warning: null,
+            actualCheckingDate: selectedDate,
+          };
+        }
+
+        // Format the date key for schedule lookup
+        const dateKey = selectedDate.includes("-")
+          ? selectedDate
+          : dayjs(selectedDate).format("YYYY-MM-DD");
+
+        const scheduleForDate = kitchen.preorderSchedule.dates[dateKey];
+
+        // CASE 3B-2: No schedule found for this specific date
+        if (!scheduleForDate || !Array.isArray(scheduleForDate)) {
+          console.log("DEBUG - CASE 3B-2: No schedule found for date");
+          return {
+            isAvailable: false,
+            maxAvailable: 0,
+            orderType,
+            message: "Not available for pre-order on selected date",
+            warning: null,
+            actualCheckingDate: selectedDate,
+          };
+        }
+
+        // Find this specific food in the schedule
+        const foodSchedule = scheduleForDate.find(
+          (item) => item.foodItemId === food.id
+        );
+
+        // CASE 3B-3: Food not found in the schedule for this date
+        if (!foodSchedule) {
+          console.log("DEBUG - CASE 3B-3: Food not found in schedule");
+          return {
+            isAvailable: false,
+            maxAvailable: 0,
+            orderType,
+            message:
+              "This item is not available for pre-order on selected date",
+            warning: null,
+            actualCheckingDate: selectedDate,
+          };
+        }
+
+        // CASE 3B-4: Food found in schedule - check if it's limited order
+        if (foodSchedule.isLimitedOrder === false) {
+          // Limited quantity pre-order
+          const availableItems = foodSchedule.numOfAvailableItems || 0;
+          console.log("DEBUG - CASE 3B-4A: Limited pre-order", {
+            availableItems,
+          });
+
+          return {
+            isAvailable: availableItems > 0,
+            maxAvailable: Math.min(availableItems, maxQuantity),
+            orderType,
+            message: availableItems <= 0 ? "Sold Out" : null,
+            warning:
+              availableItems < 5 && availableItems > 0
+                ? `Only ${availableItems} left`
+                : null,
+            actualCheckingDate: selectedDate,
+          };
+        } else {
+          // Unlimited pre-order
+          console.log("DEBUG - CASE 3B-4B: Unlimited pre-order");
+          return {
+            isAvailable: true,
+            maxAvailable: maxQuantity,
+            orderType,
+            message: null,
+            warning: null,
+            actualCheckingDate: selectedDate,
+          };
+        }
+      }
+
+      // CASE 4: No selected date and no current availability - completely sold out
+      console.log("DEBUG - CASE 4: No availability anywhere, item sold out");
+      return {
+        isAvailable: false,
+        maxAvailable: 0,
+        orderType: "GO_GRAB",
+        message: "Sold Out",
+        warning: null,
+        actualCheckingDate: null,
+      };
+    },
+    []
+  );
+
+  // ✅ FIXED: Function to get cart quantity for a specific food item
   const getCartQuantity = useCallback(
     (foodId, selectedDate = null) => {
+      const originalSelectedDate = selectedDate;
+
       console.log("🔍 getCartQuantity called with:", {
         foodId,
-        selectedDate,
+        selectedDate: originalSelectedDate,
         cartItemsCount: cartItems.length,
       });
 
@@ -26,23 +228,7 @@ export const useGenericCart = () => {
         return 0;
       }
 
-      // ✅ NEW: Check if selectedDate is in the past
-      const today = dayjs().startOf("day");
-      const isPastDate =
-        selectedDate && dayjs(selectedDate).startOf("day").isBefore(today);
-
-      if (isPastDate) {
-        console.log(
-          "🔍 Past date detected, treating as Go&Grab for cart matching:",
-          {
-            selectedDate,
-            today: today.format("YYYY-MM-DD"),
-          }
-        );
-        // For past dates, treat as Go&Grab (ignore date in matching)
-        selectedDate = null;
-      }
-
+      // ✅ CRITICAL FIX: For Go&Grab items, always match regardless of date
       const matchingItems = cartItems.filter((item) => {
         console.log("🔍 Checking item:", {
           itemFoodId: item.foodId,
@@ -53,23 +239,25 @@ export const useGenericCart = () => {
 
         const matchesFood = String(item.foodId) === String(foodId);
 
+        // ✅ IMPROVED: Always prioritize Go&Grab matching
+        const isGoGrabOrderType =
+          item.orderType === "GO_GRAB" ||
+          item.orderType === "Go&Grab" ||
+          item.orderType === "Go & Grab" ||
+          !item.orderType; // Legacy items without orderType
+
         let matchesDate;
-        if (selectedDate && !isPastDate) {
-          // For pre-order items with future dates, match exact date
+
+        if (isGoGrabOrderType) {
+          // ✅ CRITICAL: For Go&Grab items, ALWAYS match regardless of any date
+          matchesDate = true;
+          console.log("🔍 Go&Grab item found, ignoring date matching");
+        } else if (selectedDate) {
+          // For pre-order items, match exact date
           matchesDate = item.selectedDate === selectedDate;
         } else {
-          // For Go&Grab items OR past dates, match items with flexible date logic
-          const isGoGrabOrderType =
-            item.orderType === "GO_GRAB" ||
-            item.orderType === "Go&Grab" ||
-            item.orderType === "Go & Grab" ||
-            !item.orderType; // Legacy items without orderType
-
-          // ✅ IMPROVED: More flexible matching for Go&Grab
-          matchesDate =
-            !item.selectedDate || // Items without specific date
-            isGoGrabOrderType || // Any Go&Grab order type
-            (!selectedDate && !item.selectedDate); // Both are null/undefined
+          // For items without selectedDate, match items without specific date
+          matchesDate = !item.selectedDate;
         }
 
         const matches = matchesFood && matchesDate;
@@ -77,8 +265,8 @@ export const useGenericCart = () => {
           matchesFood,
           matchesDate,
           matches,
-          isPastDate,
-          effectiveSelectedDate: selectedDate,
+          isGoGrabOrderType,
+          selectedDate: originalSelectedDate,
         });
 
         return matches;
@@ -93,9 +281,7 @@ export const useGenericCart = () => {
 
       console.log("🔍 getCartQuantity result:", {
         foodId,
-        originalSelectedDate: arguments[1], // Original selectedDate passed
-        effectiveSelectedDate: selectedDate, // After past date processing
-        isPastDate,
+        originalSelectedDate,
         matchingItemsCount: matchingItems.length,
         matchingItems: matchingItems.map((item) => ({
           id: item.id,
@@ -112,6 +298,7 @@ export const useGenericCart = () => {
     [cartItems]
   );
 
+  // ✅ FIXED: Handle quantity changes with proper Go&Grab logic
   const handleQuantityChange = useCallback(
     ({
       food,
@@ -134,59 +321,43 @@ export const useGenericCart = () => {
       });
 
       try {
-        // ✅ NEW: Check if selectedDate is in the past
-        const today = dayjs().startOf("day");
-        const isPastDate =
-          selectedDate && dayjs(selectedDate).startOf("day").isBefore(today);
+        // ✅ NEW: Use calculateAvailability to determine proper order type
+        const availability = calculateAvailability(food, kitchen, selectedDate);
 
-        // ✅ IMPROVED: Determine order type based on availability priority
-        let orderType;
-        let effectiveSelectedDate;
+        console.log("🔍 Availability result:", availability);
 
-        if (isPastDate) {
-          // Past dates always become Go&Grab
-          orderType = "GO_GRAB";
-          effectiveSelectedDate = null; // Ignore date for matching
-          console.log("🔍 Past date detected, forcing Go&Grab:", {
-            originalDate: selectedDate,
-            isPastDate: true,
-          });
-        } else if (isPreOrder) {
-          // Explicitly set as Pre-Order
-          orderType = "PRE_ORDER";
-          effectiveSelectedDate = selectedDate;
-        } else {
-          // Default to Go&Grab
-          orderType = "GO_GRAB";
-          effectiveSelectedDate = null; // For Go&Grab, don't use date for matching
-        }
+        // ✅ IMPROVED: Determine order type based on availability
+        const orderType = availability.orderType;
+        const isGoGrab = orderType === "GO_GRAB";
 
         console.log("🔍 Cart item matching criteria:", {
           orderType,
-          effectiveSelectedDate,
-          originalSelectedDate: selectedDate,
-          isPastDate,
+          isGoGrab,
+          selectedDate,
           isPreOrder,
         });
 
-        // Find the exact matching cart item
+        // ✅ CRITICAL FIX: Find matching cart item with proper Go&Grab logic
         const matchingItem = cartItems.find((item) => {
           const matchesFood = String(item.foodId) === String(food.id);
 
+          // ✅ IMPROVED: For Go&Grab, match ANY item with this food regardless of date
+          const itemIsGoGrab =
+            item.orderType === "GO_GRAB" ||
+            item.orderType === "Go&Grab" ||
+            item.orderType === "Go & Grab" ||
+            !item.orderType;
+
           let matchesDate;
-          if (orderType === "PRE_ORDER" && !isPastDate) {
-            // For pre-orders with future dates, match exact date
+          if (isGoGrab && itemIsGoGrab) {
+            // ✅ CRITICAL: For Go&Grab to Go&Grab, always match regardless of date
+            matchesDate = true;
+          } else if (!isGoGrab && !itemIsGoGrab) {
+            // For pre-order to pre-order, match exact date
             matchesDate = item.selectedDate === selectedDate;
           } else {
-            // For Go&Grab or past dates, match any item regardless of date
-            const isGoGrabItem =
-              item.orderType === "GO_GRAB" ||
-              item.orderType === "Go&Grab" ||
-              item.orderType === "Go & Grab" ||
-              !item.orderType ||
-              !item.selectedDate;
-
-            matchesDate = isGoGrabItem;
+            // Mixed order types - no match
+            matchesDate = false;
           }
 
           const matchesInstructions =
@@ -202,7 +373,8 @@ export const useGenericCart = () => {
             matches,
             itemOrderType: item.orderType,
             itemSelectedDate: item.selectedDate,
-            isPastDate,
+            isGoGrab,
+            itemIsGoGrab,
           });
 
           return matches;
@@ -232,25 +404,22 @@ export const useGenericCart = () => {
             specialInstructions: specialInstructions,
           };
 
-          // For Go&Grab items, update date if provided (but don't require it for matching)
-          if (orderType === "GO_GRAB" && selectedDate && !isPastDate) {
+          // ✅ CRITICAL: For Go&Grab items, update the selectedDate but keep orderType as GO_GRAB
+          if (isGoGrab) {
+            updateData.selectedDate = selectedDate; // Allow date update for pickup preference
+            updateData.selectedTime = selectedTime;
+            updateData.orderType = "GO_GRAB"; // Ensure it stays Go&Grab
+          } else {
+            // For Pre-Order, keep exact date and time
             updateData.selectedDate = selectedDate;
             updateData.selectedTime = selectedTime;
-          } else if (orderType === "PRE_ORDER" && selectedDate && !isPastDate) {
-            updateData.selectedDate = selectedDate;
-            updateData.selectedTime = selectedTime;
+            updateData.orderType = "PRE_ORDER";
           }
 
           dispatch(updateCartItem(updateData));
         } else {
           // Add new item
           console.log("➕ Adding new item to cart with quantity:", newQuantity);
-
-          // ✅ IMPROVED: Handle date storage properly
-          let cartItemDate = null;
-          if (!isPastDate && selectedDate) {
-            cartItemDate = selectedDate; // Store date if it's not in the past
-          }
 
           const cartItem = {
             foodId: food.id,
@@ -267,8 +436,8 @@ export const useGenericCart = () => {
             },
             kitchenId: kitchen.id,
             quantity: newQuantity,
-            selectedDate: cartItemDate, // Use processed date
-            selectedTime: !isPastDate ? selectedTime : null, // Only store time if date is valid
+            selectedDate: selectedDate, // Store the selected date for pickup preference
+            selectedTime: selectedTime,
             specialInstructions,
             isPreOrder: orderType === "PRE_ORDER",
             orderType,
@@ -283,12 +452,13 @@ export const useGenericCart = () => {
         showToast.error("Failed to update cart");
       }
     },
-    [dispatch, cartItems]
+    [dispatch, cartItems, calculateAvailability]
   );
 
   return {
     cartItems,
     getCartQuantity,
     handleQuantityChange,
+    calculateAvailability,
   };
 };
