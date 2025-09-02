@@ -86,6 +86,15 @@ const authSlice = createSlice({
     wechatAuthUrl: null,
   },
   reducers: {
+    logout: (state) => {
+      state.user = null;
+      state.isAuthenticated = false;
+      state.loading = false;
+      state.error = null;
+      // Clear any stored tokens/session data
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("userData");
+    },
     clearError: (state) => {
       state.error = null;
     },
@@ -154,6 +163,7 @@ export const {
   updateUserProfile,
   setWeChatAuthUrl,
   clearAllData,
+  logout,
   setTestUser,
 } = authSlice.actions;
 

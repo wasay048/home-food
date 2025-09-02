@@ -16,8 +16,9 @@ import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import "../styles/FoodDetailPage.css";
 import { clearCart } from "../store/slices/cartSlice";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useGenericCart } from "../hooks/useGenericCart";
+import { logout } from "../store/slices/authSlice";
 
 // Custom Slider Component
 // Enhanced Custom Slider Component with better styling
@@ -223,6 +224,7 @@ export default function FoodDetailPage() {
   const dispatch = useDispatch();
   const location = useLocation();
   const navigate = useNavigate();
+  const user = useSelector((state) => state.auth.user);
 
   const { getCartQuantity, handleQuantityChange: handleCartQuantityChange } =
     useGenericCart();
@@ -603,6 +605,16 @@ export default function FoodDetailPage() {
       console.log("🛒 Clearing cart on direct landing to FoodDetailPage");
       dispatch(clearCart());
       console.log("Existing cart data cleard!");
+      console.log("Existing cart data cleared!");
+
+      // ✅ NEW: Clear user authentication state on direct landing
+      if (user) {
+        console.log("👤 Clearing user authentication state on direct landing");
+        dispatch(logout()); // Use the correct action name
+        console.log(
+          "User authentication cleared - will require re-auth for orders!"
+        );
+      }
     }
   }, [dispatch, location.state]);
 
