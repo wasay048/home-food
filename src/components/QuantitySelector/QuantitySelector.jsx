@@ -50,446 +50,185 @@ const QuantitySelector = ({
       hasPreorderSchedule: !!kitchen?.preorderSchedule?.dates,
     });
 
+    // CASE 1: No food object provided
     if (!food) {
-      console.log("DEBUG - No food object");
+      console.log("DEBUG - CASE 1: No food object");
       return {
         isAvailable: false,
         maxAvailable: 0,
-        orderType: selectedDate ? "PRE_ORDER" : "GO_GRAB", // Maintain order type based on selectedDate
+        orderType: selectedDate ? "PRE_ORDER" : "GO_GRAB",
         message: "Food item not found",
         warning: null,
-        actualCheckingDate: selectedDate, // Use selected date if provided
+        actualCheckingDate: selectedDate,
       };
     }
 
     const today = dayjs().startOf("day");
 
-    // Determine order type and availability
-    if (selectedDate) {
-      console.log(
-        "🚀 ~ QuantitySelector ~ selectedDate received:",
-        selectedDate
-      );
-      console.log(
-        "🚀 ~ QuantitySelector ~ selectedDate type:",
-        typeof selectedDate
-      );
+    // Get current Go&Grab availability
+    const numAvailable =
+      food.availability?.numAvailable || food.numAvailable || 0;
+    console.log("DEBUG - Go&Grab availability check:", { numAvailable });
 
+    // CASE 2: Go&Grab items with availability > 0 (HIGHEST PRIORITY)
+    // This case ignores date completely - if items are available, it's Go&Grab
+    if (numAvailable > 0) {
+      console.log(
+        "DEBUG - CASE 2: Items available for Go&Grab, ignoring date validation"
+      );
+      return {
+        isAvailable: true,
+        maxAvailable: Math.min(numAvailable, maxQuantity),
+        orderType: "GO_GRAB", // Force Go&Grab when items are available
+        message: null,
+        warning: numAvailable < 5 ? `Only ${numAvailable} left` : null,
+        actualCheckingDate: null, // No date restriction for Go&Grab
+      };
+    }
+
+    // CASE 3: Selected date provided, but need to validate it's not in the past
+    if (selectedDate) {
       const orderDate = dayjs(selectedDate).startOf("day");
 
-      console.log("🚀 ~ QuantitySelector ~ orderDate:", orderDate.format());
-      console.log("🚀 ~ QuantitySelector ~ today:", today.format());
-      console.log(
-        "🚀 ~ QuantitySelector ~ orderDate > today:",
-        orderDate.isAfter(today)
-      );
-      console.log(
-        "🚀 ~ QuantitySelector ~ orderDate === today:",
-        orderDate.isSame(today, "day")
-      );
-      console.log(
-        "🚀 ~ QuantitySelector ~ orderDate < today (isPast):",
-        orderDate.isBefore(today, "day")
-      );
-
-      if (orderDate.isAfter(today)) {
-        // Case 1: Future date - PRE_ORDER
-        const orderType = "PRE_ORDER";
-
-        console.log("DEBUG - Future date PRE_ORDER case");
-
-        if (!kitchen?.preorderSchedule?.dates) {
-          console.log("DEBUG - No preorder schedule");
-          return {
-            isAvailable: false,
-            maxAvailable: 0,
-            orderType,
-            message: "Pre-orders not available for this kitchen",
-            warning: null,
-            actualCheckingDate: selectedDate, // Use selected date
-          };
-        }
-
-        // Format date as YYYY-MM-DD to match kitchen schedule format
-        const dateKey = selectedDate.includes("-")
-          ? selectedDate // If already in YYYY-MM-DD format, use as is
-          : dayjs(selectedDate).format("YYYY-MM-DD");
-
-        console.log("🚀 ~ QuantitySelector ~ dateKey:", dateKey);
-        console.log("🚀 ~ QuantitySelector ~ selectedDate:", selectedDate);
+      // CASE 3A: Past date selected - ignore Pre-Order, fall back to current availability
+      if (orderDate.isBefore(today)) {
         console.log(
-          "🚀 ~ QuantitySelector ~ kitchen.preorderSchedule.dates:",
-          kitchen.preorderSchedule.dates
-        );
-        console.log(
-          "🚀 ~ QuantitySelector ~ Available dates:",
-          Object.keys(kitchen.preorderSchedule.dates)
-        );
-
-        const scheduleForDate = kitchen.preorderSchedule.dates[dateKey];
-
-        console.log("DEBUG - Date lookup:", {
-          dateKey,
-          hasScheduleForDate: !!scheduleForDate,
-          scheduleForDate,
-          availableDates: Object.keys(kitchen.preorderSchedule.dates),
-        });
-
-        if (!scheduleForDate || !Array.isArray(scheduleForDate)) {
-          console.log("DEBUG - No schedule found for date");
-          return {
-            isAvailable: false,
-            maxAvailable: 0,
-            orderType,
-            message: "Not available for pre-order on selected date",
-            warning: null,
-          };
-        }
-
-        // Find the specific food item in the schedule
-        const foodSchedule = scheduleForDate.find(
-          (item) => item.foodItemId === food.id
-        );
-
-        console.log("🚀 ~ QuantitySelector ~ foodSchedule:", foodSchedule);
-        console.log("🚀 ~ QuantitySelector ~ food.id:", food.id);
-        console.log("🚀 ~ QuantitySelector ~ food object:", food);
-
-        console.log("DEBUG - Food schedule lookup:", {
-          foodId: food.id,
-          foodSchedule,
-          allItemsInSchedule: scheduleForDate.map((item) => ({
-            id: item.foodItemId,
-            name: item.nameOfFood,
-          })),
-        });
-
-        if (!foodSchedule) {
-          console.log("DEBUG - Food not found in schedule");
-          return {
-            isAvailable: false,
-            maxAvailable: 0,
-            orderType,
-            message:
-              "This item is not available for pre-order on selected date",
-            warning: null,
-          };
-        }
-
-        // Check availability based on isLimitedOrder
-        console.log("DEBUG - Food schedule details:", {
-          isLimitedOrder: foodSchedule.isLimitedOrder,
-          numOfAvailableItems: foodSchedule.numOfAvailableItems,
-          availableTimes: foodSchedule.availableTimes,
-        });
-
-        // Fix the logic: isLimitedOrder === false means it's LIMITED (not unlimited)
-        if (foodSchedule.isLimitedOrder === false) {
-          // Limited order - check numOfAvailableItems
-          const availableItems = foodSchedule.numOfAvailableItems || 0;
-
-          console.log("DEBUG - Limited order case:", { availableItems });
-
-          if (availableItems <= 0) {
-            return {
-              isAvailable: false,
-              maxAvailable: 0,
-              orderType,
-              message: "Sold out for pre-order on selected date",
-              warning: null,
-            };
+          "DEBUG - CASE 3A: Selected date is in the past, ignoring Pre-Order check:",
+          {
+            selectedDate,
+            today: today.format("YYYY-MM-DD"),
+            isPast: true,
           }
+        );
 
+        // Check if we have current availability for Go&Grab
+        if (numAvailable > 0) {
           console.log(
-            "Math.min(availableItems, maxQuantity)",
-            Math.min(availableItems, maxQuantity)
+            "DEBUG - CASE 3A: Has current availability, allowing Go&Grab"
           );
           return {
             isAvailable: true,
-            maxAvailable: Math.min(availableItems, maxQuantity),
-            orderType,
+            maxAvailable: Math.min(numAvailable, maxQuantity),
+            orderType: "GO_GRAB",
             message: null,
-            warning:
-              availableItems < 5
-                ? `Only ${availableItems} left for pre-order`
-                : null,
+            warning: numAvailable < 5 ? `Only ${numAvailable} left` : null,
+            actualCheckingDate: null,
           };
         } else {
-          // Unlimited order - user can add as many as possible
-          console.log("DEBUG - Unlimited order case");
-          return {
-            isAvailable: true,
-            maxAvailable: maxQuantity,
-            orderType,
-            message: null,
-            warning: null,
-          };
-        }
-      } else if (orderDate.isSame(today, "day")) {
-        // Case 2: Today's date - check BOTH current availability AND preorder schedule
-        console.log(
-          "DEBUG - Today's date - checking both GO_GRAB and PRE_ORDER"
-        );
-
-        // First check if there's a preorder schedule for today
-        if (kitchen?.preorderSchedule?.dates) {
-          const dateKey = selectedDate.includes("-")
-            ? selectedDate
-            : dayjs(selectedDate).format("YYYY-MM-DD");
-
-          console.log("DEBUG - Today's date - dateKey:", dateKey);
-          const scheduleForDate = kitchen.preorderSchedule.dates[dateKey];
-
-          if (scheduleForDate && Array.isArray(scheduleForDate)) {
-            const foodSchedule = scheduleForDate.find(
-              (item) => item.foodItemId === food.id
-            );
-
-            console.log(
-              "DEBUG - Today's date - foodSchedule found:",
-              !!foodSchedule,
-              foodSchedule
-            );
-
-            if (foodSchedule) {
-              console.log(
-                "DEBUG - Today's date found in preorder schedule - using PRE_ORDER logic"
-              );
-
-              // Use preorder logic for today if it's in the schedule
-              const orderType = "PRE_ORDER";
-
-              if (foodSchedule.isLimitedOrder === false) {
-                const availableItems = foodSchedule.numOfAvailableItems || 0;
-
-                console.log("DEBUG - Today PRE_ORDER limited case:", {
-                  availableItems,
-                });
-
-                if (availableItems <= 0) {
-                  return {
-                    isAvailable: false,
-                    maxAvailable: 0,
-                    orderType,
-                    message: "Sold out for today",
-                    warning: null,
-                  };
-                }
-
-                return {
-                  isAvailable: true,
-                  maxAvailable: Math.min(availableItems, maxQuantity),
-                  orderType,
-                  message: null,
-                  warning:
-                    availableItems < 5 ? `Only ${availableItems} left` : null,
-                };
-              } else {
-                console.log("DEBUG - Today PRE_ORDER unlimited case");
-                return {
-                  isAvailable: true,
-                  maxAvailable: maxQuantity,
-                  orderType,
-                  message: null,
-                  warning: null,
-                };
-              }
-            }
-          }
-        }
-
-        // Fallback to regular GO_GRAB logic if not in preorder schedule
-        console.log(
-          "DEBUG - Today's date - no preorder schedule, falling back to GO_GRAB"
-        );
-        const orderType = "GO_GRAB";
-        const numAvailable =
-          food.availability?.numAvailable || food.numAvailable || 0;
-
-        console.log("DEBUG - Today's date GO_GRAB fallback:", { numAvailable });
-
-        if (numAvailable <= 0) {
+          console.log("DEBUG - CASE 3A: No current availability, sold out");
           return {
             isAvailable: false,
             maxAvailable: 0,
-            orderType,
-            message: "Not available",
-            warning: null,
-          };
-        }
-
-        return {
-          isAvailable: true,
-          maxAvailable: Math.min(numAvailable, maxQuantity),
-          orderType,
-          message: null,
-          warning: numAvailable < 5 ? `Only ${numAvailable} left` : null,
-        };
-      } else {
-        // Past date - but still PRE_ORDER since selectedDate was provided
-        // Check current date in preorder schedule, not Go&Grab
-        console.log("🚨 PAST PRE-ORDER DATE DETECTED! 🚨");
-        console.log(
-          "DEBUG - Past pre-order date, checking current date in preorder schedule"
-        );
-        console.log(
-          "DEBUG - Selected date was:",
-          selectedDate,
-          "which is",
-          orderDate.format()
-        );
-        console.log("DEBUG - Current date is:", today.format());
-        console.log(
-          "DEBUG - Days difference:",
-          today.diff(orderDate, "day"),
-          "days in the past"
-        );
-        console.log(
-          "DEBUG - Since selectedDate provided, maintaining PRE_ORDER type and checking today's preorder schedule"
-        );
-
-        const orderType = "PRE_ORDER"; // Keep as PRE_ORDER since selectedDate was provided
-
-        // Format today's date for preorder schedule lookup
-        const todayDateKey = today.format("YYYY-MM-DD");
-        console.log(
-          "DEBUG - Looking for today's date in preorder schedule:",
-          todayDateKey
-        );
-
-        // Check if today's date exists in preorder schedule
-        if (!kitchen?.preorderSchedule?.dates) {
-          console.log("❌ DEBUG - No preorder schedule available");
-          return {
-            isAvailable: false,
-            maxAvailable: 0,
-            orderType,
+            orderType: "GO_GRAB",
             message: "Sold Out",
             warning: null,
-            actualCheckingDate: todayDateKey, // Show which date we checked
-          };
-        }
-
-        const scheduleForToday = kitchen.preorderSchedule.dates[todayDateKey];
-        console.log("DEBUG - Today's preorder schedule:", scheduleForToday);
-
-        if (!scheduleForToday || !Array.isArray(scheduleForToday)) {
-          console.log(
-            "❌ DEBUG - No preorder schedule for today, item sold out"
-          );
-          return {
-            isAvailable: false,
-            maxAvailable: 0,
-            orderType,
-            message: "Sold Out",
-            warning: null,
-            actualCheckingDate: todayDateKey, // Show which date we checked
-          };
-        }
-
-        // Find the specific food item in today's schedule
-        const foodScheduleToday = scheduleForToday.find(
-          (item) => item.foodItemId === food.id
-        );
-
-        console.log(
-          "DEBUG - Food found in today's preorder schedule:",
-          !!foodScheduleToday,
-          foodScheduleToday
-        );
-
-        if (!foodScheduleToday) {
-          console.log(
-            "❌ DEBUG - Food not available in today's preorder schedule"
-          );
-          return {
-            isAvailable: false,
-            maxAvailable: 0,
-            orderType,
-            message: "Sold Out",
-            warning: null,
-            actualCheckingDate: todayDateKey, // Show which date we checked
-          };
-        }
-
-        // Check availability based on today's preorder schedule
-        if (foodScheduleToday.isLimitedOrder === false) {
-          // Limited order - check numOfAvailableItems for today
-          const availableItems = foodScheduleToday.numOfAvailableItems || 0;
-
-          console.log("DEBUG - Past date, today's limited preorder case:", {
-            availableItems,
-          });
-
-          if (availableItems <= 0) {
-            console.log(
-              "❌ DEBUG - Past pre-order date: Item SOLD OUT for current date in preorder schedule"
-            );
-            return {
-              isAvailable: false,
-              maxAvailable: 0,
-              orderType,
-              message: "Sold Out",
-              warning: null,
-              actualCheckingDate: todayDateKey, // Show which date we checked
-            };
-          }
-
-          console.log(
-            "✅ DEBUG - Past pre-order date: Item AVAILABLE for current date in preorder schedule, quantity:",
-            availableItems
-          );
-          return {
-            isAvailable: true,
-            maxAvailable: Math.min(availableItems, maxQuantity),
-            orderType,
-            message: null,
-            warning: availableItems < 5 ? `Only ${availableItems} left` : null,
-            actualCheckingDate: todayDateKey, // Show which date we checked
-          };
-        } else {
-          // Unlimited order for today
-          console.log(
-            "✅ DEBUG - Past pre-order date: Item AVAILABLE (unlimited) for current date in preorder schedule"
-          );
-          return {
-            isAvailable: true,
-            maxAvailable: maxQuantity,
-            orderType,
-            message: null,
-            warning: null,
-            actualCheckingDate: todayDateKey, // Show which date we checked
+            actualCheckingDate: null,
           };
         }
       }
-    } else {
-      // Case 3: No selectedDate - GO_GRAB
-      const orderType = "GO_GRAB";
-      const numAvailable =
-        food.availability?.numAvailable || food.numAvailable || 0;
 
-      console.log("DEBUG - No date GO_GRAB:", { numAvailable });
+      // CASE 3B: Future date selected - check Pre-Order
+      console.log(
+        "DEBUG - CASE 3B: Checking Pre-Order for future date:",
+        selectedDate
+      );
 
-      if (numAvailable <= 0) {
+      const orderType = "PRE_ORDER";
+
+      // CASE 3B-1: No preorder schedule exists
+      if (!kitchen?.preorderSchedule?.dates) {
+        console.log("DEBUG - CASE 3B-1: No preorder schedule");
         return {
           isAvailable: false,
           maxAvailable: 0,
           orderType,
-          message: "Sold Out",
+          message: "Pre-orders not available for this kitchen",
           warning: null,
-          actualCheckingDate: null, // No specific date for GO_GRAB
+          actualCheckingDate: selectedDate,
         };
       }
 
-      return {
-        isAvailable: true,
-        maxAvailable: Math.min(numAvailable, maxQuantity),
-        orderType,
-        message: null,
-        warning: numAvailable < 5 ? `Only ${numAvailable} left` : null,
-        actualCheckingDate: null, // No specific date for GO_GRAB
-      };
+      // Format the date key for schedule lookup
+      const dateKey = selectedDate.includes("-")
+        ? selectedDate
+        : dayjs(selectedDate).format("YYYY-MM-DD");
+
+      const scheduleForDate = kitchen.preorderSchedule.dates[dateKey];
+
+      // CASE 3B-2: No schedule found for this specific date
+      if (!scheduleForDate || !Array.isArray(scheduleForDate)) {
+        console.log("DEBUG - CASE 3B-2: No schedule found for date");
+        return {
+          isAvailable: false,
+          maxAvailable: 0,
+          orderType,
+          message: "Not available for pre-order on selected date",
+          warning: null,
+          actualCheckingDate: selectedDate,
+        };
+      }
+
+      // Find this specific food in the schedule
+      const foodSchedule = scheduleForDate.find(
+        (item) => item.foodItemId === food.id
+      );
+
+      // CASE 3B-3: Food not found in the schedule for this date
+      if (!foodSchedule) {
+        console.log("DEBUG - CASE 3B-3: Food not found in schedule");
+        return {
+          isAvailable: false,
+          maxAvailable: 0,
+          orderType,
+          message: "This item is not available for pre-order on selected date",
+          warning: null,
+          actualCheckingDate: selectedDate,
+        };
+      }
+
+      // CASE 3B-4: Food found in schedule - check if it's limited order
+      if (foodSchedule.isLimitedOrder === false) {
+        // Limited quantity pre-order
+        const availableItems = foodSchedule.numOfAvailableItems || 0;
+        console.log("DEBUG - CASE 3B-4A: Limited pre-order", {
+          availableItems,
+        });
+
+        return {
+          isAvailable: availableItems > 0,
+          maxAvailable: Math.min(availableItems, maxQuantity),
+          orderType,
+          message: availableItems <= 0 ? "Sold Out" : null,
+          warning:
+            availableItems < 5 && availableItems > 0
+              ? `Only ${availableItems} left`
+              : null,
+          actualCheckingDate: selectedDate,
+        };
+      } else {
+        // Unlimited pre-order
+        console.log("DEBUG - CASE 3B-4B: Unlimited pre-order");
+        return {
+          isAvailable: true,
+          maxAvailable: maxQuantity,
+          orderType,
+          message: null,
+          warning: null,
+          actualCheckingDate: selectedDate,
+        };
+      }
     }
+
+    // CASE 4: No selected date and no current availability - completely sold out
+    console.log("DEBUG - CASE 4: No availability anywhere, item sold out");
+    return {
+      isAvailable: false,
+      maxAvailable: 0,
+      orderType: "GO_GRAB",
+      message: "Sold Out",
+      warning: null,
+      actualCheckingDate: null,
+    };
   }, [food, kitchen, selectedDate, maxQuantity]);
 
   // Memoize the availability status to prevent unnecessary updates
@@ -767,22 +506,6 @@ const QuantitySelector = ({
           </button>
         </div>
       </div>
-
-      {/* {showErrorMessages && (
-        <>
-          {availabilityStatus.warning && (
-            <div className="quantity-selector__warning">
-              <span className="warning-text">{availabilityStatus.warning}</span>
-            </div>
-          )}
-
-          {!availabilityStatus.isAvailable && availabilityStatus.message && (
-            <div className="quantity-selector__error">
-              <span className="error-text">{availabilityStatus.message}</span>
-            </div>
-          )}
-        </>
-      )} */}
     </div>
   );
 };
