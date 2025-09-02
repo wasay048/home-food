@@ -1,23 +1,21 @@
 // functions/src/index.ts
-import { onRequest } from "firebase-functions/v2/https";
-import { admin } from "./admin";
-import { WECHAT_CONFIG } from "../src/config/wechat";
+import {onRequest} from "firebase-functions/v2/https";
+import {admin} from "./admin.js";
 
-const APPID = WECHAT_CONFIG.APPID;
-const SECRET = WECHAT_CONFIG.APP_SECRET;
-const APP_BASE = WECHAT_CONFIG.BASE_URL || "https://www.homefreshfoods.ai";
+const APPID = process.env.WECHAT_APPID;
+const SECRET = process.env.WECHAT_SECRET;
+const APP_BASE = process.env.APP_BASE || "https://www.homefreshfoods.ai";
 
-// quick cookie getter (no cookie-parser)
 function readCookie(req, name) {
   const raw = req.headers?.cookie || "";
   const m = raw.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
   return m ? decodeURIComponent(m[1]) : undefined;
 }
 
-export const wechatCallback = onRequest(
+export const exchangeWeChatCode = onRequest(
   {
     region: "us-central1",
-    secrets: ["WECHAT_APPID", "WECHAT_SECRET", "APP_ORIGIN"],
+    secrets: ["WECHAT_APPID", "WECHAT_SECRET", "APP_BASE"],
   },
   async (req, res) => {
     if (req.method !== "GET") {
@@ -45,7 +43,7 @@ export const wechatCallback = onRequest(
       grant_type: "authorization_code",
     }).toString();
 
-    const tkRes = await fetch(tokenURL, { method: "GET" });
+    const tkRes = await fetch(tokenURL, {method: "GET"});
     const tk = await tkRes.json();
 
     if (!tkRes.ok || tk.errcode || !tk.access_token) {
@@ -53,7 +51,7 @@ export const wechatCallback = onRequest(
       return;
     }
 
-    const { access_token, openid, scope, unionid } = tk;
+    const {access_token, openid, scope, unionid} = tk;
 
     // 2) Optional: fetch profile if snsapi_userinfo
     let nickname = null;
