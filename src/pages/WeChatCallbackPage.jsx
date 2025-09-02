@@ -1,194 +1,67 @@
-import React, { useEffect, useState, useContext } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import AuthContext from "../context/AuthContext";
-import { showToast } from "../utils/toast";
-import { WECHAT_API } from "../config/wechat";
+import React, { useEffect, useState } from "react";
+
+const CF_URL =
+  "https://us-central1/homefoods-16e56.cloudfunctions.net/exchangeWeChatCode";
 
 const WeChatCallbackPage = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const { handleWeChatCallback } = useContext(AuthContext);
-  const [status, setStatus] = useState("processing"); // processing, success, error
+  const [status, setStatus] =
+    (useState < "loading") | "ok" | ("error" > "loading");
+  const [data, setData] = useState(null);
 
   useEffect(() => {
-    const handleWeChatCallback = async () => {
-      try {
-        // Get the authorization code from URL parameters
-        const code = searchParams.get("code");
-        const state = searchParams.get("state");
-        const error = searchParams.get("error");
+    (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      console.log("code", code);
+      const state = params.get("state");
+      const expectedState = sessionStorage.getItem("wx_state");
 
-        console.log("WeChat callback received:", { code, state, error });
-
-        if (error) {
-          throw new Error(`WeChat OAuth error: ${error}`);
-        }
-
-        if (!code) {
-          throw new Error("Authorization code not received from WeChat");
-        }
-
-        // Check for development mode
-        if (code === "dev_mock_code") {
-          console.log("🧪 Processing development mode authentication");
-
-          // Get mock user from localStorage (set by dev button)
-          const mockUserStr = localStorage.getItem("wechat_auth_user");
-          if (mockUserStr) {
-            const mockUser = JSON.parse(mockUserStr);
-            console.log("✅ Dev authentication successful:", mockUser);
-
-            // Manually update Redux state (simulate the thunk result)
-            dispatch({
-              type: "auth/authenticateWithWeChat/fulfilled",
-              payload: mockUser,
-            });
-
-            setStatus("success");
-            showToast.success(`Welcome ${mockUser.name}! (Dev Mode)`);
-
-            // Handle pending cart action
-            const pendingCartAction = sessionStorage.getItem(
-              "wechat_pending_cart_action"
-            );
-            if (pendingCartAction === "true") {
-              sessionStorage.removeItem("wechat_pending_cart_action");
-              showToast.info("You can now add items to your cart");
-              setTimeout(() => navigate("/foods", { replace: true }), 1500);
-            } else {
-              setTimeout(() => navigate("/foods", { replace: true }), 1500);
-            }
-
-            return;
-          }
-        }
-
-        // Regular WeChat authentication
-        setStatus("processing");
-        const result = await handleWeChatCodeExchange(code, state);
-
-        console.log("✅ WeChat authentication successful:", result);
-        setStatus("success");
-
-        // Show success message
-        showToast.success(`Welcome ${result.name || "User"}!`);
-
-        // Check if user was trying to add something to cart before auth
-        const pendingCartAction = sessionStorage.getItem(
-          "wechat_pending_cart_action"
-        );
-
-        if (pendingCartAction === "true") {
-          // Clear the pending action
-          sessionStorage.removeItem("wechat_pending_cart_action");
-
-          // Show message and redirect back to food detail page
-          showToast.info("You can now add items to your cart!");
-
-          // Go back to the previous page or foods list
-          setTimeout(() => {
-            window.history.back() || navigate("/foods");
-          }, 1500);
-        } else {
-          // Regular auth flow - go to home
-          setTimeout(() => {
-            navigate("/");
-          }, 1500);
-        }
-      } catch (error) {
-        console.error("❌ WeChat authentication failed:", error);
+      if (!code) {
         setStatus("error");
-
-        // Show error message
-        showToast.error(error.message || "Authentication failed");
-
-        // Redirect to home after showing error
-        setTimeout(() => {
-          navigate("/");
-        }, 3000);
+        setData({ error: "missing_code" });
+        return;
       }
-    };
-
-    handleWeChatCallback();
-  }, [searchParams, handleWeChatCallback, navigate]);
-
-
-  const handleWeChatCodeExchange = async (code, state) => {
-    // Exchange code for access token
-    try {
-
-        const wechatToken = await WECHAT_API.getAccessToken(code);
-        
-        console.log("Access token response:", wechatToken.access_token);
-        if (wechatToken.access_token) {
-          // Fetch user info
-          const userInfo = await WECHAT_API.getUserInfo(wechatToken.access_token, state);
-          if (userInfo) {
-            // Dispatch user info to Redux store
-            dispatch({
-              type: "auth/authenticateWithWeChat/fulfilled",
-              payload: userInfo,
-            });
-          }
-      } else {
-        console.error("Failed to obtain access token");
+      if (!state || !expectedState || state !== expectedState) {
+        // CSRF / replay check failed
+        setStatus("error");
+        setData({ error: "bad_state" });
+        return;
       }
-    } catch(error) {
-      console.log("error", error);
-    }
-  };
+
+      try {
+        const res = await fetch(CF_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+          credentials: "omit",
+        });
+
+        const json = await res.json();
+        if (!res.ok || json.error) {
+          setStatus("error");
+          setData({ error: json.error || `http_${res.status}` });
+          return;
+        }
+
+        setStatus("ok");
+        setData(json);
+      } catch (e) {
+        setStatus("error");
+        setData({ error: e?.message || "network_error" });
+      }
+    })();
+  }, []);
+
+  if (status === "loading") return <p>Exchanging code…</p>;
+  if (status === "error")
+    return <pre>Error: {JSON.stringify(data, null, 2)}</pre>;
+
   return (
-    <div className="wechat-callback-page">
-      <div className="container py-5">
-        <div className="text-center">
-          {status === "processing" && (
-            <>
-              <div className="spinner-border text-success mb-3" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
-              <h2>Processing WeChat Authentication...</h2>
-              <p className="text-muted">Please wait while we sign you in.</p>
-            </>
-          )}
-
-          {status === "success" && (
-            <>
-              <div className="text-success mb-3">
-                <svg
-                  width="48"
-                  height="48"
-                  fill="currentColor"
-                  viewBox="0 0 16 16"
-                >
-                  <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.061L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z" />
-                </svg>
-              </div>
-              <h2>Authentication Successful!</h2>
-              <p className="text-muted">Redirecting you now...</p>
-            </>
-          )}
-
-          {status === "error" && (
-            <>
-              <div className="text-danger mb-3">
-                <svg
-                  width="48"
-                  height="48"
-                  fill="currentColor"
-                  viewBox="0 0 16 16"
-                >
-                  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
-                  <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z" />
-                </svg>
-              </div>
-              <h2>Authentication Failed</h2>
-              <p className="text-muted">
-                Something went wrong. Redirecting to home...
-              </p>
-            </>
-          )}
-        </div>
-      </div>
+    <div>
+      <h2>WeChat login success</h2>
+      <pre style={{ fontSize: 12, background: "#f6f6f6", padding: 12 }}>
+        {JSON.stringify(data, null, 2)}
+      </pre>
     </div>
   );
 };
