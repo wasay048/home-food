@@ -8,7 +8,6 @@ import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
 
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
 import { useGenericCart } from "../hooks/useGenericCart";
-import { getCartQuantity } from "../utils/cartUtils";
 
 export default function OrderPage() {
   const navigate = useNavigate();
@@ -276,11 +275,18 @@ export default function OrderPage() {
                 />
               </svg>
             </Link>
-            <div className="title">
-              Order ({totalItemsCount} Item{totalItemsCount !== 1 ? "s" : ""})
+            <div className="title">Order</div>
+          </div>
+          <div className="order-count">
+            <div>
+              {totalItemsCount} Item{totalItemsCount !== 1 ? "s" : ""} in Cart
+            </div>
+            <div>
+              <Link style={{ color: "#3fc045" }} onClick={handleRemoveAll}>
+                Remove all
+              </Link>
             </div>
           </div>
-
           {/* Kitchen Info */}
           {cartItems.length > 0 && cartItems[0].kitchen && (
             <h2 className="small-title mb-2">{cartItems[0].kitchen.name}</h2>
@@ -538,20 +544,6 @@ export default function OrderPage() {
 
               {/* Action Buttons */}
               <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
-                <button
-                  onClick={handleRemoveAll}
-                  style={{
-                    flex: "1",
-                    padding: "12px 16px",
-                    backgroundColor: "#f8f9fa",
-                    border: "1px solid #dee2e6",
-                    borderRadius: "8px",
-                    color: "#6c757d",
-                    cursor: "pointer",
-                  }}
-                >
-                  Clear Cart
-                </button>
                 <button
                   className="action-button"
                   onClick={() => navigate("/checkout")}

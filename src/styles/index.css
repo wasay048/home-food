@@ -121,7 +121,7 @@ body,
 
   color: #212226;
   margin: 0px;
-  margin-left: 12px;
+  margin-left: calc(50% - 36px);
 }
 .product-detail .title {
   font-weight: 700;
@@ -536,6 +536,12 @@ body,
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+}
+.order-count {
+  display: flex;
+  justify-content: space-between;
+  margin: 11px 0px;
+  font-weight: 600;
 }
 /* .order-page .top {
   height: calc(94vh - 48px);

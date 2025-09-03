@@ -12,7 +12,7 @@ import {
   testFirestoreConnection,
 } from "../services/foodService";
 import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
-import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
+// import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import "../styles/FoodDetailPage.css";
 import { clearCart } from "../store/slices/cartSlice";
@@ -281,16 +281,16 @@ export default function FoodDetailPage() {
   const [activeTab, setActiveTab] = useState("reviews");
   const [selectedQuantity, setSelectedQuantity] = useState(0);
   const [specialInstructions, setSpecialInstructions] = useState("");
-  const [showWeChatDialog, setShowWeChatDialog] = useState(false);
+  // const [showWeChatDialog, setShowWeChatDialog] = useState(false);
 
   // Date and time picker states
   const [pickupDate, setPickupDate] = useState(selectedDate);
   const [pickupTime, setPickupTime] = useState(null); // Let DateTimePicker set appropriate default
 
-  // Debug: Log showWeChatDialog state changes
-  useEffect(() => {
-    console.log("🔍 showWeChatDialog state changed to:", showWeChatDialog);
-  }, [showWeChatDialog]);
+  // // Debug: Log showWeChatDialog state changes
+  // useEffect(() => {
+  //   console.log("🔍 showWeChatDialog state changed to:", showWeChatDialog);
+  // }, [showWeChatDialog]);
 
   const [availabilityStatus, setAvailabilityStatus] = useState({
     isAvailable: true,
@@ -967,9 +967,9 @@ export default function FoodDetailPage() {
       </div>
 
       {/* WeChat Authentication Dialog */}
-      {showWeChatDialog && (
+      {/* {showWeChatDialog && (
         <WeChatAuthDialog onClose={handleWeChatDialogClose} />
-      )}
+      )} */}
     </div>
   );
 }
