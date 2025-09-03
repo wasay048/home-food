@@ -49,7 +49,7 @@ const WeChatAuthDialog = ({ onClose }) => {
         // Already in WeChat browser - direct redirect
         console.log("📱 WeChat browser detected - direct redirect");
         alert(authUrl);
-        // window.location.href = authUrl;
+        window.location.href = authUrl;
       } else if (isMobile) {
         // Mobile device - use simple, reliable approach
         console.log("📱 Mobile device - attempting WeChat authentication");
@@ -59,12 +59,12 @@ const WeChatAuthDialog = ({ onClose }) => {
         // If not installed, it will show the appropriate download page
         authUrl = generateWeChatAuthUrlMobile();
         alert(authUrl);
-        // window.location.href = authUrl;
+        window.location.href = authUrl;
       } else {
         // Desktop - direct redirect
         console.log("🖥️ Desktop - direct redirect");
         alert(authUrl);
-        // window.location.href = authUrl;
+        window.location.href = authUrl;
       }
     } catch (error) {
       console.error("❌ Error in WeChat authentication:", error);
@@ -72,7 +72,7 @@ const WeChatAuthDialog = ({ onClose }) => {
       // Simple fallback
       const authUrl = generateWeChatAuthUrlWeb();
       alert(authUrl);
-      // window.location.href = authUrl;
+      window.location.href = authUrl;
     }
   };
 
