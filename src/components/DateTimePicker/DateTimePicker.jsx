@@ -32,6 +32,15 @@ const DateTimePicker = ({
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
   const dateInputRef = useRef(null);
 
+  // ✅ CRITICAL: Use refs to track previous values and prevent infinite loops
+  const prevSelectedDate = useRef(selectedDate);
+  const prevSelectedTime = useRef(selectedTime);
+  const prevOrderType = useRef(orderType);
+  const prevFoodId = useRef(food?.id);
+  const prevKitchenId = useRef(kitchen?.id);
+  const hasAutoSelectedDate = useRef(false);
+  const hasAutoSelectedTime = useRef(false);
+
   // Detect if device is mobile
   const isMobile = useMemo(() => {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
@@ -39,28 +48,12 @@ const DateTimePicker = ({
     );
   }, []);
 
-  // Sync with external props
-  useEffect(() => {
-    setInternalDate(selectedDate);
-  }, [selectedDate]);
-
-  useEffect(() => {
-    setInternalTime(selectedTime);
-  }, [selectedTime]);
-
   // Calculate available dates based on order type
   const availableDates = useMemo(() => {
     const today = dayjs().startOf("day");
 
-    console.log("🗓️ DateTimePicker - Calculating available dates:", {
-      orderType,
-      today: today.format("YYYY-MM-DD"),
-      selectedDate,
-      foodId: food?.id,
-    });
-
     if (orderType === "GO_GRAB") {
-      // Go&Grab: Generate available dates from today onwards (7 days)
+      // Go&Grab: Generate available dates from today onwards (30 days)
       const dates = [];
 
       for (let i = 0; i < 30; i++) {
@@ -69,9 +62,9 @@ const DateTimePicker = ({
 
         let displayText;
         if (i === 0) {
-          displayText = `${date.format("MMM D, YYYY")} (Today)`;
+          displayText = `${date.format("MMM D, YYYY")}`;
         } else if (i === 1) {
-          displayText = `${date.format("MMM D, YYYY")} (Tomorrow)`;
+          displayText = `${date.format("MMM D, YYYY")}`;
         } else {
           const dayOfWeek = date.format("dddd");
           displayText = `${dayOfWeek}, ${date.format("MMM D, YYYY")}`;
@@ -102,9 +95,9 @@ const DateTimePicker = ({
 
       let displayText;
       if (isToday) {
-        displayText = `${selectedDateObj.format("MMM D, YYYY")} (Today)`;
+        displayText = `${selectedDateObj.format("MMM D, YYYY")}`;
       } else if (isTomorrow) {
-        displayText = `${selectedDateObj.format("MMM D, YYYY")} (Tomorrow)`;
+        displayText = `${selectedDateObj.format("MMM D, YYYY")}`;
       } else {
         const dayOfWeek = selectedDateObj.format("dddd");
         displayText = `${dayOfWeek}, ${selectedDateObj.format("MMM D, YYYY")}`;
@@ -129,16 +122,16 @@ const DateTimePicker = ({
     if (!internalDate) return [];
 
     if (orderType === "GO_GRAB") {
-      // Go&Grab logic (unchanged)
+      // Go&Grab logic
       const today = dayjs();
-      const selectedDate = dayjs(internalDate);
+      const selectedDateObj = dayjs(internalDate);
 
       const kitchenOpenHour = 9;
       const endHour = 21;
       const timeSlots = [];
 
       let startSlot;
-      if (selectedDate.isSame(today, "day")) {
+      if (selectedDateObj.isSame(today, "day")) {
         startSlot = today.add(30, "minutes");
         const minutes = startSlot.minute();
         const roundedMinutes = Math.ceil(minutes / 15) * 15;
@@ -148,7 +141,7 @@ const DateTimePicker = ({
           startSlot = startSlot.add(1, "hour").minute(0);
         }
       } else {
-        startSlot = selectedDate.hour(kitchenOpenHour).minute(0).second(0);
+        startSlot = selectedDateObj.hour(kitchenOpenHour).minute(0).second(0);
       }
 
       let currentSlot = startSlot;
@@ -168,7 +161,7 @@ const DateTimePicker = ({
 
       return timeSlots;
     } else if (orderType === "PRE_ORDER") {
-      // Pre-Order logic (unchanged)
+      // Pre-Order logic
       if (!selectedDate || !kitchen?.preorderSchedule?.dates) {
         return [];
       }
@@ -242,14 +235,14 @@ const DateTimePicker = ({
     return [];
   }, [internalDate, orderType, selectedDate, kitchen, food]);
 
-  // Handle date selection with validation for mobile
+  // ✅ FIXED: Handle date selection without causing infinite loops
   const handleDateChange = useCallback(
     (dateValue) => {
       // Validate that the selected date is allowed
       const selectedDateObj = dayjs(dateValue);
       const today = dayjs().startOf("day");
 
-      console.log("📱 Mobile date change validation:", {
+      console.log("📱 Date change:", {
         selectedDate: dateValue,
         isBeforeToday: selectedDateObj.isBefore(today),
         orderType,
@@ -274,15 +267,21 @@ const DateTimePicker = ({
         return;
       }
 
+      // Update internal state
       setInternalDate(dateValue);
       setInternalTime(null);
+
+      // Reset time auto-selection flag when date changes
+      hasAutoSelectedTime.current = false;
+
+      // Notify parent
       onDateChange(dateValue);
       onTimeChange(null);
     },
     [orderType, selectedDate, onDateChange, onTimeChange, isMobile]
   );
 
-  // Handle time selection
+  // ✅ FIXED: Handle time selection without causing infinite loops
   const handleTimeChange = useCallback(
     (timeValue) => {
       setInternalTime(timeValue);
@@ -341,23 +340,91 @@ const DateTimePicker = ({
     );
   };
 
-  // Auto-select logic
+  // ✅ CRITICAL FIX: Single effect that handles all synchronization without loops
   useEffect(() => {
-    if (orderType === "GO_GRAB" && !internalDate && availableDates.length > 0) {
-      const firstDate = availableDates[0].date;
-      handleDateChange(firstDate);
-    }
-    if (orderType === "PRE_ORDER" && selectedDate && !internalDate) {
-      setInternalDate(selectedDate);
-    }
-  }, [orderType, internalDate, availableDates, selectedDate, handleDateChange]);
+    let hasChanges = false;
 
-  useEffect(() => {
-    if (internalDate && !internalTime && availableTimeSlots.length > 0) {
-      const firstAvailableTime = availableTimeSlots[0].value;
-      handleTimeChange(firstAvailableTime);
+    // Check if key props have changed (requires reset)
+    const keyPropsChanged =
+      orderType !== prevOrderType.current ||
+      food?.id !== prevFoodId.current ||
+      kitchen?.id !== prevKitchenId.current;
+
+    if (keyPropsChanged) {
+      console.log("🔄 Key props changed, resetting component");
+      hasAutoSelectedDate.current = false;
+      hasAutoSelectedTime.current = false;
+      setInternalDate(null);
+      setInternalTime(null);
+      hasChanges = true;
     }
-  }, [internalDate, internalTime, availableTimeSlots, handleTimeChange]);
+
+    // Sync selectedDate with internalDate (only if different)
+    if (selectedDate !== prevSelectedDate.current || keyPropsChanged) {
+      if (selectedDate !== internalDate) {
+        console.log("🔄 Syncing selectedDate:", selectedDate);
+        setInternalDate(selectedDate);
+        hasChanges = true;
+      }
+    }
+
+    // Sync selectedTime with internalTime (only if different)
+    if (selectedTime !== prevSelectedTime.current || keyPropsChanged) {
+      if (selectedTime !== internalTime) {
+        console.log("🔄 Syncing selectedTime:", selectedTime);
+        setInternalTime(selectedTime);
+        hasChanges = true;
+      }
+    }
+
+    // Auto-select date for Go&Grab if none provided
+    if (
+      orderType === "GO_GRAB" &&
+      !hasAutoSelectedDate.current &&
+      !internalDate &&
+      availableDates.length > 0
+    ) {
+      const firstDate = availableDates[0].date;
+      setInternalDate(firstDate);
+      onDateChange(firstDate);
+      hasAutoSelectedDate.current = true;
+      hasChanges = true;
+    }
+
+    // Auto-select time if date is set but no time selected
+    if (
+      !hasAutoSelectedTime.current &&
+      internalDate &&
+      !internalTime &&
+      availableTimeSlots.length > 0
+    ) {
+      const firstTime = availableTimeSlots[0].value;
+      console.log("🔄 Auto-selecting time:", firstTime);
+      setInternalTime(firstTime);
+      onTimeChange(firstTime);
+      hasAutoSelectedTime.current = true;
+      hasChanges = true;
+    }
+
+    // Update ref values at the end
+    prevSelectedDate.current = selectedDate;
+    prevSelectedTime.current = selectedTime;
+    prevOrderType.current = orderType;
+    prevFoodId.current = food?.id;
+    prevKitchenId.current = kitchen?.id;
+  }, [
+    selectedDate,
+    selectedTime,
+    orderType,
+    food?.id,
+    kitchen?.id,
+    internalDate,
+    internalTime,
+    availableDates,
+    availableTimeSlots,
+    onDateChange,
+    onTimeChange,
+  ]);
 
   if (disabled) {
     return (
@@ -375,7 +442,7 @@ const DateTimePicker = ({
   }
 
   if (availableDates.length === 0) {
-    return <div className={``} style={style}></div>;
+    return <div className={`${className}`} style={style}></div>;
   }
 
   const datePickerProps = showTimeFirst ? {} : { "data-first": true };
@@ -503,15 +570,6 @@ const DateTimePicker = ({
               value={timeOption.value}
               disabled={!timeOption.isAvailable}
               data-recommended={timeOption.isRecommended || false}
-              style={
-                timeOption.isRecommended
-                  ? {
-                      backgroundColor: "#e8f5e8",
-                      fontWeight: "600",
-                      color: "#2e7d2e",
-                    }
-                  : {}
-              }
             >
               {timeOption.display}
             </option>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 const CF_URL =
-  "https://us-central1/homefoods-16e56.cloudfunctions.net/exchangeWeChatCode";
+  "https://us-central1-homefoods-16e56.cloudfunctions.net/exchangeWeChatCode";
 
 const WeChatCallbackPage = () => {
   const [status, setStatus] =

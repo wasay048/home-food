@@ -7,6 +7,7 @@ import {
   useAllKitchensWithFoods,
 } from "../hooks/useKitchenListing";
 import { useGenericCart } from "../hooks/useGenericCart";
+import { showToast } from "../utils/toast";
 // import Edit from "../assets/images/edit.svg";
 import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
 import MobileLoader from "../components/Loader/MobileLoader";
@@ -67,14 +68,11 @@ export default function ListingPage() {
   // Get specific kitchen data using the determined kitchen ID
   const { kitchen, foods, loading, error } =
     useKitchenWithFoods(currentKitchenId);
-  console.log("🚀 ~ ListingPage ~ foods:", foods);
 
   // Debug logging
   useEffect(() => {
     if (kitchen && foods.length > 0) {
-      console.log("[ListingPage] Kitchen data:", kitchen);
-      console.log("[ListingPage] Foods data:", foods);
-      console.log("[ListingPage] Preorder schedule:", kitchen.preorderSchedule);
+      console.log("[ListingPage] Kitchen data loaded successfully");
     }
   }, [kitchen, foods]);
 
@@ -86,15 +84,6 @@ export default function ListingPage() {
     const today = dayjs();
     const todayStr = today.format("YYYY-MM-DD");
 
-    console.log(
-      "🔥🔥🔥 [PREORDER DATES DEBUG] Using dayjs - Current date (today):",
-      todayStr
-    );
-    console.log(
-      "🔥🔥🔥 [PREORDER DATES DEBUG] Raw dayjs object:",
-      today.toString()
-    );
-
     // Generate the next 2 days after today using dayjs
     const nextTwoDays = [];
     for (let i = 1; i <= 2; i++) {
@@ -103,47 +92,23 @@ export default function ListingPage() {
       nextTwoDays.push(dateString);
     }
 
-    console.log(
-      "🔥🔥🔥 [PREORDER DATES DEBUG] Next 2 days after today (should be 2025-08-23, 2025-08-24):",
-      nextTwoDays
-    );
-    console.log(
-      "🔥🔥🔥 [PREORDER DATES DEBUG] All dates in preorder schedule:",
-      Object.keys(kitchen.preorderSchedule.dates)
-    );
-
     // Filter to only include dates that exist in the preorder schedule AND are in our next 2 days
     // EXPLICITLY exclude today's date
     const availableDates = nextTwoDays.filter((dateStr) => {
       const hasSchedule = kitchen.preorderSchedule.dates[dateStr];
       const isNotToday = dateStr !== todayStr;
-      console.log(
-        `🔥🔥🔥 [PREORDER DATES DEBUG] Date ${dateStr}: has schedule=${!!hasSchedule}, is not today=${isNotToday}, today is=${todayStr}`
-      );
       return hasSchedule && isNotToday;
     });
-
-    console.log(
-      "🔥🔥🔥 [PREORDER DATES DEBUG] Final available preorder dates (should only be 23 & 24):",
-      availableDates
-    );
 
     const finalResult = availableDates.map((dateString) => {
       const date = dayjs(dateString);
       const displayDate = date.format("ddd, MMM D");
-      console.log(
-        `🔥🔥🔥 [PREORDER DATES DEBUG] Mapping ${dateString} to display: ${displayDate}`
-      );
       return {
         dateString,
         displayDate,
       };
     });
 
-    console.log(
-      "🔥🔥🔥 [PREORDER DATES DEBUG] Final result returned:",
-      finalResult
-    );
     return finalResult;
   };
 
@@ -158,20 +123,10 @@ export default function ListingPage() {
       (food) => food.kitchenId === currentKitchenId
     );
 
-    console.log(
-      "[ListingPage] All foods for current kitchen:",
-      currentKitchenFoods
-    );
-
     // Go & Grab: items with numAvailable > 0 (check both possible locations)
     const goGrab = currentKitchenFoods.filter((food) => {
       const numAvailable =
         food.availability?.numAvailable || food.numAvailable || 0;
-      console.log(
-        `[ListingPage] ${food.name} - numAvailable: ${numAvailable} (from ${
-          food.availability?.numAvailable ? "availability" : "direct"
-        })`
-      );
       return numAvailable > 0;
     });
 
@@ -188,41 +143,14 @@ export default function ListingPage() {
           preorderFoodIds.add(item.foodItemId);
         });
 
-      console.log(
-        "[ListingPage] Preorder food IDs from schedule:",
-        Array.from(preorderFoodIds)
-      );
-
       // Include all foods that are in preorder schedule
       preOrder = currentKitchenFoods.filter((food) => {
-        const isInPreorder = preorderFoodIds.has(food.id);
-        console.log(
-          `[ListingPage] ${food.name} (${food.id}) - in preorder: ${isInPreorder}`
-        );
-        return isInPreorder;
+        return preorderFoodIds.has(food.id);
       });
     }
 
-    console.log(
-      `[ListingPage] Kitchen: ${currentKitchenId}, Total Foods: ${currentKitchenFoods.length}, Go&Grab: ${goGrab.length}, Pre-order: ${preOrder.length}`
-    );
-    console.log(
-      "[ListingPage] Go&Grab items:",
-      goGrab.map((f) => ({
-        id: f.id,
-        name: f.name,
-        numAvailable: f.availability?.numAvailable || f.numAvailable,
-      }))
-    );
-    console.log(
-      "[ListingPage] Pre-order items:",
-      preOrder.map((f) => ({ id: f.id, name: f.name }))
-    );
-
     return { goGrabItems: goGrab, preOrderItems: preOrder };
   }, [foods, kitchen, currentKitchenId]);
-  console.log("🚀 ~ ListingPage ~ goGrabItems:", goGrabItems);
-  console.log("🚀 ~ ListingPage ~ preOrderItems:", preOrderItems);
 
   // Date/Time picker handlers
   const handleDateChange = useCallback(
@@ -232,11 +160,6 @@ export default function ListingPage() {
         ...prev,
         [key]: newDate,
       }));
-      console.log("📅 [ListingPage] Date changed:", {
-        foodId,
-        newDate,
-        isPreOrder,
-      });
     },
     []
   );
@@ -248,11 +171,6 @@ export default function ListingPage() {
         ...prev,
         [key]: newTime,
       }));
-      console.log("⏰ [ListingPage] Time changed:", {
-        foodId,
-        newTime,
-        isPreOrder,
-      });
     },
     []
   );
@@ -273,6 +191,40 @@ export default function ListingPage() {
   };
 
   const availablePreorderDates = getAvailablePreorderDates();
+
+  // ✅ OPTIMIZATION: Memoize cart quantities to prevent infinite recalculations
+  const cartQuantities = useMemo(() => {
+    const quantities = new Map();
+
+    // Pre-calculate all cart quantities to avoid repeated calls in render
+    if (foods && foods.length > 0) {
+      foods.forEach((food) => {
+        // For Go&Grab items (no date dependency)
+        quantities.set(`${food.id}`, getCartQuantity(food.id));
+
+        // For Pre-Order items (with dates)
+        if (availablePreorderDates.length > 0) {
+          availablePreorderDates.forEach((dateInfo) => {
+            quantities.set(
+              `${food.id}-${dateInfo.dateString}`,
+              getCartQuantity(food.id, dateInfo.dateString)
+            );
+          });
+        }
+      });
+    }
+
+    return quantities;
+  }, [foods.length, cartItems.length, availablePreorderDates.length]);
+
+  // Helper function to get cart quantity from memoized map
+  const getMemoizedCartQuantity = useCallback(
+    (foodId, selectedDate = null) => {
+      const key = selectedDate ? `${foodId}-${selectedDate}` : `${foodId}`;
+      return cartQuantities.get(key) || 0;
+    },
+    [cartQuantities]
+  );
 
   // Check if data is fully loaded
   const isDataLoaded = !loading && kitchen && foods.length > 0;
@@ -341,7 +293,7 @@ export default function ListingPage() {
               <h2 className="small-title mb-20">Grab & Go</h2>
               <div className="menu-listing">
                 {goGrabItems.map((food) => {
-                  const cartQty = getCartQuantity(food.id);
+                  const cartQty = getMemoizedCartQuantity(food.id);
                   return (
                     <div key={food.id} className="menu-list">
                       <div className="left">
@@ -377,21 +329,14 @@ export default function ListingPage() {
                             minQuantity={0}
                             onQuantityChange={(newQuantity) => {
                               try {
-                                const currentQty = getCartQuantity(food.id);
+                                const currentQty = getMemoizedCartQuantity(
+                                  food.id
+                                );
                                 const selectedDate = pickupDates[food.id];
                                 const selectedTime = pickupTimes[food.id];
                                 const isToday = selectedDate
                                   ? dayjs(selectedDate).isSame(dayjs(), "day")
                                   : true;
-
-                                console.log(
-                                  "🛒 ListingPage Go&Grab quantity change:",
-                                  {
-                                    foodId: food.id,
-                                    newQuantity,
-                                    currentQty,
-                                  }
-                                );
 
                                 handleQuantityChange({
                                   // Removed await
@@ -456,7 +401,7 @@ export default function ListingPage() {
                 </h2>
                 <div className="menu-listing">
                   {preOrderItemsForDate.map((food) => {
-                    const cartQty = getCartQuantity(
+                    const cartQty = getMemoizedCartQuantity(
                       food.id,
                       dateInfo.dateString
                     );
@@ -503,7 +448,7 @@ export default function ListingPage() {
                               onQuantityChange={(newQuantity) => {
                                 // Removed async
                                 try {
-                                  const currentQty = getCartQuantity(
+                                  const currentQty = getMemoizedCartQuantity(
                                     food.id,
                                     dateInfo.dateString
                                   );
