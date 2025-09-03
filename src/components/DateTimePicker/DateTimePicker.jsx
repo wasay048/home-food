@@ -119,7 +119,19 @@ const DateTimePicker = ({
 
   // Calculate available time slots for selected date
   const availableTimeSlots = useMemo(() => {
-    if (!internalDate) return [];
+    console.log("🕐 Calculating time slots for:", {
+      internalDate,
+      orderType,
+      selectedDate,
+      foodId: food?.id,
+      kitchenId: kitchen?.id,
+      hasPreorderSchedule: !!kitchen?.preorderSchedule?.dates,
+    });
+
+    if (!internalDate) {
+      console.log("❌ No internal date");
+      return [];
+    }
 
     if (orderType === "GO_GRAB") {
       // Go&Grab logic
@@ -159,81 +171,140 @@ const DateTimePicker = ({
         currentSlot = currentSlot.add(15, "minutes");
       }
 
+      console.log("✅ Go&Grab time slots:", timeSlots.length);
       return timeSlots;
     } else if (orderType === "PRE_ORDER") {
-      // Pre-Order logic
-      if (!selectedDate || !kitchen?.preorderSchedule?.dates) {
+      // Pre-Order logic - Enhanced for iOS compatibility
+      console.log("🍽️ Processing PRE_ORDER time slots");
+
+      if (!kitchen?.preorderSchedule?.dates) {
+        console.log("❌ No preorder schedule in kitchen");
+        return [];
+      }
+
+      if (!food?.id) {
+        console.log("❌ No food ID");
+        return [];
+      }
+
+      // Use internalDate instead of selectedDate for more reliable calculation
+      const dateToUse = internalDate || selectedDate;
+      if (!dateToUse) {
+        console.log("❌ No date to use");
         return [];
       }
 
       let scheduleDate;
       try {
-        const parsedDate = dayjs(selectedDate);
+        const parsedDate = dayjs(dateToUse);
         scheduleDate = parsedDate.format("YYYY-MM-DD");
+        console.log("📅 Schedule date:", scheduleDate);
       } catch (error) {
-        console.error("Error parsing selectedDate:", selectedDate, error);
+        console.error("Error parsing date:", dateToUse, error);
         return [];
       }
 
-      if (!kitchen.preorderSchedule.dates[scheduleDate]) {
+      const scheduleDates = kitchen.preorderSchedule.dates;
+      console.log("📋 Available schedule dates:", Object.keys(scheduleDates));
+
+      if (!scheduleDates[scheduleDate]) {
+        console.log("❌ No schedule for date:", scheduleDate);
         return [];
       }
 
-      const scheduleItems = kitchen.preorderSchedule.dates[scheduleDate];
+      const scheduleItems = scheduleDates[scheduleDate];
+      console.log("📦 Schedule items for date:", scheduleItems.length);
+
       const foodScheduleItems = scheduleItems.filter(
-        (item) => item.foodItemId === food?.id
+        (item) => item.foodItemId === food.id
+      );
+      console.log(
+        "🍕 Food schedule items:",
+        foodScheduleItems.length,
+        "for food ID:",
+        food.id
       );
 
       if (foodScheduleItems.length === 0) {
+        console.log("❌ No schedule items for this food");
         return [];
       }
 
       const timeSlots = [];
 
-      foodScheduleItems.forEach((scheduleItem) => {
+      foodScheduleItems.forEach((scheduleItem, index) => {
+        console.log(`📋 Processing schedule item ${index}:`, scheduleItem);
+
         if (
           scheduleItem.availableTimes &&
           Array.isArray(scheduleItem.availableTimes)
         ) {
+          console.log("⏰ Available times:", scheduleItem.availableTimes);
+
           scheduleItem.availableTimes.forEach((time) => {
-            const scheduledTime = dayjs(
-              `2000-01-01 ${time}`,
-              "YYYY-MM-DD h:mm A"
-            );
+            try {
+              const scheduledTime = dayjs(
+                `2000-01-01 ${time}`,
+                "YYYY-MM-DD h:mm A"
+              );
 
-            for (let offset = -30; offset <= 30; offset += 15) {
-              const timeSlot = scheduledTime.add(offset, "minutes");
-              const timeValue = timeSlot.format("h:mm A");
-              const hour = timeSlot.hour();
-
-              if (
-                hour >= 8 &&
-                hour <= 22 &&
-                !timeSlots.find((slot) => slot.value === timeValue)
-              ) {
-                timeSlots.push({
-                  value: timeValue,
-                  display: timeValue + (offset === 0 ? " (Recommended)" : ""),
-                  isAvailable: true,
-                  scheduleItem,
-                  isRecommended: offset === 0,
-                  originalTime: time,
-                });
+              if (!scheduledTime.isValid()) {
+                console.warn("⚠️ Invalid time format:", time);
+                return;
               }
+
+              for (let offset = -30; offset <= 30; offset += 15) {
+                const timeSlot = scheduledTime.add(offset, "minutes");
+                const timeValue = timeSlot.format("h:mm A");
+                const hour = timeSlot.hour();
+
+                if (
+                  hour >= 8 &&
+                  hour <= 22 &&
+                  !timeSlots.find((slot) => slot.value === timeValue)
+                ) {
+                  timeSlots.push({
+                    value: timeValue,
+                    display: timeValue + (offset === 0 ? " (Recommended)" : ""),
+                    isAvailable: true,
+                    scheduleItem,
+                    isRecommended: offset === 0,
+                    originalTime: time,
+                  });
+                }
+              }
+            } catch (error) {
+              console.error("❌ Error processing time:", time, error);
             }
           });
+        } else {
+          console.log("❌ No valid availableTimes array in schedule item");
         }
       });
 
-      return timeSlots.sort((a, b) => {
+      const sortedTimeSlots = timeSlots.sort((a, b) => {
         const timeA = dayjs(`2000-01-01 ${a.value}`, "YYYY-MM-DD h:mm A");
         const timeB = dayjs(`2000-01-01 ${b.value}`, "YYYY-MM-DD h:mm A");
         return timeA.diff(timeB);
       });
+
+      console.log(
+        "✅ Final PRE_ORDER time slots:",
+        sortedTimeSlots.length,
+        sortedTimeSlots
+      );
+      return sortedTimeSlots;
     }
 
     return [];
-  }, [internalDate, orderType, selectedDate, kitchen, food]);
+  }, [
+    internalDate,
+    orderType,
+    selectedDate,
+    kitchen?.id,
+    kitchen?.preorderSchedule?.dates,
+    food?.id,
+  ]);
 
   // ✅ FIXED: Handle date selection without causing infinite loops
   const handleDateChange = useCallback(
@@ -342,6 +413,16 @@ const DateTimePicker = ({
 
   // ✅ CRITICAL FIX: Single effect that handles all synchronization without loops
   useEffect(() => {
+    console.log("🔄 Main effect triggered:", {
+      orderType,
+      internalDate,
+      selectedDate,
+      foodId: food?.id,
+      kitchenId: kitchen?.id,
+      availableTimeSlotsCount: availableTimeSlots.length,
+      internalTime,
+    });
+
     let hasChanges = false;
 
     // Check if key props have changed (requires reset)
@@ -385,6 +466,7 @@ const DateTimePicker = ({
       availableDates.length > 0
     ) {
       const firstDate = availableDates[0].date;
+      console.log("🔄 Auto-selecting date:", firstDate);
       setInternalDate(firstDate);
       onDateChange(firstDate);
       hasAutoSelectedDate.current = true;
@@ -423,6 +505,40 @@ const DateTimePicker = ({
     availableDates,
     availableTimeSlots,
     onDateChange,
+    onTimeChange,
+  ]);
+
+  // ✅ Additional effect specifically for iOS time slot refresh
+  useEffect(() => {
+    // Force refresh time slots on iOS when date or order type changes
+    if (orderType === "PRE_ORDER" && internalDate && isMobile) {
+      console.log(
+        "📱 iOS PRE_ORDER refresh - forcing time slots recalculation"
+      );
+
+      // Small delay to ensure iOS processes the state change
+      const timeoutId = setTimeout(() => {
+        if (
+          availableTimeSlots.length > 0 &&
+          !internalTime &&
+          !hasAutoSelectedTime.current
+        ) {
+          const firstTime = availableTimeSlots[0].value;
+          console.log("📱 iOS auto-selecting time:", firstTime);
+          setInternalTime(firstTime);
+          onTimeChange(firstTime);
+          hasAutoSelectedTime.current = true;
+        }
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [
+    orderType,
+    internalDate,
+    isMobile,
+    availableTimeSlots.length,
+    internalTime,
     onTimeChange,
   ]);
 
