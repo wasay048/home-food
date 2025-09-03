@@ -30,6 +30,7 @@ const DateTimePicker = ({
   const [internalDate, setInternalDate] = useState(selectedDate);
   const [internalTime, setInternalTime] = useState(selectedTime);
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
+  const [currentCalendarDate, setCurrentCalendarDate] = useState(dayjs()); // ✅ Added missing state
   const dateInputRef = useRef(null);
 
   // ✅ CRITICAL: Use refs to track previous values and prevent infinite loops
@@ -56,7 +57,7 @@ const DateTimePicker = ({
       // Go&Grab: Generate available dates from today onwards (30 days)
       const dates = [];
 
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < 60; i++) {
         const date = today.add(i, "day");
         const dateString = date.format("YYYY-MM-DD");
 
@@ -365,6 +366,18 @@ const DateTimePicker = ({
   const CustomMobileDatePicker = () => {
     if (!showCustomDatePicker) return null;
 
+    const navigateMonth = (direction) => {
+      setCurrentCalendarDate((prev) =>
+        direction === "next" ? prev.add(1, "month") : prev.subtract(1, "month")
+      );
+    };
+
+    const navigateYear = (direction) => {
+      setCurrentCalendarDate((prev) =>
+        direction === "next" ? prev.add(1, "year") : prev.subtract(1, "year")
+      );
+    };
+
     return (
       <div
         className="mobile-date-picker-overlay"
@@ -375,36 +388,166 @@ const DateTimePicker = ({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="mobile-date-picker-header">
-            <button onClick={() => setShowCustomDatePicker(false)}>
+            <button
+              className="mobile-picker-btn cancel"
+              onClick={() => setShowCustomDatePicker(false)}
+            >
               Cancel
             </button>
-            <h3>Select Date</h3>
-            <button onClick={() => setShowCustomDatePicker(false)}>Done</button>
+            <h3>Select Pickup Date</h3>
+            <button
+              className="mobile-picker-btn done"
+              onClick={() => setShowCustomDatePicker(false)}
+            >
+              Done
+            </button>
           </div>
-          <div className="mobile-date-grid">
-            {availableDates.map((dateOption) => (
-              <button
-                key={dateOption.date}
-                className={`mobile-date-option ${
-                  internalDate === dateOption.date ? "selected" : ""
-                } ${dateOption.isToday ? "today" : ""}`}
-                onClick={() => {
-                  handleDateChange(dateOption.date);
-                  setShowCustomDatePicker(false);
-                }}
-                disabled={!dateOption.isAvailable}
-              >
-                <div className="mobile-date-day">
-                  {dateOption.dayjs.format("D")}
+
+          {/* Calendar Grid */}
+          <div className="mobile-calendar-container">
+            {/* Month/Year Navigation */}
+            <div className="mobile-calendar-navigation">
+              <div className="calendar-nav-section">
+                <button
+                  className="nav-btn year-nav"
+                  onClick={() => navigateYear("prev")}
+                >
+                  ‹‹
+                </button>
+                <button
+                  className="nav-btn month-nav"
+                  onClick={() => navigateMonth("prev")}
+                >
+                  ‹
+                </button>
+              </div>
+
+              <div className="mobile-calendar-month-header">
+                <h4>{currentCalendarDate.format("MMMM YYYY")}</h4>
+              </div>
+
+              <div className="calendar-nav-section">
+                <button
+                  className="nav-btn month-nav"
+                  onClick={() => navigateMonth("next")}
+                >
+                  ›
+                </button>
+                <button
+                  className="nav-btn year-nav"
+                  onClick={() => navigateYear("next")}
+                >
+                  ››
+                </button>
+              </div>
+            </div>
+
+            {/* Days of week header */}
+            <div className="mobile-calendar-weekdays">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                <div key={day} className="mobile-weekday-header">
+                  {day}
                 </div>
-                <div className="mobile-date-month">
-                  {dateOption.dayjs.format("MMM")}
-                </div>
-                <div className="mobile-date-weekday">
-                  {dateOption.dayjs.format("ddd")}
-                </div>
-              </button>
-            ))}
+              ))}
+            </div>
+
+            {/* Calendar Grid */}
+            <div className="mobile-calendar-grid">
+              {(() => {
+                const today = dayjs().startOf("day");
+                const firstDayOfMonth = currentCalendarDate.startOf("month");
+                const lastDayOfMonth = currentCalendarDate.endOf("month");
+                const startDate = firstDayOfMonth.startOf("week");
+                const endDate = lastDayOfMonth.endOf("week");
+
+                const calendarDays = [];
+                let currentDate = startDate;
+
+                while (
+                  currentDate.isBefore(endDate) ||
+                  currentDate.isSame(endDate, "day")
+                ) {
+                  const dateString = currentDate.format("YYYY-MM-DD");
+                  const isCurrentMonth = currentDate.isSame(
+                    currentCalendarDate,
+                    "month"
+                  );
+                  const isToday = currentDate.isSame(today, "day");
+                  const isPast = currentDate.isBefore(today, "day");
+                  const isSelected = internalDate === dateString;
+                  // For Go&Grab: Allow dates from today onwards (within 30 days)
+                  const isFuture = currentDate.isAfter(
+                    today.add(30, "days"),
+                    "day"
+                  );
+                  const isAvailable = !isPast && !isFuture && isCurrentMonth;
+
+                  calendarDays.push(
+                    <button
+                      key={dateString}
+                      className={`mobile-calendar-day ${
+                        isCurrentMonth ? "current-month" : "other-month"
+                      } ${isToday ? "today" : ""} ${
+                        isSelected ? "selected" : ""
+                      } ${isPast ? "past" : ""} ${
+                        isFuture ? "future-disabled" : ""
+                      } ${isAvailable ? "available" : "unavailable"}`}
+                      onClick={() => {
+                        if (isAvailable) {
+                          handleDateChange(dateString);
+                          setShowCustomDatePicker(false);
+                        }
+                      }}
+                      disabled={!isAvailable}
+                    >
+                      <span className="day-number">
+                        {currentDate.format("D")}
+                      </span>
+                      {isToday && (
+                        <span className="today-indicator">Today</span>
+                      )}
+                    </button>
+                  );
+
+                  currentDate = currentDate.add(1, "day");
+                }
+
+                return calendarDays;
+              })()}
+            </div>
+
+            {/* Quick Date Options */}
+            <div className="mobile-quick-dates">
+              <h5>Quick Select</h5>
+              <div className="quick-date-buttons">
+                {availableDates.slice(0, 7).map((dateOption) => (
+                  <button
+                    key={dateOption.date}
+                    className={`quick-date-btn ${
+                      internalDate === dateOption.date ? "selected" : ""
+                    } ${dateOption.isToday ? "today" : ""}`}
+                    onClick={() => {
+                      handleDateChange(dateOption.date);
+                      setShowCustomDatePicker(false);
+                    }}
+                    disabled={!dateOption.isAvailable}
+                  >
+                    <div className="quick-date-day">
+                      {dateOption.dayjs.format("D")}
+                    </div>
+                    <div className="quick-date-month">
+                      {dateOption.dayjs.format("MMM")}
+                    </div>
+                    <div className="quick-date-weekday">
+                      {dateOption.dayjs.format("ddd")}
+                    </div>
+                    {dateOption.isToday && (
+                      <div className="quick-date-today">Today</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
