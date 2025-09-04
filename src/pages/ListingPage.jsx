@@ -12,11 +12,19 @@ import { showToast } from "../utils/toast";
 import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
 import MobileLoader from "../components/Loader/MobileLoader";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
+import { useSelector } from "react-redux";
 
 export default function ListingPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { kitchenId } = useParams(); // Get kitchenId from URL if available
+  const currentKitchen = useSelector((state) => state.food.currentKitchen);
+  const kitchenId = currentKitchen?.id;
+
+  console.log("[ListingPage] Current kitchen from Redux:", {
+    kitchenId,
+    kitchenName: currentKitchen?.name,
+    hasKitchen: !!currentKitchen,
+  }); // Get kitchenId from URL if available
 
   // Function to go back to previous page in history
   const handleGoBack = () => {
@@ -279,7 +287,7 @@ export default function ListingPage() {
                 />
               </svg>
             </button>
-            <div className="title">More offers from HomeFresh</div>
+            <div className="listing-page-title">More offers from HomeFresh</div>
           </div>
 
           {/* Kitchen Info */}

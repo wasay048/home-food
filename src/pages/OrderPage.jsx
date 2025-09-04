@@ -23,6 +23,10 @@ export default function OrderPage() {
   // State for tracking which items are in edit mode for pickup date/time
   const [editModeItems, setEditModeItems] = useState(new Set());
 
+  const [showRemoveAllDialog, setShowRemoveAllDialog] = useState(false);
+  const [showRemoveItemDialog, setShowRemoveItemDialog] = useState(false);
+  const [pendingRemovalItem, setPendingRemovalItem] = useState(null);
+
   // Handle navigation from PaymentPage edit functionality
   useEffect(() => {
     if (location.state?.editItem) {
@@ -212,43 +216,53 @@ export default function OrderPage() {
     };
   }, [cartItems, foodDataMap]);
 
-  // Helper to get cart quantity for a food item
-  // Update the getCartQuantity function
-
-  // Helper to get cart quantity for a food item
-  // const getCartQuantity = useCallback(
-  //   (foodId, selectedDate = null) => {
-  //     const matchingItems = cartItems.filter((item) => {
-  //       const matchesFood = item.foodId === foodId;
-  //       const matchesDate = selectedDate
-  //         ? item.selectedDate === selectedDate
-  //         : !item.selectedDate && !item.isPreOrder;
-  //       return matchesFood && matchesDate;
-  //     });
-
-  //     const totalQuantity = matchingItems.reduce(
-  //       (total, item) => total + (item.quantity || 1),
-  //       0
-  //     );
-
-  //     console.log("📊 getCartQuantity:", {
-  //       foodId,
-  //       selectedDate,
-  //       matchingItems: matchingItems.length,
-  //       totalQuantity,
-  //     });
-
-  //     return totalQuantity;
-  //   },
-  //   [cartItems]
-  // );
-
-  // Handle remove all
   const handleRemoveAll = () => {
-    dispatch(clearCart());
-    showToast.info("Cart cleared successfully");
+    setShowRemoveAllDialog(true);
   };
 
+  const confirmRemoveAll = () => {
+    dispatch(clearCart());
+    showToast.info("Cart cleared successfully");
+    setShowRemoveAllDialog(false);
+  };
+
+  const cancelRemoveAll = () => {
+    setShowRemoveAllDialog(false);
+  };
+
+  // ✅ NEW: Enhanced quantity change handler with confirmation for removal
+  const handleQuantityChangeWithConfirmation = async (params) => {
+    console.log("params", params);
+    const { newQuantity, currentQuantity, food } = params;
+
+    console.log("OrderPage - handleQuantityChangeWithConfirmation:", {
+      params,
+    });
+    if (currentQuantity === 1 && newQuantity === 0) {
+      setPendingRemovalItem({
+        ...params,
+        itemName: food.name || "this item",
+      });
+      setShowRemoveItemDialog(true);
+      return;
+    }
+
+    // For all other quantity changes, proceed normally
+    await handleQuantityChange(params);
+  };
+
+  const confirmRemoveItem = async () => {
+    if (pendingRemovalItem) {
+      await handleQuantityChange(pendingRemovalItem);
+      setPendingRemovalItem(null);
+      setShowRemoveItemDialog(false);
+    }
+  };
+
+  const cancelRemoveItem = () => {
+    setPendingRemovalItem(null);
+    setShowRemoveItemDialog(false);
+  };
   // Format date for display
   const formatDate = (dateString) => {
     return dayjs(dateString).format("MMM D ddd");
@@ -288,9 +302,9 @@ export default function OrderPage() {
             </div>
           </div>
           {/* Kitchen Info */}
-          {cartItems.length > 0 && cartItems[0].kitchen && (
+          {/* {cartItems.length > 0 && cartItems[0].kitchen && (
             <h2 className="small-title mb-2">{cartItems[0].kitchen.name}</h2>
-          )}
+          )} */}
 
           {cartItems.length === 0 ? (
             <div className="text-center py-5">
@@ -372,8 +386,7 @@ export default function OrderPage() {
 
                                   const enrichedFood =
                                     getEnrichedFoodData(item);
-                                  handleQuantityChange({
-                                    // Removed await
+                                  handleQuantityChangeWithConfirmation({
                                     food: enrichedFood,
                                     kitchen: kitchen || item.kitchen,
                                     newQuantity,
@@ -460,7 +473,7 @@ export default function OrderPage() {
 
                                     const enrichedFood =
                                       getEnrichedFoodData(item);
-                                    handleQuantityChange({
+                                    handleQuantityChangeWithConfirmation({
                                       food: enrichedFood,
                                       kitchen: kitchen || item.kitchen,
                                       newQuantity,
@@ -556,6 +569,100 @@ export default function OrderPage() {
           )}
         </div>
       </div>
+      {showRemoveAllDialog && (
+        <div className="modal-overlay" onClick={cancelRemoveAll}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Remove All Items</h3>
+            </div>
+            <div className="modal-body">
+              <p>
+                Are you sure you want to remove all items from your cart? This
+                action cannot be undone.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn-secondary"
+                onClick={cancelRemoveAll}
+                style={{
+                  padding: "10px 20px",
+                  border: "1px solid #ccc",
+                  borderRadius: "4px",
+                  backgroundColor: "white",
+                  cursor: "pointer",
+                  width: "100%",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-danger"
+                onClick={confirmRemoveAll}
+                style={{
+                  padding: "10px 20px",
+                  border: "none",
+                  borderRadius: "4px",
+                  backgroundColor: "#dc3545",
+                  color: "white",
+                  cursor: "pointer",
+                  width: "100%",
+                }}
+              >
+                Remove All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ NEW: Remove Single Item Confirmation Dialog */}
+      {showRemoveItemDialog && pendingRemovalItem && (
+        <div className="modal-overlay" onClick={cancelRemoveItem}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Remove Item</h3>
+            </div>
+            <div className="modal-body">
+              <p>
+                Are you sure you want to remove &quot;
+                {pendingRemovalItem.itemName}&quot; from your cart?
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn-secondary"
+                onClick={cancelRemoveItem}
+                style={{
+                  padding: "10px 20px",
+                  border: "1px solid #ccc",
+                  borderRadius: "4px",
+                  backgroundColor: "white",
+                  cursor: "pointer",
+                  width: "100%",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-danger"
+                onClick={confirmRemoveItem}
+                style={{
+                  padding: "10px 20px",
+                  border: "none",
+                  borderRadius: "4px",
+                  backgroundColor: "#dc3545",
+                  color: "white",
+                  cursor: "pointer",
+                  width: "100%",
+                }}
+              >
+                Remove Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

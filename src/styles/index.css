@@ -121,7 +121,16 @@ body,
 
   color: #212226;
   margin: 0px;
-  margin-left: calc(50% - 36px);
+  margin-left: calc(40% - 36px);
+}
+
+.back-link-title .listing-page-title {
+  font-size: 18px;
+  font-weight: bold;
+
+  color: #212226;
+  margin: 0px;
+  margin-left: 12px;
 }
 .product-detail .title {
   font-weight: 700;
@@ -2109,4 +2118,64 @@ body,
     width: 100%;
     justify-content: center;
   }
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  padding: 0;
+  min-width: 300px;
+  max-width: 300px;
+  margin: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  padding: 20px 20px 10px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-body p {
+  margin: 0;
+  color: #666;
+  line-height: 1.5;
+}
+
+.modal-footer {
+  padding: 10px 20px 20px 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn-secondary:hover {
+  background-color: #f8f9fa;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
 }
