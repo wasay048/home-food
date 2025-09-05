@@ -1,7 +1,7 @@
 // WeChat OAuth Configuration
 export const WECHAT_CONFIG = {
   BASE_URL: "https://www.homefreshfoods.ai",
-  APP_ID: "wx4a71fe09bb125182",
+  APP_ID: "wxed0d87f9100935d4",
   APP_SECRET: "e8a88b5e0271b89a1dc71261d9063fad", // Note: In production, this should be on the backend only
   // Use non-www domain to match WeChat Console configuration
   REDIRECT_URI: "https://www.homefreshfoods.ai/wechat/callback",
