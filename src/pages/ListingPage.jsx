@@ -12,12 +12,15 @@ import { showToast } from "../utils/toast";
 import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
 import MobileLoader from "../components/Loader/MobileLoader";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
+import { useSelector } from "react-redux";
 
 export default function ListingPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { kitchenId } = useParams();
-
+  const { kitchenId: urlKitchenId } = useParams();
+  const currentKitchenFromRedux = useSelector(
+    (state) => state.food.currentKitchen
+  );
   // Function to go back to previous page in history
   const handleGoBack = () => {
     // Check if we have state from FoodDetailPage with the exact params
@@ -59,11 +62,33 @@ export default function ListingPage() {
 
   // Get the current kitchen ID from the food data (using the first food item)
   const { allFoods: allFoodsFromAllKitchens } = useAllKitchensWithFoods(10);
-  const currentKitchenId =
-    kitchenId ||
-    (allFoodsFromAllKitchens.length > 0
-      ? allFoodsFromAllKitchens[0].kitchenId
-      : null);
+
+  const currentKitchenId = useMemo(() => {
+    // Priority 1: URL parameter
+    if (urlKitchenId) {
+      console.log("[ListingPage] Using kitchen ID from URL:", urlKitchenId);
+      return urlKitchenId;
+    }
+
+    // Priority 2: Redux current kitchen
+    if (currentKitchenFromRedux?.id) {
+      console.log(
+        "[ListingPage] Using kitchen ID from Redux:",
+        currentKitchenFromRedux.id
+      );
+      return currentKitchenFromRedux.id;
+    }
+
+    // Priority 3: Fallback to first available kitchen
+    if (allFoodsFromAllKitchens.length > 0) {
+      const fallbackId = allFoodsFromAllKitchens[0].kitchenId;
+      console.log("[ListingPage] Using fallback kitchen ID:", fallbackId);
+      return fallbackId;
+    }
+
+    console.log("[ListingPage] No kitchen ID available");
+    return null;
+  }, [urlKitchenId, currentKitchenFromRedux?.id, allFoodsFromAllKitchens]);
 
   // Get specific kitchen data using the determined kitchen ID
   const { kitchen, foods, loading, error } =
