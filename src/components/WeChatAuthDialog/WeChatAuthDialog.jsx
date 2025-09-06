@@ -45,7 +45,7 @@ const WeChatAuthDialog = ({ onClose }) => {
       // console.log("🔗 Generated auth URL:", authUrl);
       let authUrl = generateWeChatAuthUrlWeb();
       if (isWeChat) {
-        authUrl = generateWeChatAuthUrlWeb();
+        authUrl = generateWeChatAuthUrlMobile();
         // Already in WeChat browser - direct redirect
         console.log("📱 WeChat browser detected - direct redirect");
         alert(authUrl + "- Direct WeChat Browser");

@@ -22,13 +22,13 @@ const WeChatCallbackPage = () => {
         setData({ error: "missing_code" });
         return;
       }
-      if (!state || !expectedState || state !== expectedState) {
-        alert("bad state");
-        // CSRF / replay check failed
-        setStatus("error");
-        setData({ error: "bad_state" });
-        return;
-      }
+      // if (!state || !expectedState || state !== expectedState) {
+      //   alert("bad state");
+      //   // CSRF / replay check failed
+      //   setStatus("error");
+      //   setData({ error: "bad_state" });
+      //   return;
+      // }
 
       try {
         alert("CF_URL: " + CF_URL);

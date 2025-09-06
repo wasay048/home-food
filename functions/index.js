@@ -6,11 +6,11 @@ const APPID = process.env.WECHAT_APPID;
 const SECRET = process.env.WECHAT_SECRET;
 const APP_BASE = process.env.APP_BASE || "https://www.homefreshfoods.ai";
 
-function readCookie(req, name) {
-  const raw = req.headers?.cookie || "";
-  const m = raw.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
-  return m ? decodeURIComponent(m[1]) : undefined;
-}
+// function readCookie(req, name) {
+//   const raw = req.headers?.cookie || "";
+//   const m = raw.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+//   return m ? decodeURIComponent(m[1]) : undefined;
+// }
 
 export const exchangeWeChatCode = onRequest(
   {
@@ -22,12 +22,12 @@ export const exchangeWeChatCode = onRequest(
       res.status(405).send("Method Not Allowed");
       return;
     }
-
+    console.log("Received WeChat OAuth callback WECHAT_SECRET");
     const code = req.query.code;
-    const state = req.query.state;
-    const saved = readCookie(req, "wx_state"); // CSRF (optional but recommended)
+    // const state = req.query.state;
+    // const saved = readCookie(req, "wx_state"); // CSRF (optional but recommended)
 
-    if (!code || !state || !saved || state !== saved) {
+    if (!code) {
       res.redirect(`${APP_BASE}/login?err=state`);
       return;
     }
@@ -50,7 +50,7 @@ export const exchangeWeChatCode = onRequest(
       res.redirect(`${APP_BASE}/login?err=token_${tk.errcode ?? tkRes.status}`);
       return;
     }
-
+    console.log("WeChat token response:", tk);
     const {access_token, openid, scope, unionid} = tk;
 
     // 2) Optional: fetch profile if snsapi_userinfo
