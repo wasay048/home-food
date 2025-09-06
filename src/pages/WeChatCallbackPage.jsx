@@ -11,7 +11,7 @@ const WeChatCallbackPage = () => {
     (async () => {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
-      alert("code: " + code);
+      // alert("code: " + code);
       console.log("code", code);
       const state = params.get("state");
       const expectedState = sessionStorage.getItem("wx_state");
@@ -31,26 +31,27 @@ const WeChatCallbackPage = () => {
       // }
 
       try {
-        alert("CF_URL: " + CF_URL);
+        // alert("CF_URL: " + CF_URL);
         const res = await fetch(CF_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code }),
           credentials: "omit",
         });
-        alert("res: " + JSON.stringify(res));
         const json = await res.json();
+        // alert("res: " + JSON.stringify(json));
+
         if (!res.ok || json.error) {
-          alert("error:" + JSON.stringify(json.error));
+          // alert("error:" + JSON.stringify(json.error));
           setStatus("error");
           setData({ error: json.error || `http_${res.status}` });
           return;
         }
-        alert("json: " + JSON.stringify(json));
+        // alert("json: " + JSON.stringify(json));
         setStatus("ok");
         setData(json);
       } catch (e) {
-        alert("catch error:" + JSON.stringify(e));
+        // alert("catch error:" + JSON.stringify(e));
         setStatus("error");
         setData({ error: e?.message || "network_error" });
       }

@@ -48,7 +48,7 @@ const WeChatAuthDialog = ({ onClose }) => {
         authUrl = generateWeChatAuthUrlMobile();
         // Already in WeChat browser - direct redirect
         console.log("📱 WeChat browser detected - direct redirect");
-        alert(authUrl + "- Direct WeChat Browser");
+        // alert(authUrl + "- Direct WeChat Browser");
         window.location.href = authUrl;
       } else if (isMobile) {
         // Mobile device - use simple, reliable approach
@@ -58,12 +58,12 @@ const WeChatAuthDialog = ({ onClose }) => {
         // WeChat will handle the app opening automatically if installed
         // If not installed, it will show the appropriate download page
         authUrl = generateWeChatAuthUrlMobile();
-        alert(authUrl + "- Mobile Browser");
+        // alert(authUrl + "- Mobile Browser");
         window.location.href = authUrl;
       } else {
         // Desktop - direct redirect
         console.log("🖥️ Desktop - direct redirect");
-        alert(authUrl + "- Desktop Browser");
+        // alert(authUrl + "- Desktop Browser");
         window.location.href = authUrl;
       }
     } catch (error) {
@@ -71,7 +71,7 @@ const WeChatAuthDialog = ({ onClose }) => {
 
       // Simple fallback
       const authUrl = generateWeChatAuthUrlWeb();
-      alert(authUrl + "- Web Browser");
+      // alert(authUrl + "- Web Browser");
       window.location.href = authUrl;
     }
   };
