@@ -106,8 +106,8 @@ const authSlice = createSlice({
     setWeChatAuthUrl: (state, action) => {
       state.wechatAuthUrl = action.payload;
     },
-    // TEMPORARY: Set test user for bypassing WeChat auth
-    setTestUser: (state, action) => {
+    // TEMPORARY: Set WeChat user for bypassing WeChat auth
+    setWeChatUser: (state, action) => {
       state.user = action.payload;
       state.isAuthenticated = true;
       state.loading = false;
@@ -164,7 +164,7 @@ export const {
   setWeChatAuthUrl,
   clearAllData,
   logout,
-  setTestUser,
+  setWeChatUser,
 } = authSlice.actions;
 
 export default authSlice.reducer;

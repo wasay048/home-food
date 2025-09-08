@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { performCompleteLogout } from "../store/actions/logoutActions";
-import { setTestUser } from "../store/slices/authSlice";
+import { setWeChatUser } from "../store/slices/authSlice";
 import { firebaseApp, firebaseDisabled } from "../services/firebase";
 import { WECHAT_CONFIG, getRedirectUri } from "../config/wechat";
 import {
@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
           const mockUser = JSON.parse(testSession);
           setUser(mockUser);
           // IMPORTANT: Also restore to Redux store
-          dispatch(setTestUser(mockUser));
+          dispatch(setWeChatUser(mockUser));
           console.log("🧪 Restored test user session:", mockUser);
         } catch (e) {
           console.warn("Failed to restore test session:", e);
@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
         try {
           const wechatUser = JSON.parse(wechatSession);
           setUser(wechatUser);
-          dispatch(setTestUser(wechatUser)); // Use same action for consistency
+          dispatch(setWeChatUser(wechatUser)); // Use same action for consistency
           console.log("🔄 Restored WeChat user session:", wechatUser);
         } catch (e) {
           console.warn("Failed to restore WeChat session:", e);
@@ -89,30 +89,28 @@ export function AuthProvider({ children }) {
 
   // Handle WeChat OAuth callback - Frontend-only implementation
   const handleWeChatCallback = useCallback(
-    async (code) => {
+    async (userInfo) => {
       try {
         console.log("🔄 Exchanging WeChat code for user info...");
 
         // Import WECHAT_API here to avoid circular dependencies
-        const { WECHAT_API } = await import("../config/wechat");
+        // const { WECHAT_API } = await import("../config/wechat");
 
         // Step 1: Exchange code for access token
-        const tokenData = await WECHAT_API.getAccessToken(code);
+        // const tokenData = await WECHAT_API.getAccessToken(code);
 
-        if (tokenData.errcode) {
-          throw new Error(`WeChat API Error: ${tokenData.errmsg}`);
-        }
-
-        console.log("✅ Got access token:", tokenData);
+        // if (tokenData.errcode) {
+        //   throw new Error(`WeChat API Error: ${tokenData.errmsg}`);
+        // }
 
         // Step 2: Get user information
-        const userInfo = await WECHAT_API.getUserInfo(
-          tokenData.access_token,
-          tokenData.openid
-        );
+        // const userInfo = await WECHAT_API.getUserInfo(
+        //   tokenData.access_token,
+        //   tokenData.openid
+        // );
 
-        if (userInfo.errcode) {
-          throw new Error(`WeChat User Info Error: ${userInfo.errmsg}`);
+        if (!userInfo) {
+          throw new Error(`WeChat User Info Error: No user info returned`);
         }
 
         console.log("✅ Got user info:", userInfo);
@@ -120,21 +118,24 @@ export function AuthProvider({ children }) {
         // Step 3: Create user object
         const wechatUser = {
           id: `wechat_${userInfo.openid}`,
-          uid: userInfo.openid,
+          uid: userInfo.uid,
           openid: userInfo.openid,
           name: userInfo.nickname,
-          displayName: userInfo.nickname,
-          avatar: userInfo.headimgurl,
-          photoURL: userInfo.headimgurl,
-          country: userInfo.country,
-          province: userInfo.province,
-          city: userInfo.city,
-          sex: userInfo.sex,
-          language: userInfo.language,
+          displayName: userInfo?.user?.nickname,
+          avatar: userInfo?.user?.headimgurl,
+          photoURL: userInfo?.user?.headimgurl,
+          country: userInfo?.user?.country,
+          province: userInfo?.user?.province,
+          city: userInfo?.user?.city,
+          sex: userInfo?.user?.sex,
+          language: userInfo?.user?.language,
           isAuthenticated: true,
           authMethod: "wechat",
           wechatOpenId: userInfo.openid,
           accessToken: tokenData.access_token,
+          refreshToken: tokenData.refresh_token,
+          expireAt: Date.now() + (tokenData.expires_in || 7200) * 1000, // usually 7200 seconds
+          scope: tokenData.scope,
           createdAt: new Date().toISOString(),
         };
 
@@ -145,7 +146,7 @@ export function AuthProvider({ children }) {
         setUser(wechatUser);
 
         // Step 6: Update Redux store
-        dispatch(setTestUser(wechatUser));
+        dispatch(setWeChatUser(wechatUser));
 
         console.log("✅ WeChat authentication successful:", wechatUser);
         return wechatUser;
@@ -158,8 +159,8 @@ export function AuthProvider({ children }) {
   );
 
   // TEMPORARY: Bypass WeChat auth for testing purposes
-  const signInWithTestUser = useCallback(async () => {
-    console.log("🧪 Using test user bypass");
+  const signInWithWeChatUser = useCallback(async () => {
+    console.log("🧪 Using WeChat user bypass");
 
     // Create a mock user object similar to what WeChat would provide
     const mockUser = {
@@ -189,7 +190,7 @@ export function AuthProvider({ children }) {
     setUser(mockUser);
 
     // IMPORTANT: Also dispatch to Redux store so the app recognizes the user
-    dispatch(setTestUser(mockUser));
+    dispatch(setWeChatUser(mockUser));
 
     // Store test session in localStorage for persistence
     localStorage.setItem("test_user_session", JSON.stringify(mockUser));
@@ -233,7 +234,7 @@ export function AuthProvider({ children }) {
     authDisabled: firebaseDisabled,
     signInAnonymously,
     signInWithWeChatPopup,
-    signInWithTestUser, // TEMPORARY: for testing
+    signInWithWeChatUser, // TEMPORARY: for testing
     handleWeChatCallback,
     signOut,
   };

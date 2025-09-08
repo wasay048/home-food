@@ -12,13 +12,13 @@ import "./WeChatAuthDialog.css";
 const WeChatAuthDialog = ({ onClose }) => {
   console.log("🚀 WeChatAuthDialog rendered!");
 
-  const { signInWithTestUser } = useContext(AuthContext);
+  const { signInWithWeChatUser } = useContext(AuthContext);
 
   // TEMPORARY: Handle test user bypass
   const handleTestUserBypass = async () => {
     try {
       console.log("🧪 Using test user bypass");
-      await signInWithTestUser();
+      await signInWithWeChatUser();
 
       // Clear any pending cart actions since we're now "authenticated"
       sessionStorage.removeItem("wechat_pending_cart_action");

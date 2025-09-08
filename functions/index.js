@@ -1,6 +1,7 @@
 import {onRequest} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import {defineSecret} from "firebase-functions/params";
+import { ref } from "firebase/storage";
 // import {admin} from "./admin"; // when you’re ready to mint a Firebase custom token
 
 const WECHAT_APPID = defineSecret("WECHAT_APPID");
@@ -121,7 +122,11 @@ export const exchangeWeChatCode = onRequest(
         uid,
         openid,
         unionid: unionid ?? null,
-        // token: customToken, // uncomment if you mint a Firebase Custom Token
+        access_token,
+        refresh_token: tk.refresh_token,
+        expires_in: tk.expires_in, // usually 7200
+        scope,
+                // token: customToken, // uncomment if you mint a Firebase Custom Token
         user: userInfo,
       });
     } catch (e) {

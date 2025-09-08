@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from "react";
-
+import React, { useContext, useEffect, useState } from "react";
+import AuthContext from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 const CF_URL =
   "https://us-central1-homefoods-16e56.cloudfunctions.net/exchangeWeChatCode";
 
 const WeChatCallbackPage = () => {
   const [status, setStatus] = useState("loading"); // "loading", "error", "ok"
   const [data, setData] = useState(null);
-
+  const { handleWeChatCallback } = useContext(AuthContext);
+  const navigate = useNavigate();
   useEffect(() => {
     (async () => {
       const params = new URLSearchParams(window.location.search);
@@ -48,8 +50,11 @@ const WeChatCallbackPage = () => {
           return;
         }
         // alert("json: " + JSON.stringify(json));
-        setStatus("ok");
+        setStatus("ok")
         setData(json);
+        handleWeChatCallback(json);
+        navigate("/checkout", { replace: true });
+
       } catch (e) {
         // alert("catch error:" + JSON.stringify(e));
         setStatus("error");
