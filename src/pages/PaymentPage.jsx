@@ -327,7 +327,8 @@ export default function PaymentPage() {
         );
         return;
       }
-
+      console.log("Placing order for user:", currentUser);
+      console.log("Placing order for isAuthenticated:", isAuthenticated);
       // Check authentication FIRST before other validations
       if (!isAuthenticated || !currentUser) {
         console.log("🔒 Authentication required for placing order");

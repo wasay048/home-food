@@ -132,10 +132,10 @@ export function AuthProvider({ children }) {
           isAuthenticated: true,
           authMethod: "wechat",
           wechatOpenId: userInfo.openid,
-          accessToken: tokenData.access_token,
-          refreshToken: tokenData.refresh_token,
-          expireAt: Date.now() + (tokenData.expires_in || 7200) * 1000, // usually 7200 seconds
-          scope: tokenData.scope,
+          accessToken: userInfo.access_token,
+          refreshToken: userInfo.refresh_token,
+          expireAt: Date.now() + (userInfo.expires_in || 7200) * 1000, // usually 7200 seconds
+          scope: userInfo.scope,
           createdAt: new Date().toISOString(),
         };
 
