@@ -4,14 +4,14 @@ import { performCompleteLogout } from "../store/actions/logoutActions";
 import { setWeChatUser } from "../store/slices/authSlice";
 import { firebaseApp, firebaseDisabled } from "../services/firebase";
 import { WECHAT_CONFIG, getRedirectUri } from "../config/wechat";
+
 import {
   getAuth,
   onAuthStateChanged,
   signInAnonymously as fbAnon,
   signOut as fbSignOut,
-  signInWithCredential,
-  OAuthProvider,
 } from "firebase/auth";
+import { useUserAccount } from "../hooks/useUserAccount";
 
 const AuthContext = createContext(null);
 
@@ -20,6 +20,7 @@ const auth = firebaseApp ? getAuth(firebaseApp) : null;
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
+  const { processWeChatAccount } = useUserAccount();
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -114,10 +115,13 @@ export function AuthProvider({ children }) {
         }
 
         console.log("✅ Got user info:", userInfo);
+        const accountResult = await processWeChatAccount(userInfo);
+
+        alert(JSON.stringify(accountResult, null, 2));
 
         // Step 3: Create user object
         const wechatUser = {
-          id: `wechat_${userInfo.openid}`,
+          id: accountResult.account.id,
           uid: userInfo.uid,
           openid: userInfo.openid,
           name: userInfo.nickname,
@@ -140,7 +144,7 @@ export function AuthProvider({ children }) {
         };
 
         // Step 4: Store user data in localStorage
-        localStorage.setItem('wechat_user', JSON.stringify(wechatUser));
+        localStorage.setItem("wechat_user", JSON.stringify(wechatUser));
 
         // Step 5: Update React state
         setUser(wechatUser);

@@ -159,7 +159,7 @@ export const createOrderObject = ({
       },
     },
     pickUpAddress: kitchenInfo?.address || "Address not available",
-    userId: currentUser?.uid || "mzqXlFHOJXNVA0BUvtvbbhgF78x1", // Use provided user ID as fallback
+    userId: currentUser?.id,
     // Additional metadata
     subtotal: parseFloat(paymentCalculation.subtotal),
     salesTax: parseFloat(paymentCalculation.salesTax),

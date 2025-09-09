@@ -72,8 +72,10 @@ const WeChatCallbackPage = () => {
 
         //   }
         // })
-        navigate("/checkout?" + new URLSearchParams({ firebaseImageUrl: state }), { replace: true });
-
+        navigate(
+          "/checkout?" + new URLSearchParams({ firebaseImageUrl: state }),
+          { replace: true }
+        );
       } catch (e) {
         // alert("catch error:" + JSON.stringify(e));
         setStatus("error");
