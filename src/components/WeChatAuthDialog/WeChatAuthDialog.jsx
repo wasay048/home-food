@@ -9,7 +9,7 @@ import AuthContext from "../../context/AuthContext";
 import wechatIcon from "../../assets/wechat-icon.svg";
 import "./WeChatAuthDialog.css";
 
-const WeChatAuthDialog = ({ onClose }) => {
+const WeChatAuthDialog = ({ onClose, firebaseImageUrl }) => {
   console.log("🚀 WeChatAuthDialog rendered!");
 
   const { signInWithWeChatUser } = useContext(AuthContext);
@@ -43,13 +43,13 @@ const WeChatAuthDialog = ({ onClose }) => {
       // Generate auth URL
       // const authUrl = generateWeChatAuthUrl();
       // console.log("🔗 Generated auth URL:", authUrl);
-      let authUrl = generateWeChatAuthUrlWeb();
+      let authUrl = generateWeChatAuthUrlWeb(firebaseImageUrl);
       if (isWeChat) {
-        authUrl = generateWeChatAuthUrlMobile();
+        authUrl = generateWeChatAuthUrlMobile(firebaseImageUrl);
         // Already in WeChat browser - direct redirect
         console.log("📱 WeChat browser detected - direct redirect");
         // alert(authUrl + "- Direct WeChat Browser");
-        window.open(authUrl, "_blank");
+        window.location.href = authUrl;
       } else if (isMobile) {
         // Mobile device - use simple, reliable approach
         console.log("📱 Mobile device - attempting WeChat authentication");
@@ -57,14 +57,14 @@ const WeChatAuthDialog = ({ onClose }) => {
         // On mobile, directly try to redirect to WeChat OAuth
         // WeChat will handle the app opening automatically if installed
         // If not installed, it will show the appropriate download page
-        authUrl = generateWeChatAuthUrlMobile();
+        authUrl = generateWeChatAuthUrlMobile(firebaseImageUrl);
         // alert(authUrl + "- Mobile Browser");
-        window.open(authUrl, "_blank");
+        window.location.href = authUrl;
       } else {
         // Desktop - direct redirect
         console.log("🖥️ Desktop - direct redirect");
         // alert(authUrl + "- Desktop Browser");
-        window.open(authUrl, "_blank");
+        window.location.href = authUrl;
       }
     } catch (error) {
       console.error("❌ Error in WeChat authentication:", error);

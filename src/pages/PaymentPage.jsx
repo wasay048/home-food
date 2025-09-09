@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
@@ -37,6 +37,20 @@ export default function PaymentPage() {
   const currentUser = useSelector((state) => state.auth.user);
 
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+
+   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const value = params.get("firebaseImageUrl");
+    alert(value);
+    console.log("firebaseImageUrl from URL params:", value);
+    if (value) {
+      setFirebaseImageUrl(value);
+      setUploadPreview(value);
+
+      // remove query string without reloading
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
   // Get kitchen information from cart items
   const kitchenInfo = useMemo(() => {
     if (currentKitchen) {
@@ -708,7 +722,7 @@ export default function PaymentPage() {
         </div>
       )}
       {showWeChatDialog && (
-        <WeChatAuthDialog onClose={handleWeChatDialogClose} />
+        <WeChatAuthDialog firebaseImageUrl={firebaseImageUrl} onClose={handleWeChatDialogClose} />
       )}
     </>
   );

@@ -50,10 +50,29 @@ const WeChatCallbackPage = () => {
           return;
         }
         // alert("json: " + JSON.stringify(json));
-        setStatus("ok")
+        setStatus("ok");
+        json["firebaseImageUrl"] = state;
         setData(json);
         handleWeChatCallback(json);
-        navigate("/checkout", { replace: true });
+        // handleWeChatCallback({
+        //   openId: "i1234567890",
+        //   unionId: "test",
+        //   uid:"test",
+        //   firebaseImageUrl: state,
+        //   user: {
+        //     nickname: "test",
+        //     avatar: "test",
+        //     openId: "i1234567890",
+        //     sex: 1,
+        //     country: "test",
+        //     province: "test",
+        //     city: "test",
+        //     unionId: "test",
+        //     headimgurl: "test",
+
+        //   }
+        // })
+        navigate("/checkout?" + new URLSearchParams({ firebaseImageUrl: state }), { replace: true });
 
       } catch (e) {
         // alert("catch error:" + JSON.stringify(e));
