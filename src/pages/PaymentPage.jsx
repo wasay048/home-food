@@ -41,7 +41,6 @@ export default function PaymentPage() {
    useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const value = params.get("firebaseImageUrl");
-    alert(value);
     console.log("firebaseImageUrl from URL params:", value);
     if (value) {
       setFirebaseImageUrl(value);
