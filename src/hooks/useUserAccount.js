@@ -24,14 +24,14 @@ export const useUserAccount = () => {
    * Generate email from WeChat user data using the pattern:
    * nickname (no spaces) + last 4 of openid + @gmail.com
    */
-  const generateEmailFromWeChatUser = useCallback((openid, nickname) => {
+  const generateEmailFromWeChatUser = useCallback((unionid, nickname) => {
     console.log("[useUserAccount] Generating email", {
-      openid: openid?.substring(0, 10) + "...",
+      openid: unionid?.substring(0, 10) + "...",
       nickname,
     });
 
     // Get last 4 characters of openid
-    const last4 = openid.slice(-4);
+    const last4 = unionid.slice(-4);
 
     // Clean nickname - remove spaces and special characters
     const nicknameCleaned = (nickname || "user")
@@ -48,9 +48,9 @@ export const useUserAccount = () => {
       last4,
     });
 
-    alert(
-      `📧 Generated email pattern:\n${nicknameCleaned} + ${last4} + @gmail.com\n= ${email}`
-    );
+    // alert(
+    //   `📧 Generated email pattern:\n${nicknameCleaned} + ${last4} + @gmail.com\n= ${email}`
+    // );
 
     return email;
   }, []);
@@ -60,7 +60,7 @@ export const useUserAccount = () => {
    */
   const checkAccountExists = useCallback(async (email) => {
     console.log("[useUserAccount] Checking account existence for:", email);
-    alert(`🔍 Checking if account exists:\nEmail: ${email}`);
+    // alert(`🔍 Checking if account exists:\nEmail: ${email}`);
 
     try {
       const accountsRef = collection(db, "accounts");
@@ -72,9 +72,9 @@ export const useUserAccount = () => {
         const data = { id: accountDoc.id, ...accountDoc.data() };
 
         console.log("[useUserAccount] Account found:", accountDoc.id);
-        alert(
-          `✅ Existing account found!\nID: ${accountDoc.id}\nEmail: ${data.email}`
-        );
+        // alert(
+        //   `✅ Existing account found!\nID: ${accountDoc.id}\nEmail: ${data.email}`
+        // );
 
         return {
           exists: true,
@@ -84,9 +84,9 @@ export const useUserAccount = () => {
       }
 
       console.log("[useUserAccount] No account found");
-      alert(
-        `❌ No existing account found for:\n${email}\nWill create new account.`
-      );
+      // alert(
+      //   `❌ No existing account found for:\n${email}\nWill create new account.`
+      // );
 
       return {
         exists: false,
@@ -95,7 +95,7 @@ export const useUserAccount = () => {
       };
     } catch (error) {
       console.error("[useUserAccount] Error checking account:", error);
-      alert(`⚠️ Error checking account:\n${error.message}`);
+      // alert(`⚠️ Error checking account:\n${error.message}`);
 
       return {
         exists: false,
@@ -166,9 +166,9 @@ export const useUserAccount = () => {
       await setDoc(newAccountRef, newAccountData);
 
       console.log("[useUserAccount] Account created:", newAccountRef.id);
-      alert(
-        `✅ New account created!\nID: ${newAccountRef.id}\nEmail: ${email}`
-      );
+      // alert(
+      //   `✅ New account created!\nID: ${newAccountRef.id}\nEmail: ${email}`
+      // );
 
       return {
         success: true,
@@ -181,7 +181,7 @@ export const useUserAccount = () => {
       };
     } catch (error) {
       console.error("[useUserAccount] Error creating account:", error);
-      alert(`❌ Failed to create account:\n${error.message}`);
+      // alert(`❌ Failed to create account:\n${error.message}`);
       throw error;
     }
   }, []);
@@ -207,7 +207,7 @@ export const useUserAccount = () => {
       await updateDoc(accountRef, updateData);
 
       console.log("[useUserAccount] Login updated");
-      alert(`✅ Welcome back!\nLast login updated.`);
+      // alert(`✅ Welcome back!\nLast login updated.`);
 
       return { success: true };
     } catch (error) {
@@ -231,27 +231,27 @@ export const useUserAccount = () => {
           throw new Error("No WeChat user info provided");
         }
         const userInfo = wechatUserInfo.user || wechatUserInfo;
-        const { openid, nickname } = userInfo;
+        const { unionid, nickname } = userInfo;
 
-        if (!openid) {
-          throw new Error("No OpenID in WeChat user info");
+        if (!unionid) {
+          throw new Error("No UnionID in WeChat user info");
         }
 
         // Generate email
-        const email = generateEmailFromWeChatUser(openid, nickname);
+        const email = generateEmailFromWeChatUser(unionid, nickname);
 
-        alert(
-          `🔄 Processing WeChat account:\nNickname: ${nickname}\nEmail: ${email}`
-        );
+        // alert(
+        //   `🔄 Processing WeChat account:\nNickname: ${nickname}\nEmail: ${email}`
+        // );
 
         // Check if account exists
         const accountCheck = await checkAccountExists(email);
 
         if (accountCheck.exists) {
           // Existing user
-          alert(
-            `✅ Welcome back ${nickname}!\nAccount ID: ${accountCheck.data.id}`
-          );
+          // alert(
+          //   `✅ Welcome back ${nickname}!\nAccount ID: ${accountCheck.data.id}`
+          // );
 
           // Update last login (non-blocking)
           updateAccountLogin(accountCheck.data.id, wechatUserInfo).catch(
@@ -272,14 +272,14 @@ export const useUserAccount = () => {
         }
 
         // Create new account
-        alert(`🆕 Creating new account for ${nickname}...`);
+        // alert(`🆕 Creating new account for ${nickname}...`);
 
         const createResult = await createNewAccount(wechatUserInfo, email);
 
         if (createResult.success) {
-          alert(
-            `🎉 Welcome ${nickname}!\nYour account has been created successfully!`
-          );
+          // alert(
+          //   `🎉 Welcome ${nickname}!\nYour account has been created successfully!`
+          // );
 
           const result = {
             isNewUser: true,
@@ -318,7 +318,7 @@ export const useUserAccount = () => {
         };
 
         setAccountData(fallbackResult);
-        alert(`⚠️ Using temporary account.\nSome features may be limited.`);
+        // alert(`⚠️ Using temporary account.\nSome features may be limited.`);
 
         return fallbackResult;
       } finally {
@@ -365,7 +365,7 @@ export const useUserAccount = () => {
     console.log("[useUserAccount] Updating profile:", accountId);
 
     if (!accountId || accountId.startsWith("temp_")) {
-      alert("⚠️ Cannot update temporary account.");
+      // alert("⚠️ Cannot update temporary account.");
       return { success: false, error: "Temporary account" };
     }
 
@@ -378,12 +378,12 @@ export const useUserAccount = () => {
       });
 
       console.log("[useUserAccount] Profile updated");
-      alert("✅ Profile updated successfully!");
+      // alert("✅ Profile updated successfully!");
 
       return { success: true };
     } catch (error) {
       console.error("[useUserAccount] Error updating profile:", error);
-      alert(`❌ Failed to update profile:\n${error.message}`);
+      // alert(`❌ Failed to update profile:\n${error.message}`);
       return { success: false, error: error.message };
     }
   }, []);
