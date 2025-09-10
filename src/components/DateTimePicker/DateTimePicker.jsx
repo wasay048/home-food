@@ -133,7 +133,7 @@ const DateTimePicker = ({
       console.log("❌ No internal date");
       return [];
     }
-    console("order type: " + orderType);
+    console.log("order type: " + orderType);
     if (orderType === "GO_GRAB") {
       // Go&Grab logic
       const today = dayjs();
@@ -179,22 +179,22 @@ const DateTimePicker = ({
       console.log("🍽️ Processing PRE_ORDER time slots");
 
       if (!kitchen?.preorderSchedule?.dates) {
-        console("No preorder schedule available in kitchen.");
+        console.log("No preorder schedule available in kitchen.");
         console.log("❌ No preorder schedule in kitchen");
         return [];
       }
 
       if (!food?.id) {
-        console("No food ID available.");
+        console.log("No food ID available.");
         console.log("❌ No food ID");
         return [];
       }
 
       // Use internalDate instead of selectedDate for more reliable calculation
       const dateToUse = internalDate || selectedDate;
-      console("Date to use for PRE_ORDER: " + dateToUse);
+      console.log("Date to use for PRE_ORDER: " + dateToUse);
       if (!dateToUse) {
-        console("No date to use for PRE_ORDER.");
+        console.log("No date to use for PRE_ORDER.");
         console.log("❌ No date to use");
         return [];
       }
@@ -202,9 +202,9 @@ const DateTimePicker = ({
       let scheduleDate;
       try {
         const parsedDate = dayjs(dateToUse);
-        console("Parsed date: " + parsedDate);
+        console.log("Parsed date: " + parsedDate);
         scheduleDate = parsedDate.format("YYYY-MM-DD");
-        console("Schedule date: " + scheduleDate);
+        console.log("Schedule date: " + scheduleDate);
         console.log("📅 Schedule date:", scheduleDate);
       } catch (error) {
         console.error("Error parsing date:", dateToUse, error);
@@ -215,19 +215,19 @@ const DateTimePicker = ({
       console.log("📋 Available schedule dates:", Object.keys(scheduleDates));
 
       if (!scheduleDates[scheduleDate]) {
-        console("No schedule for date: " + scheduleDate);
+        console.log("No schedule for date: " + scheduleDate);
         console.log("❌ No schedule for date:", scheduleDate);
         return [];
       }
 
       const scheduleItems = scheduleDates[scheduleDate];
-      console("Schedule items for date: " + JSON.stringify(scheduleItems));
+      console.log("Schedule items for date: " + JSON.stringify(scheduleItems));
       console.log("📦 Schedule items for date:", scheduleItems.length);
 
       const foodScheduleItems = scheduleItems.filter(
         (item) => item.foodItemId === food.id
       );
-      console(
+      console.log(
         "Food schedule items: foodScheduleItems:" +
           JSON.stringify(foodScheduleItems)
       );
@@ -239,7 +239,7 @@ const DateTimePicker = ({
       );
 
       if (foodScheduleItems.length === 0) {
-        console("❌ No schedule items for this food");
+        console.log("❌ No schedule items for this food");
         console.log("❌ No schedule items for this food");
         return [];
       }
@@ -248,13 +248,15 @@ const DateTimePicker = ({
 
       foodScheduleItems.forEach((scheduleItem, index) => {
         console.log(`📋 Processing schedule item ${index}:`, scheduleItem);
-        console("Processing schedule item: " + JSON.stringify(scheduleItem));
+        console.log(
+          "Processing schedule item: " + JSON.stringify(scheduleItem)
+        );
         if (
           scheduleItem.availableTimes &&
           Array.isArray(scheduleItem.availableTimes)
         ) {
           console.log("⏰ Available times:", scheduleItem.availableTimes);
-          console(
+          console.log(
             "Available times: " + JSON.stringify(scheduleItem.availableTimes)
           );
           scheduleItem.availableTimes.forEach((time) => {
@@ -298,13 +300,15 @@ const DateTimePicker = ({
           console.log("❌ No valid availableTimes array in schedule item");
         }
       });
-      console("Total time slots before sorting: " + JSON.stringify(timeSlots));
+      console.log(
+        "Total time slots before sorting: " + JSON.stringify(timeSlots)
+      );
       const sortedTimeSlots = timeSlots.sort((a, b) => {
         const timeA = dayjs(`2000-01-01 ${a.value}`, "YYYY-MM-DD h:mm A");
         const timeB = dayjs(`2000-01-01 ${b.value}`, "YYYY-MM-DD h:mm A");
         return timeA.diff(timeB);
       });
-      console("Sorted time slots: " + JSON.stringify(sortedTimeSlots));
+      console.log("Sorted time slots: " + JSON.stringify(sortedTimeSlots));
       console.log(
         "✅ Final PRE_ORDER time slots:",
         sortedTimeSlots.length,
@@ -322,8 +326,8 @@ const DateTimePicker = ({
     kitchen?.preorderSchedule?.dates,
     food?.id,
   ]);
-  console("Order type: outside of the useMemo()" + orderType);
-  console(
+  console.log("Order type: outside of the useMemo()" + orderType);
+  console.log(
     `Available time slots: ${orderType} ${JSON.stringify(availableTimeSlots)}`
   );
   // ✅ FIXED: Handle date selection without causing infinite loops
@@ -342,7 +346,7 @@ const DateTimePicker = ({
 
       // For Go&Grab: Don't allow past dates
       if (orderType === "GO_GRAB" && selectedDateObj.isBefore(today)) {
-        console("Please select today or a future date for pickup.");
+        console.log("Please select today or a future date for pickup.");
         // Reset to today
         const todayString = today.format("YYYY-MM-DD");
         setInternalDate(todayString);
@@ -352,7 +356,7 @@ const DateTimePicker = ({
 
       // For Pre-Order: Only allow the specific selected date
       if (orderType === "PRE_ORDER" && dateValue !== selectedDate) {
-        console("For pre-orders, the pickup date cannot be changed.");
+        console.log("For pre-orders, the pickup date cannot be changed.");
         // Reset to the original selected date
         setInternalDate(selectedDate);
         return;
