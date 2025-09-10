@@ -10,37 +10,55 @@ import {
   updateDoc,
   getDoc,
 } from "firebase/firestore";
-import { db } from "../services/firebase";
+import {
+  signInWithCustomToken,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+  onAuthStateChanged,
+  signOut as firebaseSignOut,
+} from "firebase/auth";
+import { db, auth } from "../services/firebase";
 
 /**
- * Custom hook for managing user accounts with WeChat authentication
+ * Custom hook for managing user accounts with WeChat authentication and Firebase Auth
  */
 export const useUserAccount = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [accountData, setAccountData] = useState(null);
+  const [firebaseUser, setFirebaseUser] = useState(null);
+
+  // Monitor Firebase Auth state
+  const initializeAuthListener = useCallback(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log("[useUserAccount] Firebase Auth state changed:", user?.uid);
+      setFirebaseUser(user);
+    });
+    return unsubscribe;
+  }, []);
 
   /**
    * Generate email from WeChat user data using the pattern:
-   * nickname (no spaces) + last 4 of openid + @gmail.com
+   * nickname (no spaces) + last 4 of unionid + @gmail.com
    */
   const generateEmailFromWeChatUser = useCallback((unionid, nickname) => {
     console.log("[useUserAccount] Generating email", {
-      openid: unionid?.substring(0, 10) + "...",
+      unionid: unionid?.substring(0, 10) + "...",
       nickname,
     });
 
-    // Get last 4 characters of openid
+    // Get last 4 characters of unionid
     const last4 = unionid.slice(-4);
 
     // Clean nickname - remove spaces and special characters
     const nicknameCleaned = (nickname || "user")
-      .replace(/\s+/g, "") // Remove all spaces
-      .replace(/[^a-zA-Z0-9]/g, "") // Keep only alphanumeric
+      .replace(/\s+/g, "")
+      .replace(/[^a-zA-Z0-9]/g, "")
       .toLowerCase();
 
     // Generate email
-    const email = `${nicknameCleaned}${last4}@gmail.com`;
+    const email = `${nicknameCleaned}${last4}@gmail.com`?.toLowerCase();
 
     console.log("[useUserAccount] Email generated:", email, {
       original: nickname,
@@ -48,19 +66,97 @@ export const useUserAccount = () => {
       last4,
     });
 
-    // alert(
-    //   `📧 Generated email pattern:\n${nicknameCleaned} + ${last4} + @gmail.com\n= ${email}`
-    // );
-
     return email;
   }, []);
+
+  /**
+   * Generate a secure password from WeChat data
+   */
+  const generatePasswordFromWeChatUser = useCallback((unionid, openid) => {
+    // Create a secure password using unionid and openid
+    const combinedId = `${unionid}_${openid}`;
+    // Use parts of the IDs to create a password
+    const password = `WC_${combinedId.substring(0, 8)}_${combinedId.slice(
+      -8
+    )}!`;
+    return password;
+  }, []);
+
+  /**
+   * Authenticate user with Firebase Auth
+   */
+  const authenticateWithFirebase = useCallback(
+    async (email, password, userData) => {
+      console.log("[useUserAccount] Authenticating with Firebase Auth");
+
+      try {
+        let firebaseUser = null;
+
+        // Try to sign in first
+        try {
+          console.log("[useUserAccount] Attempting to sign in existing user");
+          const userCredential = await signInWithEmailAndPassword(
+            auth,
+            email,
+            password
+          );
+          firebaseUser = userCredential.user;
+          console.log(
+            "[useUserAccount] Existing Firebase user signed in:",
+            firebaseUser.uid
+          );
+        } catch (signInError) {
+          console.log(
+            "[useUserAccount] Sign in failed, creating new Firebase user"
+          );
+
+          // If sign in fails, create new user
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            email,
+            password
+          );
+          firebaseUser = userCredential.user;
+          console.log(
+            "[useUserAccount] New Firebase user created:",
+            firebaseUser.uid
+          );
+
+          // Update the Firebase user profile
+          await updateProfile(firebaseUser, {
+            displayName: userData.nickname || userData.name,
+            photoURL: userData.headimgurl || userData.avatar,
+          });
+
+          console.log("[useUserAccount] Firebase user profile updated");
+        }
+
+        return {
+          success: true,
+          firebaseUser,
+          firebaseUid: firebaseUser.uid,
+        };
+      } catch (error) {
+        console.error(
+          "[useUserAccount] Firebase authentication failed:",
+          error
+        );
+        return {
+          success: false,
+          error: error.message,
+          firebaseUser: null,
+          firebaseUid: null,
+        };
+      }
+    },
+    []
+  );
 
   /**
    * Check if account exists by email
    */
   const checkAccountExists = useCallback(async (email) => {
     console.log("[useUserAccount] Checking account existence for:", email);
-    // alert(`🔍 Checking if account exists:\nEmail: ${email}`);
 
     try {
       const accountsRef = collection(db, "accounts");
@@ -84,10 +180,6 @@ export const useUserAccount = () => {
       }
 
       console.log("[useUserAccount] No account found");
-      // alert(
-      //   `❌ No existing account found for:\n${email}\nWill create new account.`
-      // );
-
       return {
         exists: false,
         data: null,
@@ -95,8 +187,6 @@ export const useUserAccount = () => {
       };
     } catch (error) {
       console.error("[useUserAccount] Error checking account:", error);
-      // alert(`⚠️ Error checking account:\n${error.message}`);
-
       return {
         exists: false,
         data: null,
@@ -107,121 +197,161 @@ export const useUserAccount = () => {
   }, []);
 
   /**
-   * Create new account
+   * Create new account with Firebase Auth
    */
-  const createNewAccount = useCallback(async (wechatUserInfo, email) => {
-    console.log("[useUserAccount] Creating new account for:", email);
+  const createNewAccount = useCallback(
+    async (wechatUserInfo, email) => {
+      console.log("[useUserAccount] Creating new account for:", email);
 
-    const {
-      openid,
-      nickname,
-      headimgurl,
-      sex,
-      country,
-      province,
-      city,
-      unionid,
-    } = wechatUserInfo.user || wechatUserInfo;
+      const {
+        openid,
+        nickname,
+        headimgurl,
+        sex,
+        country,
+        province,
+        city,
+        unionid,
+      } = wechatUserInfo.user || wechatUserInfo;
 
-    try {
-      const accountsRef = collection(db, "accounts");
-      const newAccountRef = doc(accountsRef); // Auto-generate ID
+      try {
+        // Step 1: Authenticate with Firebase
+        const password = generatePasswordFromWeChatUser(unionid, openid);
+        const firebaseAuth = await authenticateWithFirebase(email, password, {
+          nickname,
+          headimgurl,
+          name: nickname,
+          avatar: headimgurl,
+        });
 
-      const newAccountData = {
-        // Required fields
-        email: email,
-        name: nickname || "WeChat User",
+        if (!firebaseAuth.success) {
+          throw new Error(
+            `Firebase authentication failed: ${firebaseAuth.error}`
+          );
+        }
 
-        // Authentication flags
-        isAdmin: false,
-        isChef: false,
-        isLogInWithWechat: true,
-        wantsToBeChef: false,
+        // Step 2: Create Firestore account document
+        const accountsRef = collection(db, "accounts");
+        const newAccountRef = doc(accountsRef); // Auto-generate ID
 
-        // WeChat specific data
-        wechatOpenId: openid,
-        wechatUnionId: unionid || "",
-        wechatNickname: nickname || "",
-        wechatAvatar: headimgurl || "",
-        wechatSex: sex || 0,
-        wechatCountry: country || "",
-        wechatProvince: province || "",
-        wechatCity: city || "",
+        const newAccountData = {
+          // Required fields
+          email: email,
+          name: nickname || "WeChat User",
 
-        // Optional fields
-        favoriteCuisines: [],
-        howHeardAboutUs: "WeChat",
-        fcmToken: "",
+          // ✅ ADD: Firebase Auth integration
+          firebaseUid: firebaseAuth.firebaseUid,
+          firebaseEmail: firebaseAuth.firebaseUser.email,
 
-        // Timestamps
-        accountCreationDate: serverTimestamp(),
-        lastLoginAt: serverTimestamp(),
+          // Authentication flags
+          isAdmin: false,
+          isChef: false,
+          isLogInWithWechat: true,
+          wantsToBeChef: false,
 
-        // Metadata
-        authMethod: "wechat",
-        profileComplete: false,
-      };
+          // WeChat specific data
+          wechatOpenId: openid,
+          wechatUnionId: unionid || "",
+          wechatNickname: nickname || "",
+          wechatAvatar: headimgurl || "",
+          wechatSex: sex || 0,
+          wechatCountry: country || "",
+          wechatProvince: province || "",
+          wechatCity: city || "",
 
-      console.log("[useUserAccount] Saving to Firestore...");
-      await setDoc(newAccountRef, newAccountData);
+          // Optional fields
+          favoriteCuisines: [],
+          howHeardAboutUs: "WeChat",
+          fcmToken: "",
 
-      console.log("[useUserAccount] Account created:", newAccountRef.id);
-      // alert(
-      //   `✅ New account created!\nID: ${newAccountRef.id}\nEmail: ${email}`
-      // );
+          // Timestamps
+          accountCreationDate: serverTimestamp(),
+          lastLoginAt: serverTimestamp(),
 
-      return {
-        success: true,
-        account: {
-          id: newAccountRef.id,
-          ...newAccountData,
-          accountCreationDate: new Date().toISOString(),
-          lastLoginAt: new Date().toISOString(),
-        },
-      };
-    } catch (error) {
-      console.error("[useUserAccount] Error creating account:", error);
-      // alert(`❌ Failed to create account:\n${error.message}`);
-      throw error;
-    }
-  }, []);
+          // Metadata
+          authMethod: "wechat",
+          profileComplete: false,
+        };
+
+        console.log("[useUserAccount] Saving to Firestore...");
+        await setDoc(newAccountRef, newAccountData);
+
+        console.log("[useUserAccount] Account created:", newAccountRef.id);
+        alert(
+          `✅ New account created!\nFirestore ID: ${newAccountRef.id}\nFirebase UID: ${firebaseAuth.firebaseUid}\nEmail: ${email}`
+        );
+
+        return {
+          success: true,
+          account: {
+            id: newAccountRef.id,
+            ...newAccountData,
+            accountCreationDate: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+            firebaseUid: firebaseAuth.firebaseUid,
+          },
+          firebaseUser: firebaseAuth.firebaseUser,
+        };
+      } catch (error) {
+        console.error("[useUserAccount] Error creating account:", error);
+        alert(`❌ Failed to create account:\n${error.message}`);
+        throw error;
+      }
+    },
+    [generatePasswordFromWeChatUser, authenticateWithFirebase]
+  );
 
   /**
-   * Update existing account login
+   * Update existing account login with Firebase Auth
    */
-  const updateAccountLogin = useCallback(async (accountId, wechatUserInfo) => {
-    console.log("[useUserAccount] Updating login for account:", accountId);
+  const updateAccountLogin = useCallback(
+    async (accountId, wechatUserInfo) => {
+      console.log("[useUserAccount] Updating login for account:", accountId);
+      console.log(
+        "[useUserAccount] Skipping Firebase authentication for existing user update"
+      );
 
-    try {
-      const accountRef = doc(db, "accounts", accountId);
+      try {
+        // Get existing account data
+        const accountRef = doc(db, "accounts", accountId);
+        const accountSnap = await getDoc(accountRef);
 
-      const updateData = {
-        lastLoginAt: serverTimestamp(),
-        wechatOpenId: wechatUserInfo.openid || wechatUserInfo.user?.openid,
-        wechatAvatar:
-          wechatUserInfo.user?.headimgurl || wechatUserInfo.headimgurl || "",
-        wechatNickname:
-          wechatUserInfo.user?.nickname || wechatUserInfo.nickname || "",
-      };
+        if (!accountSnap.exists()) {
+          throw new Error("Account not found");
+        }
 
-      await updateDoc(accountRef, updateData);
+        // ✅ NO Firebase authentication - just update Firestore document
+        const updateData = {
+          lastLoginAt: serverTimestamp(),
+          wechatOpenId: wechatUserInfo.openid || wechatUserInfo.user?.openid,
+          wechatAvatar:
+            wechatUserInfo.user?.headimgurl || wechatUserInfo.headimgurl || "",
+          wechatNickname:
+            wechatUserInfo.user?.nickname || wechatUserInfo.nickname || "",
+        };
 
-      console.log("[useUserAccount] Login updated");
-      // alert(`✅ Welcome back!\nLast login updated.`);
+        await updateDoc(accountRef, updateData);
 
-      return { success: true };
-    } catch (error) {
-      console.error("[useUserAccount] Error updating login:", error);
-      return { success: false, error: error.message };
-    }
-  }, []);
+        console.log(
+          "[useUserAccount] Login updated successfully without Firebase auth"
+        );
+        return { success: true };
+      } catch (error) {
+        console.error("[useUserAccount] Error updating login:", error);
+        return { success: false, error: error.message };
+      }
+    },
+    [] // ✅ Removed Firebase dependencies
+  );
 
   /**
-   * Main function to process WeChat account
+   * Main function to process WeChat account with Firebase Auth
    */
   const processWeChatAccount = useCallback(
     async (wechatUserInfo) => {
-      console.log("[useUserAccount] Processing WeChat account");
+      console.log(
+        "[useUserAccount] Processing WeChat account with Firebase Auth"
+      );
       setLoading(true);
       setError(null);
 
@@ -248,12 +378,20 @@ export const useUserAccount = () => {
         const accountCheck = await checkAccountExists(email);
 
         if (accountCheck.exists) {
-          // Existing user
-          // alert(
-          //   `✅ Welcome back ${nickname}!\nAccount ID: ${accountCheck.data.id}`
-          // );
+          // ✅ EXISTING USER - Skip Firebase Auth, just return stored data
+          console.log(
+            `[useUserAccount] Existing user found - Document ID: ${accountCheck.data.id}`
+          );
+          console.log(
+            `[useUserAccount] Skipping Firebase authentication for existing user`
+          );
+          console.log(
+            `[useUserAccount] Using stored Firebase UID: ${
+              accountCheck.data.firebaseUid || "Not available"
+            }`
+          );
 
-          // Update last login (non-blocking)
+          // Update last login (non-blocking) - no Firebase auth needed
           updateAccountLogin(accountCheck.data.id, wechatUserInfo).catch(
             (err) => {
               console.warn("[useUserAccount] Failed to update login:", err);
@@ -265,27 +403,52 @@ export const useUserAccount = () => {
             account: accountCheck.data,
             email,
             method: accountCheck.method,
+            // ✅ Return existing user data with stored Firebase UID
+            userId: accountCheck.data.id,
+            documentId: accountCheck.data.id,
+            firebaseUid: accountCheck.data.firebaseUid || null, // Use stored Firebase UID
+            firebaseUser: null, // Don't return Firebase user object for existing users
+            isExistingUser: true, // Flag to indicate this is existing user data
           };
 
           setAccountData(result);
+
+          alert(
+            `✅ Existing user logged in!\n` +
+              `- Document ID: ${result.documentId}\n` +
+              `- Stored Firebase UID: ${
+                result.firebaseUid || "Not available"
+              }\n` +
+              `- Email: ${result.email}`
+          );
+
           return result;
         }
 
-        // Create new account
-        // alert(`🆕 Creating new account for ${nickname}...`);
+        // ✅ NEW USER - Create account with Firebase Auth
+        console.log(`[useUserAccount] Creating new account for: ${nickname}`);
+        console.log(
+          `[useUserAccount] New user will be authenticated with Firebase`
+        );
 
         const createResult = await createNewAccount(wechatUserInfo, email);
 
         if (createResult.success) {
-          // alert(
-          //   `🎉 Welcome ${nickname}!\nYour account has been created successfully!`
-          // );
+          console.log(
+            `[useUserAccount] New account created - Document ID: ${createResult.account.id}`
+          );
 
           const result = {
             isNewUser: true,
             account: createResult.account,
             email,
             method: "created",
+            // ✅ Return new user data with fresh Firebase UID
+            userId: createResult.account.id,
+            documentId: createResult.account.id,
+            firebaseUid: createResult.account.firebaseUid,
+            firebaseUser: createResult.firebaseUser,
+            isExistingUser: false,
           };
 
           setAccountData(result);
@@ -295,32 +458,8 @@ export const useUserAccount = () => {
         throw new Error("Account creation failed");
       } catch (err) {
         console.error("[useUserAccount] Error:", err);
-        setError(err.message);
-
-        // Create fallback account for session
-        const userInfo = wechatUserInfo.user || wechatUserInfo;
-        const { openid, nickname } = userInfo;
-        const email = generateEmailFromWeChatUser(openid, nickname);
-
-        const fallbackResult = {
-          isNewUser: true,
-          account: {
-            id: `temp_${openid}`,
-            email: email,
-            name: nickname || "WeChat User",
-            isTemporary: true,
-            wechatOpenId: openid,
-            error: err.message,
-          },
-          email,
-          method: "fallback",
-          error: err.message,
-        };
-
-        setAccountData(fallbackResult);
-        // alert(`⚠️ Using temporary account.\nSome features may be limited.`);
-
-        return fallbackResult;
+        setLoading(false);
+        return err;
       } finally {
         setLoading(false);
       }
@@ -330,8 +469,26 @@ export const useUserAccount = () => {
       checkAccountExists,
       createNewAccount,
       updateAccountLogin,
+      generatePasswordFromWeChatUser,
+      authenticateWithFirebase,
     ]
   );
+
+  /**
+   * Sign out from Firebase Auth
+   */
+  const signOutFromFirebase = useCallback(async () => {
+    try {
+      await firebaseSignOut(auth);
+      setFirebaseUser(null);
+      setAccountData(null);
+      console.log("[useUserAccount] Signed out from Firebase");
+      return { success: true };
+    } catch (error) {
+      console.error("[useUserAccount] Error signing out:", error);
+      return { success: false, error: error.message };
+    }
+  }, []);
 
   /**
    * Get account by ID
@@ -365,7 +522,6 @@ export const useUserAccount = () => {
     console.log("[useUserAccount] Updating profile:", accountId);
 
     if (!accountId || accountId.startsWith("temp_")) {
-      // alert("⚠️ Cannot update temporary account.");
       return { success: false, error: "Temporary account" };
     }
 
@@ -378,12 +534,9 @@ export const useUserAccount = () => {
       });
 
       console.log("[useUserAccount] Profile updated");
-      // alert("✅ Profile updated successfully!");
-
       return { success: true };
     } catch (error) {
       console.error("[useUserAccount] Error updating profile:", error);
-      // alert(`❌ Failed to update profile:\n${error.message}`);
       return { success: false, error: error.message };
     }
   }, []);
@@ -393,6 +546,7 @@ export const useUserAccount = () => {
     loading,
     error,
     accountData,
+    firebaseUser,
 
     // Functions
     processWeChatAccount,
@@ -400,5 +554,7 @@ export const useUserAccount = () => {
     updateUserProfile,
     generateEmailFromWeChatUser,
     checkAccountExists,
+    signOutFromFirebase,
+    initializeAuthListener,
   };
 };
