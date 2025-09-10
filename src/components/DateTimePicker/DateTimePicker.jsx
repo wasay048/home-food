@@ -273,7 +273,7 @@ const DateTimePicker = ({
                 const timeSlot = scheduledTime.add(offset, "minutes");
                 const timeValue = timeSlot.format("h:mm A");
                 const hour = timeSlot.hour();
-
+                console.log("time slot: before" + timeSlot);
                 if (
                   hour >= 8 &&
                   hour <= 22 &&
@@ -288,6 +288,7 @@ const DateTimePicker = ({
                     originalTime: time,
                   });
                 }
+                console.log("time slot: after", timeSlot);
               }
             } catch (error) {
               console.error("❌ Error processing time:", time, error);
