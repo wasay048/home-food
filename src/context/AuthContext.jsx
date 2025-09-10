@@ -117,8 +117,10 @@ export function AuthProvider({ children }) {
         console.log("✅ Got user info:", userInfo);
         const accountResult = await processWeChatAccount(userInfo);
 
-        // alert(JSON.stringify(accountResult, null, 2));
-
+        alert("User details:" + JSON.stringify(accountResult));
+        alert(
+          `User Id: ${accountResult.account.id} \nName: ${accountResult.account.name}\n\nYou have successfully logged in with WeChat!`
+        );
         // Step 3: Create user object
         const wechatUser = {
           id: accountResult.account.id,

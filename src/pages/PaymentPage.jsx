@@ -38,7 +38,7 @@ export default function PaymentPage() {
 
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
-   useEffect(() => {
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const value = params.get("firebaseImageUrl");
     console.log("firebaseImageUrl from URL params:", value);
@@ -341,6 +341,7 @@ export default function PaymentPage() {
         return;
       }
       console.log("Placing order for user:", currentUser);
+      alert("Placing order for user: " + JSON.stringify(currentUser));
       console.log("Placing order for isAuthenticated:", isAuthenticated);
       // Check authentication FIRST before other validations
       if (!isAuthenticated || !currentUser) {
@@ -721,7 +722,10 @@ export default function PaymentPage() {
         </div>
       )}
       {showWeChatDialog && (
-        <WeChatAuthDialog firebaseImageUrl={firebaseImageUrl} onClose={handleWeChatDialogClose} />
+        <WeChatAuthDialog
+          firebaseImageUrl={firebaseImageUrl}
+          onClose={handleWeChatDialogClose}
+        />
       )}
     </>
   );
