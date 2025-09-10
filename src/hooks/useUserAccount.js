@@ -72,9 +72,9 @@ export const useUserAccount = () => {
         const data = { id: accountDoc.id, ...accountDoc.data() };
 
         console.log("[useUserAccount] Account found:", accountDoc.id);
-        // alert(
-        //   `✅ Existing account found!\nID: ${accountDoc.id}\nEmail: ${data.email}`
-        // );
+        alert(
+          `✅ Existing account found!\nID: ${accountDoc.id}\nEmail: ${data.email}`
+        );
 
         return {
           exists: true,
