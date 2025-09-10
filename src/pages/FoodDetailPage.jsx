@@ -19,6 +19,12 @@ import { clearCart } from "../store/slices/cartSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useGenericCart } from "../hooks/useGenericCart";
 import { logout } from "../store/slices/authSlice";
+import {
+  setListingData,
+  setListingLoading,
+} from "../store/slices/listingSlice";
+import dayjs from "dayjs";
+import { useKitchenWithFoods } from "../hooks/useKitchenListing";
 
 // Custom Slider Component
 // Enhanced Custom Slider Component with better styling
@@ -278,6 +284,8 @@ export default function FoodDetailPage() {
     );
   }
 
+  const { kitchen: fullKitchen, foods: allFoods } =
+    useKitchenWithFoods(kitchenId);
   const [activeTab, setActiveTab] = useState("reviews");
   const [selectedQuantity, setSelectedQuantity] = useState(0);
   const [specialInstructions, setSpecialInstructions] = useState("");
@@ -611,6 +619,100 @@ export default function FoodDetailPage() {
       }
     }
   }, [dispatch, location.state]);
+
+  // Add this useEffect after the existing useEffects to process and store listing data
+  useEffect(() => {
+    if (!fullKitchen || !allFoods || allFoods.length === 0 || !kitchenId) {
+      console.log("[FoodDetailPage] Missing data for listing processing");
+      return;
+    }
+
+    console.log("[FoodDetailPage] Processing and storing listing data");
+    dispatch(setListingLoading(true));
+
+    try {
+      // Process Go & Grab items
+      const goGrabItems = allFoods.filter((food) => {
+        const numAvailable =
+          food.availability?.numAvailable || food.numAvailable || 0;
+        return numAvailable > 0 && food.kitchenId === kitchenId;
+      });
+
+      // Process Pre-Order items
+      let preOrderItems = [];
+      let availablePreorderDates = [];
+
+      if (fullKitchen?.preorderSchedule?.dates) {
+        // Get available preorder dates
+        const today = dayjs();
+        const todayStr = today.format("YYYY-MM-DD");
+
+        // Generate next 2 days
+        const nextTwoDays = [];
+        for (let i = 1; i <= 2; i++) {
+          const nextDay = today.add(i, "day");
+          const dateString = nextDay.format("YYYY-MM-DD");
+          nextTwoDays.push(dateString);
+        }
+
+        // Filter to only include dates in preorder schedule
+        const availableDateStrings = nextTwoDays.filter((dateStr) => {
+          const hasSchedule = fullKitchen.preorderSchedule.dates[dateStr];
+          const isNotToday = dateStr !== todayStr;
+          return hasSchedule && isNotToday;
+        });
+
+        // Map to display format
+        availablePreorderDates = availableDateStrings.map((dateString) => {
+          const date = dayjs(dateString);
+          return {
+            dateString,
+            displayDate: date.format("ddd, MMM D"),
+            scheduleItems: fullKitchen.preorderSchedule.dates[dateString] || [],
+          };
+        });
+
+        // Get all food IDs in preorder schedule
+        const preorderFoodIds = new Set();
+        Object.values(fullKitchen.preorderSchedule.dates)
+          .flat()
+          .forEach((item) => {
+            preorderFoodIds.add(item.foodItemId);
+          });
+
+        // Filter foods that are in preorder schedule
+        preOrderItems = allFoods.filter((food) => {
+          return preorderFoodIds.has(food.id) && food.kitchenId === kitchenId;
+        });
+      }
+
+      // Dispatch to Redux store
+      const listingData = {
+        goGrabItems,
+        preOrderItems,
+        availablePreorderDates,
+        kitchen: fullKitchen,
+      };
+
+      console.log("[FoodDetailPage] Dispatching listing data:", {
+        goGrabCount: goGrabItems.length,
+        preOrderCount: preOrderItems.length,
+        datesCount: availablePreorderDates.length,
+      });
+
+      dispatch(setListingData(listingData));
+
+      // Alert for iOS devices
+      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        console.log(
+          "[FoodDetailPage] iOS device detected - listing data stored in Redux"
+        );
+      }
+    } catch (error) {
+      console.error("[FoodDetailPage] Error processing listing data:", error);
+      dispatch(setListingLoading(false));
+    }
+  }, [fullKitchen, allFoods, kitchenId, dispatch]);
 
   if (loading) {
     return (

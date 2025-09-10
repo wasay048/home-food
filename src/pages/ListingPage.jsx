@@ -18,9 +18,58 @@ export default function ListingPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { kitchenId: urlKitchenId } = useParams();
+
+  // ✅ Get listing data from Redux store
+  const {
+    goGrabItems,
+    preOrderItems,
+    availablePreorderDates,
+    kitchen,
+    isLoading: listingLoading,
+    lastUpdated,
+  } = useSelector((state) => state.listing);
+
+  // Get current kitchen from Redux (for fallback)
   const currentKitchenFromRedux = useSelector(
     (state) => state.food.currentKitchen
   );
+
+  // Use the generic cart hook for all cart operations
+  const { cartItems, getCartQuantity, handleQuantityChange } = useGenericCart();
+
+  // State for managing pickup dates and times for each food item
+  const [pickupDates, setPickupDates] = useState({});
+  const [pickupTimes, setPickupTimes] = useState({});
+
+  // ✅ Log Redux data on mount and updates
+  useEffect(() => {
+    console.log("[ListingPage] Using Redux listing data:", {
+      goGrabItems: goGrabItems?.length || 0,
+      preOrderItems: preOrderItems?.length || 0,
+      availablePreorderDates: availablePreorderDates?.length || 0,
+      kitchen: kitchen?.name,
+      lastUpdated: lastUpdated ? new Date(lastUpdated).toISOString() : "never",
+      isLoading: listingLoading,
+    });
+
+    // Alert for iOS devices
+    if (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+      goGrabItems?.length > 0
+    ) {
+      console.log(
+        "[ListingPage] iOS device detected - using pre-loaded Redux data"
+      );
+    }
+  }, [
+    goGrabItems,
+    preOrderItems,
+    availablePreorderDates,
+    kitchen,
+    lastUpdated,
+    listingLoading,
+  ]);
+
   // Function to go back to previous page in history
   const handleGoBack = () => {
     // Check if we have state from FoodDetailPage with the exact params
@@ -53,130 +102,6 @@ export default function ListingPage() {
     }
   };
 
-  // Use the generic cart hook for all cart operations
-  const { cartItems, getCartQuantity, handleQuantityChange } = useGenericCart();
-
-  // State for managing pickup dates and times for each food item
-  const [pickupDates, setPickupDates] = useState({});
-  const [pickupTimes, setPickupTimes] = useState({});
-
-  // Get the current kitchen ID from the food data (using the first food item)
-  const { allFoods: allFoodsFromAllKitchens } = useAllKitchensWithFoods(10);
-
-  const currentKitchenId = useMemo(() => {
-    // Priority 1: URL parameter
-    if (urlKitchenId) {
-      console.log("[ListingPage] Using kitchen ID from URL:", urlKitchenId);
-      return urlKitchenId;
-    }
-
-    // Priority 2: Redux current kitchen
-    if (currentKitchenFromRedux?.id) {
-      console.log(
-        "[ListingPage] Using kitchen ID from Redux:",
-        currentKitchenFromRedux.id
-      );
-      return currentKitchenFromRedux.id;
-    }
-
-    // Priority 3: Fallback to first available kitchen
-    if (allFoodsFromAllKitchens.length > 0) {
-      const fallbackId = allFoodsFromAllKitchens[0].kitchenId;
-      console.log("[ListingPage] Using fallback kitchen ID:", fallbackId);
-      return fallbackId;
-    }
-
-    console.log("[ListingPage] No kitchen ID available");
-    return null;
-  }, [urlKitchenId, currentKitchenFromRedux?.id, allFoodsFromAllKitchens]);
-
-  // Get specific kitchen data using the determined kitchen ID
-  const { kitchen, foods, loading, error } =
-    useKitchenWithFoods(currentKitchenId);
-
-  // Debug logging
-  useEffect(() => {
-    if (kitchen && foods.length > 0) {
-      console.log("[ListingPage] Kitchen data loaded successfully");
-    }
-  }, [kitchen, foods]);
-
-  // Helper function to get available preorder dates from kitchen schedule
-  const getAvailablePreorderDates = () => {
-    if (!kitchen?.preorderSchedule?.dates) return [];
-
-    // Use dayjs for reliable date handling
-    const today = dayjs();
-    const todayStr = today.format("YYYY-MM-DD");
-
-    // Generate the next 2 days after today using dayjs
-    const nextTwoDays = [];
-    for (let i = 1; i <= 2; i++) {
-      const nextDay = today.add(i, "day");
-      const dateString = nextDay.format("YYYY-MM-DD");
-      nextTwoDays.push(dateString);
-    }
-
-    // Filter to only include dates that exist in the preorder schedule AND are in our next 2 days
-    // EXPLICITLY exclude today's date
-    const availableDates = nextTwoDays.filter((dateStr) => {
-      const hasSchedule = kitchen.preorderSchedule.dates[dateStr];
-      const isNotToday = dateStr !== todayStr;
-      return hasSchedule && isNotToday;
-    });
-
-    const finalResult = availableDates.map((dateString) => {
-      const date = dayjs(dateString);
-      const displayDate = date.format("ddd, MMM D");
-      return {
-        dateString,
-        displayDate,
-      };
-    });
-
-    return finalResult;
-  };
-
-  // Separate foods into Go & Grab and Pre-order items
-  const { goGrabItems, preOrderItems } = useMemo(() => {
-    if (!foods.length) {
-      return { goGrabItems: [], preOrderItems: [] };
-    }
-
-    // Filter foods to only include items from current kitchen
-    const currentKitchenFoods = foods.filter(
-      (food) => food.kitchenId === currentKitchenId
-    );
-
-    // Go & Grab: items with numAvailable > 0 (check both possible locations)
-    const goGrab = currentKitchenFoods.filter((food) => {
-      const numAvailable =
-        food.availability?.numAvailable || food.numAvailable || 0;
-      return numAvailable > 0;
-    });
-
-    // Pre-order: items that are in preorder schedule (regardless of current availability)
-    let preOrder = [];
-    if (kitchen?.preorderSchedule?.dates) {
-      const preorderDates = kitchen.preorderSchedule.dates;
-      const preorderFoodIds = new Set();
-
-      // Get all food IDs that appear in any preorder schedule
-      Object.values(preorderDates)
-        .flat()
-        .forEach((item) => {
-          preorderFoodIds.add(item.foodItemId);
-        });
-
-      // Include all foods that are in preorder schedule
-      preOrder = currentKitchenFoods.filter((food) => {
-        return preorderFoodIds.has(food.id);
-      });
-    }
-
-    return { goGrabItems: goGrab, preOrderItems: preOrder };
-  }, [foods, kitchen, currentKitchenId]);
-
   // Date/Time picker handlers
   const handleDateChange = useCallback(
     (foodId, newDate, isPreOrder = false) => {
@@ -185,6 +110,7 @@ export default function ListingPage() {
         ...prev,
         [key]: newDate,
       }));
+      console.log(`[ListingPage] Date changed for ${key}:`, newDate);
     },
     []
   );
@@ -196,51 +122,62 @@ export default function ListingPage() {
         ...prev,
         [key]: newTime,
       }));
+      console.log(`[ListingPage] Time changed for ${key}:`, newTime);
     },
     []
   );
 
-  // Get preorder items for a specific date
-  const getPreOrderItemsForDate = (dateString) => {
-    if (!kitchen?.preorderSchedule?.dates?.[dateString]) return [];
+  // ✅ Get preorder items for a specific date (using Redux data)
+  const getPreOrderItemsForDate = useCallback(
+    (dateString) => {
+      if (!kitchen?.preorderSchedule?.dates?.[dateString]) return [];
+      if (!preOrderItems || preOrderItems.length === 0) return [];
 
-    const scheduleItems = kitchen.preorderSchedule.dates[dateString];
-    return scheduleItems
-      .map((scheduleItem) => {
-        const food = preOrderItems.find(
-          (f) => f.id === scheduleItem.foodItemId
-        );
-        return food ? { ...food, scheduleItem } : null;
-      })
-      .filter(Boolean);
-  };
+      const scheduleItems = kitchen.preorderSchedule.dates[dateString];
+      return scheduleItems
+        .map((scheduleItem) => {
+          const food = preOrderItems.find(
+            (f) => f.id === scheduleItem.foodItemId
+          );
+          return food ? { ...food, scheduleItem } : null;
+        })
+        .filter(Boolean);
+    },
+    [kitchen, preOrderItems]
+  );
 
-  const availablePreorderDates = getAvailablePreorderDates();
-
-  // ✅ OPTIMIZATION: Memoize cart quantities to prevent infinite recalculations
+  // ✅ Memoize cart quantities to prevent infinite recalculations
   const cartQuantities = useMemo(() => {
     const quantities = new Map();
 
-    // Pre-calculate all cart quantities to avoid repeated calls in render
-    if (foods && foods.length > 0) {
-      foods.forEach((food) => {
-        // For Go&Grab items (no date dependency)
+    // Calculate Go&Grab quantities
+    if (goGrabItems && goGrabItems.length > 0) {
+      goGrabItems.forEach((food) => {
         quantities.set(`${food.id}`, getCartQuantity(food.id));
+      });
+    }
 
-        // For Pre-Order items (with dates)
-        if (availablePreorderDates.length > 0) {
-          availablePreorderDates.forEach((dateInfo) => {
-            quantities.set(
-              `${food.id}-${dateInfo.dateString}`,
-              getCartQuantity(food.id, dateInfo.dateString)
-            );
-          });
-        }
+    // Calculate Pre-Order quantities
+    if (availablePreorderDates && availablePreorderDates.length > 0) {
+      availablePreorderDates.forEach((dateInfo) => {
+        const itemsForDate = getPreOrderItemsForDate(dateInfo.dateString);
+        itemsForDate.forEach((food) => {
+          quantities.set(
+            `${food.id}-${dateInfo.dateString}`,
+            getCartQuantity(food.id, dateInfo.dateString)
+          );
+        });
       });
     }
 
     return quantities;
-  }, [foods.length, cartItems.length, availablePreorderDates.length]);
+  }, [
+    goGrabItems,
+    availablePreorderDates,
+    cartItems.length,
+    getCartQuantity,
+    getPreOrderItemsForDate,
+  ]);
 
   // Helper function to get cart quantity from memoized map
   const getMemoizedCartQuantity = useCallback(
@@ -251,36 +188,33 @@ export default function ListingPage() {
     [cartQuantities]
   );
 
-  // Check if data is fully loaded
-  const isDataLoaded = !loading && kitchen && foods.length > 0;
+  // if (error) {
+  //   return (
+  //     <div className="container">
+  //       <div className="mobile-container">
+  //         <div className="padding-20">
+  //           <div className="text-center py-5 text-danger">Error: {error}</div>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
-  if (error) {
-    return (
-      <div className="container">
-        <div className="mobile-container">
-          <div className="padding-20">
-            <div className="text-center py-5 text-danger">Error: {error}</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show loader if still loading OR if data is not ready
-  if (loading || !isDataLoaded) {
-    return (
-      <div className="container">
-        <div className="mobile-container">
-          <MobileLoader
-            isLoading={true}
-            text="Loading menu items..."
-            overlay={true}
-            size="medium"
-          />
-        </div>
-      </div>
-    );
-  }
+  // // Show loader if still loading OR if data is not ready
+  // if (loading) {
+  //   return (
+  //     <div className="container">
+  //       <div className="mobile-container">
+  //         <MobileLoader
+  //           isLoading={true}
+  //           text="Loading menu items..."
+  //           overlay={true}
+  //           size="medium"
+  //         />
+  //       </div>
+  //     </div>
+  //   );
+  // }
   return (
     <div className="container">
       <div className="mobile-container">

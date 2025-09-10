@@ -7,6 +7,7 @@ import foodReducer from "./slices/foodSlice";
 import cartReducer from "./slices/cartSlice";
 import kitchenReducer from "./slices/kitchenSlice";
 import reviewsReducer from "./slices/reviewsSlice";
+import listingSlice from "./slices/listingSlice";
 
 // Persist configuration
 const persistConfig = {
@@ -38,6 +39,7 @@ const rootReducer = combineReducers({
   cart: persistReducer(cartPersistConfig, cartReducer),
   kitchen: kitchenReducer,
   reviews: reviewsReducer,
+  listing: listingSlice,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
