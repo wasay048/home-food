@@ -240,9 +240,9 @@ export const useUserAccount = () => {
         // Generate email
         const email = generateEmailFromWeChatUser(unionid, nickname);
 
-        // alert(
-        //   `🔄 Processing WeChat account:\nNickname: ${nickname}\nEmail: ${email}`
-        // );
+        alert(
+          `🔄 Processing WeChat account:\nNickname: ${nickname}\nEmail: ${email}`
+        );
 
         // Check if account exists
         const accountCheck = await checkAccountExists(email);
