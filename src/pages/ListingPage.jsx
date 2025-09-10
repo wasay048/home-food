@@ -1,23 +1,17 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import qrCode from "../assets/images/home-food-qr.svg";
 import dayjs from "dayjs";
-import {
-  useKitchenWithFoods,
-  useAllKitchensWithFoods,
-} from "../hooks/useKitchenListing";
 import { useGenericCart } from "../hooks/useGenericCart";
 import { showToast } from "../utils/toast";
 // import Edit from "../assets/images/edit.svg";
 import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
-import MobileLoader from "../components/Loader/MobileLoader";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import { useSelector } from "react-redux";
 
 export default function ListingPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { kitchenId: urlKitchenId } = useParams();
 
   // ✅ Get listing data from Redux store
   const {
@@ -28,11 +22,6 @@ export default function ListingPage() {
     isLoading: listingLoading,
     lastUpdated,
   } = useSelector((state) => state.listing);
-
-  // Get current kitchen from Redux (for fallback)
-  const currentKitchenFromRedux = useSelector(
-    (state) => state.food.currentKitchen
-  );
 
   // Use the generic cart hook for all cart operations
   const { cartItems, getCartQuantity, handleQuantityChange } = useGenericCart();

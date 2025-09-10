@@ -133,7 +133,7 @@ const DateTimePicker = ({
       console.log("❌ No internal date");
       return [];
     }
-
+    alert("order type: " + orderType);
     if (orderType === "GO_GRAB") {
       // Go&Grab logic
       const today = dayjs();
@@ -179,18 +179,22 @@ const DateTimePicker = ({
       console.log("🍽️ Processing PRE_ORDER time slots");
 
       if (!kitchen?.preorderSchedule?.dates) {
+        alert("No preorder schedule available in kitchen.");
         console.log("❌ No preorder schedule in kitchen");
         return [];
       }
 
       if (!food?.id) {
+        alert("No food ID available.");
         console.log("❌ No food ID");
         return [];
       }
 
       // Use internalDate instead of selectedDate for more reliable calculation
       const dateToUse = internalDate || selectedDate;
+      alert("Date to use for PRE_ORDER: " + dateToUse);
       if (!dateToUse) {
+        alert("No date to use for PRE_ORDER.");
         console.log("❌ No date to use");
         return [];
       }
@@ -198,7 +202,9 @@ const DateTimePicker = ({
       let scheduleDate;
       try {
         const parsedDate = dayjs(dateToUse);
+        alert("Parsed date: " + parsedDate);
         scheduleDate = parsedDate.format("YYYY-MM-DD");
+        alert("Schedule date: " + scheduleDate);
         console.log("📅 Schedule date:", scheduleDate);
       } catch (error) {
         console.error("Error parsing date:", dateToUse, error);
@@ -209,15 +215,21 @@ const DateTimePicker = ({
       console.log("📋 Available schedule dates:", Object.keys(scheduleDates));
 
       if (!scheduleDates[scheduleDate]) {
+        alert("No schedule for date: " + scheduleDate);
         console.log("❌ No schedule for date:", scheduleDate);
         return [];
       }
 
       const scheduleItems = scheduleDates[scheduleDate];
+      alert("Schedule items for date: " + JSON.stringify(scheduleItems));
       console.log("📦 Schedule items for date:", scheduleItems.length);
 
       const foodScheduleItems = scheduleItems.filter(
         (item) => item.foodItemId === food.id
+      );
+      alert(
+        "Food schedule items: foodScheduleItems:" +
+          JSON.stringify(foodScheduleItems)
       );
       console.log(
         "🍕 Food schedule items:",
@@ -227,6 +239,7 @@ const DateTimePicker = ({
       );
 
       if (foodScheduleItems.length === 0) {
+        alert("❌ No schedule items for this food");
         console.log("❌ No schedule items for this food");
         return [];
       }
@@ -235,13 +248,15 @@ const DateTimePicker = ({
 
       foodScheduleItems.forEach((scheduleItem, index) => {
         console.log(`📋 Processing schedule item ${index}:`, scheduleItem);
-
+        alert("Processing schedule item: " + JSON.stringify(scheduleItem));
         if (
           scheduleItem.availableTimes &&
           Array.isArray(scheduleItem.availableTimes)
         ) {
           console.log("⏰ Available times:", scheduleItem.availableTimes);
-
+          alert(
+            "Available times: " + JSON.stringify(scheduleItem.availableTimes)
+          );
           scheduleItem.availableTimes.forEach((time) => {
             try {
               const scheduledTime = dayjs(
@@ -282,13 +297,13 @@ const DateTimePicker = ({
           console.log("❌ No valid availableTimes array in schedule item");
         }
       });
-
+      alert("Total time slots before sorting: " + JSON.stringify(timeSlots));
       const sortedTimeSlots = timeSlots.sort((a, b) => {
         const timeA = dayjs(`2000-01-01 ${a.value}`, "YYYY-MM-DD h:mm A");
         const timeB = dayjs(`2000-01-01 ${b.value}`, "YYYY-MM-DD h:mm A");
         return timeA.diff(timeB);
       });
-
+      alert("Sorted time slots: " + JSON.stringify(sortedTimeSlots));
       console.log(
         "✅ Final PRE_ORDER time slots:",
         sortedTimeSlots.length,
@@ -306,7 +321,8 @@ const DateTimePicker = ({
     kitchen?.preorderSchedule?.dates,
     food?.id,
   ]);
-
+  alert("Order type: outside of the useMemo()" + orderType);
+  alert(`Available time slots: ${JSON.stringify(availableTimeSlots)}`);
   // ✅ FIXED: Handle date selection without causing infinite loops
   const handleDateChange = useCallback(
     (dateValue) => {
@@ -628,6 +644,7 @@ const DateTimePicker = ({
       setInternalTime(firstTime);
       onTimeChange(firstTime);
       hasAutoSelectedTime.current = true;
+      // eslint-disable-next-line no-unused-vars
       hasChanges = true;
     }
 
