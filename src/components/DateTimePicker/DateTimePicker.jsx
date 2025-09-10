@@ -5,8 +5,9 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import dayjs from "dayjs";
 import "./DateTimePicker.css";
+import dayjs from "../../lib/dayjs";
+import { parseClockTime } from "../../utils/timeParseUtils";
 
 /**
  * Reusable DateTimePicker component that handles both Go&Grab and Pre-Order scenarios
@@ -255,27 +256,29 @@ const DateTimePicker = ({
           scheduleItem.availableTimes &&
           Array.isArray(scheduleItem.availableTimes)
         ) {
-          console.log("⏰ Available times:", scheduleItem.availableTimes);
-          console.log(
-            "Available times: " + JSON.stringify(scheduleItem.availableTimes)
-          );
           scheduleItem.availableTimes.forEach((time) => {
             try {
-              const scheduledTime = dayjs(
-                `2000-01-01 ${time}`,
-                "YYYY-MM-DD h:mm A"
-              );
-
-              if (!scheduledTime.isValid()) {
-                console.warn("⚠️ Invalid time format:", time);
+              // ✅ FIX: strict-parse "7:30 PM" without relying on native Date
+              const parsed = parseClockTime(time);
+              console.log("Parsed time:", time, "->", parsed);
+              if (!parsed) {
+                console.warn("⚠️ Invalid time format (strict):", time);
                 return;
               }
 
+              // Build a concrete datetime on a safe base date (avoids Safari issues)
+              const base = dayjs("2000-01-01", "YYYY-MM-DD", true);
+              let scheduledTime = base
+                .hour(parsed.h)
+                .minute(parsed.min)
+                .second(0);
+
+              // generate ±30min in 15-min steps
               for (let offset = -30; offset <= 30; offset += 15) {
-                const timeSlot = scheduledTime.add(offset, "minutes");
+                const timeSlot = scheduledTime.add(offset, "minute");
                 const timeValue = timeSlot.format("h:mm A");
                 const hour = timeSlot.hour();
-                console.log("time slot: before" + timeSlot);
+
                 if (
                   hour >= 8 &&
                   hour <= 22 &&
@@ -290,10 +293,9 @@ const DateTimePicker = ({
                     originalTime: time,
                   });
                 }
-                console.log("time slot: after", timeSlot);
               }
-            } catch (error) {
-              console.error("❌ Error processing time:", time, error);
+            } catch (err) {
+              console.error("❌ Error processing time:", time, err);
             }
           });
         } else {
@@ -304,9 +306,12 @@ const DateTimePicker = ({
         "Total time slots before sorting: " + JSON.stringify(timeSlots)
       );
       const sortedTimeSlots = timeSlots.sort((a, b) => {
-        const timeA = dayjs(`2000-01-01 ${a.value}`, "YYYY-MM-DD h:mm A");
-        const timeB = dayjs(`2000-01-01 ${b.value}`, "YYYY-MM-DD h:mm A");
-        return timeA.diff(timeB);
+        const pa = dayjs(a.value, "h:mm A", true);
+        const pb = dayjs(b.value, "h:mm A", true);
+        const base = dayjs("2000-01-01", "YYYY-MM-DD", true);
+        const da = base.hour(pa.hour()).minute(pa.minute());
+        const db = base.hour(pb.hour()).minute(pb.minute());
+        return da.diff(db);
       });
       console.log("Sorted time slots: " + JSON.stringify(sortedTimeSlots));
       console.log(
