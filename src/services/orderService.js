@@ -144,14 +144,14 @@ export const createOrderObject = ({
       price: parseFloat(item.food?.cost || item.food?.price || 0),
     },
     price: parseFloat(item.food?.cost || item.food?.price || 0),
-    pickupDate: Timestamp.fromDate(item.pickupDetails?.date),
+    pickupDate: new Date(item.pickupDetails?.date),
     pickupTime: item.pickupDetails?.time || "4:30 PM",
   }));
 
   // Create the order object
   const orderObject = {
-    datePickedUp: Timestamp.fromDate(datePickedUp),
-    datePlaced: Timestamp.fromDate(now),
+    datePickedUp: datePickedUp,
+    datePlaced: now,
     kitchenId: kitchenInfo?.id || kitchenInfo?.kitchenId,
     kitchenName: kitchenInfo?.name,
     orderID: orderID,
