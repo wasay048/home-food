@@ -215,12 +215,6 @@ export default function PaymentPage() {
     return groups;
   }, [cartItems]);
 
-  // Format date for display
-  const formatDate = (dateString) => {
-    return dayjs(dateString).format("MMM D ddd");
-  };
-
-
   // Calculate payment totals
   const paymentCalculation = useMemo(() => {
     const subtotal = cartItems.reduce((total, item) => {
@@ -341,7 +335,7 @@ export default function PaymentPage() {
         paymentCalculation,
         groupedCartItems,
       });
-      
+
       console.log("Order data to be placed:", orderData);
 
       // Place the order in Firestore
@@ -406,7 +400,15 @@ export default function PaymentPage() {
       setIsPlacingOrder(false);
     }
   };
-
+  const handleCopyEmail = async (email) => {
+    try {
+      await navigator.clipboard.writeText(email);
+      showToast.success(`${email} copied to clipboard!`);
+    } catch (error) {
+      console.error("Failed to copy email:", error);
+      showToast.error("Failed to copy email");
+    }
+  };
   return (
     <>
       <div className="container">
@@ -428,7 +430,12 @@ export default function PaymentPage() {
                   <a className="email">jamesPayPal00@gmail.com</a>
                 </div>
                 <div className="copy">
-                  <Copy /> Copy
+                  <Copy
+                    onClick={async () =>
+                      await handleCopyEmail("jamesPayPal00@gmail.com")
+                    }
+                  />{" "}
+                  Copy
                 </div>
               </div>
               <div className="item-flex">
@@ -437,7 +444,12 @@ export default function PaymentPage() {
                   <a className="email">jamesVenmo00@gmail.com</a>
                 </div>
                 <div className="copy">
-                  <Copy /> Copy
+                  <Copy
+                    onClick={async () =>
+                      await handleCopyEmail("jamesVenmo00@gmail.com")
+                    }
+                  />{" "}
+                  Copy
                 </div>
               </div>
             </div>
@@ -492,7 +504,13 @@ export default function PaymentPage() {
                               {item.food?.name || "Unknown Item"}
                             </h5>
                             <div className="pickup-time">
-                              Today, {item.displayPickupClock}
+                              {dayjs(item.selectedDate).format(
+                                "dddd, MMMM D, YYYY"
+                              )}{" "}
+                              at{" "}
+                              {dayjs(item.selectedTime, "h:mm A").format(
+                                "h:mm A"
+                              )}
                             </div>
                             <div className="item-quantity">
                               Qty: {item.quantity} × $
@@ -535,7 +553,13 @@ export default function PaymentPage() {
                                   {item.food?.name || "Unknown Item"}
                                 </h5>
                                 <div className="pickup-time">
-                                  {formatDate(date)}, {item.displayPickupClock}
+                                  {dayjs(item.selectedDate).format(
+                                    "dddd, MMMM D, YYYY"
+                                  )}{" "}
+                                  at{" "}
+                                  {dayjs(item.selectedTime, "h:mm A").format(
+                                    "h:mm A"
+                                  )}
                                 </div>
                                 <div className="item-quantity">
                                   Qty: {item.quantity} × $

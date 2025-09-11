@@ -8,6 +8,7 @@ import React, {
 import "./DateTimePicker.css";
 import dayjs from "../../lib/dayjs";
 import { parseClockTime } from "../../utils/timeParseUtils";
+import { useGenericCart } from "../../hooks/useGenericCart";
 
 /**
  * Reusable DateTimePicker component that handles both Go&Grab and Pre-Order scenarios
@@ -16,7 +17,7 @@ import { parseClockTime } from "../../utils/timeParseUtils";
 const DateTimePicker = ({
   food,
   kitchen,
-  orderType = "GO_GRAB", // "GO_GRAB" or "PRE_ORDER"
+  orderType = "GO_GRAB",
   selectedDate = null,
   selectedTime = null,
   onDateChange = () => {},
@@ -49,6 +50,13 @@ const DateTimePicker = ({
       navigator.userAgent
     );
   }, []);
+
+  const { getCartQuantity, handleQuantityChange: handleCartQuantityChange } =
+    useGenericCart();
+  const cartQuantity = useMemo(() => {
+    if (!food?.id) return 0;
+    return getCartQuantity(food.id, selectedDate, orderType);
+  }, [food?.id, selectedDate, getCartQuantity]);
 
   // Calculate available dates based on order type
   const availableDates = useMemo(() => {
@@ -341,7 +349,6 @@ const DateTimePicker = ({
       // Validate that the selected date is allowed
       const selectedDateObj = dayjs(dateValue);
       const today = dayjs().startOf("day");
-
       console.log("📱 Date change:", {
         selectedDate: dateValue,
         isBeforeToday: selectedDateObj.isBefore(today),
@@ -376,6 +383,16 @@ const DateTimePicker = ({
 
       // Notify parent
       onDateChange(dateValue);
+      handleCartQuantityChange({
+        food,
+        kitchen,
+        newQuantity: cartQuantity,
+        currentQuantity: cartQuantity,
+        selectedDate: internalDate,
+        selectedTime: selectedTime,
+        specialInstructions: "",
+        incomingOrderType: orderType,
+      });
       onTimeChange(null);
     },
     [orderType, selectedDate, onDateChange, onTimeChange, isMobile]
@@ -386,6 +403,18 @@ const DateTimePicker = ({
     (timeValue) => {
       setInternalTime(timeValue);
       onTimeChange(timeValue);
+      // eslint-disable-next-line no-debugger
+      debugger;
+      handleCartQuantityChange({
+        food,
+        kitchen,
+        newQuantity: cartQuantity,
+        currentQuantity: cartQuantity,
+        selectedDate: internalDate,
+        selectedTime: timeValue,
+        specialInstructions: "",
+        incomingOrderType: orderType,
+      });
     },
     [onTimeChange]
   );

@@ -4,7 +4,7 @@ import {
   doc,
   updateDoc,
   increment,
-  Timestamp,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import dayjs from "../lib/dayjs";
@@ -34,30 +34,64 @@ export const placeOrder = async (orderData) => {
       orderIDKey: orderRef.id,
     });
 
-    // Update kitchen statistics (optional)
-    if (orderData.kitchenId) {
-      try {
-        const kitchenRef = doc(db, "kitchens", orderData.kitchenId);
-        await updateDoc(kitchenRef, {
-          totalOrders: increment(1),
-          lastOrderDate: new Date(),
-        });
-      } catch (error) {
-        console.warn("Could not update kitchen statistics:", error);
-      }
-    }
-
-    // Update food item statistics (optional)
     for (const item of orderData.orderedFoodItems) {
       try {
-        const foodRef = doc(db, "foods", item.foodItemId);
-        await updateDoc(foodRef, {
-          numOfSoldItem: increment(item.quantity),
-          numberOfAvailableItem: increment(-item.quantity),
-        });
+        if (item.orderType === "grabAndGo") {
+          // For Go&Grab: Update the foodItems collection
+          const foodRef = doc(db, "foodItems", item.foodItemId);
+          await updateDoc(foodRef, {
+            numOfSoldItem: increment(item.quantity),
+            numberOfAvailableItem: increment(-item.quantity),
+          });
+          console.log(
+            `Updated Go&Grab food item ${item.foodItemId}: sold +${item.quantity}, available -${item.quantity}`
+          );
+        } else if (item.orderType === "preOrder") {
+          // For PreOrder: Update the kitchen's preorderSchedule
+          const kitchenRef = doc(db, "kitchens", orderData.kitchenId);
+
+          // Get the pickup date for this item
+          const pickupDate =
+            item.pickupDate instanceof Date
+              ? dayjs(item.pickupDate).format("YYYY-MM-DD")
+              : dayjs(item.pickupDate).format("YYYY-MM-DD");
+
+          // First, get the current kitchen data to find the correct array index
+          const kitchenDoc = await getDoc(kitchenRef);
+          if (kitchenDoc.exists()) {
+            const kitchenData = kitchenDoc.data();
+            const dateSchedule =
+              kitchenData.preorderSchedule?.dates?.[pickupDate];
+
+            if (dateSchedule && Array.isArray(dateSchedule)) {
+              // Find the index of the food item in the schedule
+              const foodIndex = dateSchedule.findIndex(
+                (scheduleItem) => scheduleItem.foodItemId === item.foodItemId
+              );
+
+              if (foodIndex !== -1) {
+                // Update the specific food item's available count
+                const fieldPath = `preorderSchedule.dates.${pickupDate}.${foodIndex}.numOfAvailableItems`;
+                await updateDoc(kitchenRef, {
+                  [fieldPath]: increment(-item.quantity),
+                });
+
+                console.log(
+                  `Updated PreOrder for food ${item.foodItemId} on ${pickupDate}: available -${item.quantity}`
+                );
+              } else {
+                console.warn(
+                  `Food item ${item.foodItemId} not found in preorder schedule for ${pickupDate}`
+                );
+              }
+            } else {
+              console.warn(`No preorder schedule found for date ${pickupDate}`);
+            }
+          }
+        }
       } catch (error) {
-        console.warn(
-          `Could not update food item ${item.foodItemId} statistics:`,
+        console.error(
+          `Could not update item ${item.foodItemId} (${item.orderType}):`,
           error
         );
       }
@@ -144,8 +178,8 @@ export const createOrderObject = ({
       price: parseFloat(item.food?.cost || item.food?.price || 0),
     },
     price: parseFloat(item.food?.cost || item.food?.price || 0),
-    pickupDate: new Date(item.pickupDetails?.date),
-    pickupTime: item.pickupDetails?.time || "4:30 PM",
+    pickupDate: new Date(item.selectedDate),
+    pickupTime: item.selectedTime || "4:30 PM",
   }));
 
   // Create the order object

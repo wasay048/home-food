@@ -345,6 +345,17 @@ export default function OrderPage() {
                                 orderType="GO_GRAB"
                               />
                             </div>
+                            <div className="title">
+                              {dayjs(item.selectedDate).format("MMMM D, YYYY")}{" "}
+                            </div>
+                            <div className="bottom">
+                              <div className="time">
+                                at{" "}
+                                {dayjs(item?.selectedTime, "h:mm A").format(
+                                  "h:mm A"
+                                ) || "5:30 PM"}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       );
@@ -415,11 +426,11 @@ export default function OrderPage() {
                               <div className="title">
                                 {item.displayPickupTime}
                               </div>
-                              {/* <div className="bottom">
+                              <div className="bottom">
                                 <div className="time">
                                   {item.displayPickupClock}
                                 </div>
-                              </div> */}
+                              </div>
                             </div>
                           </div>
                         );

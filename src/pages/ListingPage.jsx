@@ -22,7 +22,7 @@ export default function ListingPage() {
   } = useSelector((state) => state.listing);
 
   // Use the generic cart hook for all cart operations
-  const { cartItems, getCartQuantity } = useGenericCart();
+  const { cartItems, getCartQuantity, handleQuantityChange } = useGenericCart();
 
   // State for managing pickup dates and times for each food item
   const [pickupDates, setPickupDates] = useState({});
@@ -95,7 +95,6 @@ export default function ListingPage() {
     }
   };
 
-  // Date/Time picker handlers
   const handleDateChange = useCallback(
     (foodId, newDate, isPreOrder = false) => {
       const key = isPreOrder ? `${foodId}_preorder` : foodId;
@@ -181,33 +180,15 @@ export default function ListingPage() {
     [cartQuantities]
   );
 
-  // if (error) {
-  //   return (
-  //     <div className="container">
-  //       <div className="mobile-container">
-  //         <div className="padding-20">
-  //           <div className="text-center py-5 text-danger">Error: {error}</div>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  useEffect(() => {
+    console.log("pickupDates updated:", pickupDates);
+    console.log("pickupTimes updated:", pickupTimes);
+  }, [pickupDates, pickupTimes]);
 
-  // // Show loader if still loading OR if data is not ready
-  // if (loading) {
-  //   return (
-  //     <div className="container">
-  //       <div className="mobile-container">
-  //         <MobileLoader
-  //           isLoading={true}
-  //           text="Loading menu items..."
-  //           overlay={true}
-  //           size="medium"
-  //         />
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  console.log(
+    "Rendering ListingPage with state:",
+    cartItems.map((item) => item.foodId)
+  );
   return (
     <div className="container">
       <div className="mobile-container">
@@ -289,12 +270,12 @@ export default function ListingPage() {
                             orderType="GO_GRAB"
                             selectedDate={pickupDates[food.id]}
                             selectedTime={pickupTimes[food.id]}
-                            onDateChange={(newDate) =>
-                              handleDateChange(food.id, newDate, false)
-                            }
-                            onTimeChange={(newTime) =>
-                              handleTimeChange(food.id, newTime, false)
-                            }
+                            onDateChange={(newDate) => {
+                              handleDateChange(food.id, newDate, false);
+                            }}
+                            onTimeChange={(newTime) => {
+                              handleTimeChange(food.id, newTime, false);
+                            }}
                             disabled={!food || !kitchen}
                             className="listing-page-picker"
                             dateLabel=""
@@ -381,12 +362,12 @@ export default function ListingPage() {
                                 dateInfo.dateString
                               }
                               selectedTime={pickupTimes[`${food.id}_preorder`]}
-                              onDateChange={(newDate) =>
-                                handleDateChange(food.id, newDate, true)
-                              }
-                              onTimeChange={(newTime) =>
-                                handleTimeChange(food.id, newTime, true)
-                              }
+                              onDateChange={(newDate) => {
+                                handleDateChange(food.id, newDate, true);
+                              }}
+                              onTimeChange={(newTime) => {
+                                handleTimeChange(food.id, newTime, true);
+                              }}
                               disabled={!food || !kitchen}
                               className="listing-page-picker"
                               dateLabel=""

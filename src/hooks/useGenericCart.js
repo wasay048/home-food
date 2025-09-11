@@ -214,7 +214,6 @@ export const useGenericCart = () => {
 
         return matchesFood && matchesDate;
       });
-      console.log("matchedItems getCartQuantity", matchingItems);
       // Sum up quantities from all matching items
       const totalQuantity = matchingItems.reduce((total, item) => {
         return total + (item.quantity || 1);
@@ -236,10 +235,15 @@ export const useGenericCart = () => {
       specialInstructions = "",
       incomingOrderType,
     }) => {
+      // eslint-disable-next-line no-debugger
+      debugger;
       console.log("🔥 handleQuantityChange called with:", incomingOrderType);
       try {
         // ✅ NEW: Use calculateAvailability to determine proper order type
-
+        console.log("selectedDate", selectedDate);
+        console.log("selectedTime", selectedTime);
+        // eslint-disable-next-line no-debugger
+        debugger;
         const availability = calculateAvailability(
           food,
           kitchen,
@@ -314,10 +318,12 @@ export const useGenericCart = () => {
 
           // ✅ CRITICAL: For Go&Grab items, update the selectedDate but keep orderType as GO_GRAB
           if (isGoGrab) {
-            updateData.selectedDate = selectedDate; // Allow date update for pickup preference
+            console.log("updatedData", updateData);
+            updateData.selectedDate = selectedDate;
             updateData.selectedTime = selectedTime;
-            updateData.orderType = "GO_GRAB"; // Ensure it stays Go&Grab
+            updateData.orderType = "GO_GRAB";
           } else {
+            console.log("updatedData", updateData);
             // For Pre-Order, keep exact date and time
             updateData.selectedDate = selectedDate;
             updateData.selectedTime = selectedTime;
@@ -354,7 +360,7 @@ export const useGenericCart = () => {
         }
       } catch (error) {
         console.error("❌ Error updating cart:", error);
-        showToast.error("Failed to update cart");
+        // showToast.error("Failed to update cart");
       }
     },
     [dispatch, cartItems, calculateAvailability]

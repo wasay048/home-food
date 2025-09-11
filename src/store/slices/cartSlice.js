@@ -17,6 +17,7 @@ const cartSlice = createSlice({
       console.log("🛒 Adding to cart:", action.payload);
 
       const newItem = action.payload;
+      const { selectedDate, selectedTime } = action.payload;
       console.log("newItem redux item:", newItem);
       console.log("state item length redux items:", state?.items?.length);
 
@@ -32,7 +33,8 @@ const cartSlice = createSlice({
         const oldQuantity = state.items[existingItemIndex].quantity;
         state.items[existingItemIndex].quantity += newItem.quantity || 1;
         state.items[existingItemIndex].updatedAt = new Date().toISOString();
-
+        state.items[existingItemIndex].selectedDate = selectedDate;
+        state.items[existingItemIndex].selectedTime = selectedTime;
         console.log("📦 Updated existing cart item quantity:", {
           foodId: newItem.foodId,
           selectedDate: newItem.selectedDate,
@@ -93,8 +95,14 @@ const cartSlice = createSlice({
 
     // Update cart item (quantity and special instructions)
     updateCartItem: (state, action) => {
-      const { cartItemId, quantity, specialInstructions, orderType } =
-        action.payload;
+      const {
+        cartItemId,
+        quantity,
+        specialInstructions,
+        orderType,
+        selectedDate,
+        selectedTime,
+      } = action.payload;
 
       console.log("📝 Updating cart item:", action.payload);
       console.log("state item length redux items:", state?.items?.length);
@@ -108,6 +116,12 @@ const cartSlice = createSlice({
         }
         if (specialInstructions !== undefined) {
           state.items[itemIndex].specialInstructions = specialInstructions;
+        }
+        if (selectedDate !== undefined) {
+          state.items[itemIndex].selectedDate = selectedDate;
+        }
+        if (selectedTime !== undefined) {
+          state.items[itemIndex].selectedTime = selectedTime;
         }
         state.items[itemIndex].updatedAt = new Date().toISOString();
         console.log("Updated cart redux items:", state.items);

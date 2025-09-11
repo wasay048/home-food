@@ -389,15 +389,43 @@ export default function FoodDetailPage() {
   });
 
   // Date/Time picker handlers
-  const handleDateChange = useCallback((newDate) => {
-    setPickupDate(newDate);
-    console.log("📅 Date changed to:", newDate);
-  }, []);
+  // const handleDateChange = useCallback((newDate) => {
+  //   // eslint-disable-next-line no-debugger
+  //   // debugger;
+  //   setPickupDate(newDate);
+  //   if (cartQuantity > 0) {
+  //     handleCartQuantityChange({
+  //       food,
+  //       kitchen,
+  //       newQuantity: selectedQuantity,
+  //       currentQuantity: cartQuantity,
+  //       selectedDate: pickupDate,
+  //       selectedTime: pickupTime,
+  //       specialInstructions,
+  //       incomingOrderType: orderType,
+  //     });
+  //   }
+  // }, []);
 
-  const handleTimeChange = useCallback((newTime) => {
-    setPickupTime(newTime);
-    console.log("⏰ Time changed to:", newTime);
-  }, []);
+  // const handleTimeChange = useCallback(
+  //   (newTime) => {
+  //     setPickupTime(newTime);
+  //     console.log("newTime", newTime);
+  //     console.log("cartQuantity", cartQuantity);
+  //     // eslint-disable-next-line no-debugger
+  //     handleCartQuantityChange({
+  //       food,
+  //       kitchen,
+  //       newQuantity: selectedQuantity,
+  //       currentQuantity: cartQuantity,
+  //       selectedDate: pickupDate,
+  //       selectedTime: newTime,
+  //       specialInstructions,
+  //       incomingOrderType: orderType,
+  //     });
+  //   },
+  //   [pickupTime]
+  // );
 
   const handleAvailabilityChange = useCallback((availabilityData) => {
     setAvailabilityStatus(availabilityData);
@@ -715,6 +743,11 @@ export default function FoodDetailPage() {
     }
   }, [fullKitchen, allFoods, kitchenId, dispatch]);
 
+  useEffect(() => {
+    console.log("pickupDate", pickupDate);
+    console.log("pickupTime", pickupTime);
+  }, [pickupDate, pickupTime]);
+
   if (loading) {
     return (
       <div className="container">
@@ -756,14 +789,7 @@ export default function FoodDetailPage() {
                   </svg>
                 </div>
                 <div className="text">
-                  <strong>
-                    {kitchen?.rating && kitchen?.ratingCount
-                      ? parseFloat(
-                          parseInt(kitchen?.rating) /
-                            parseInt(kitchen?.ratingCount)
-                        ).toFixed(1)
-                      : "0"}
-                  </strong>
+                  <strong>{displayRating.toFixed(1)}</strong>
                 </div>
               </div>
               <div className="line"></div>
@@ -873,8 +899,32 @@ export default function FoodDetailPage() {
                 orderType={orderType}
                 selectedDate={pickupDate}
                 selectedTime={pickupTime}
-                onDateChange={handleDateChange}
-                onTimeChange={handleTimeChange}
+                onDateChange={(newDate) => {
+                  setPickupDate(newDate);
+                  handleCartQuantityChange({
+                    food,
+                    kitchen,
+                    newQuantity: selectedQuantity,
+                    currentQuantity: cartQuantity,
+                    selectedDate: newDate,
+                    selectedTime: pickupTime,
+                    specialInstructions,
+                    incomingOrderType: orderType,
+                  });
+                }}
+                onTimeChange={(newTime) => {
+                  setPickupTime(newTime);
+                  handleCartQuantityChange({
+                    food,
+                    kitchen,
+                    newQuantity: selectedQuantity,
+                    currentQuantity: cartQuantity,
+                    selectedDate: pickupDate,
+                    selectedTime: newTime,
+                    specialInstructions,
+                    incomingOrderType: orderType,
+                  });
+                }}
                 disabled={!food || !kitchen}
                 className="food-detail-picker"
               />
