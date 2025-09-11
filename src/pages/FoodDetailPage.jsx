@@ -639,13 +639,13 @@ export default function FoodDetailPage() {
       console.log("Existing cart data cleared!");
 
       // ✅ NEW: Clear user authentication state on direct landing
-      if (user) {
-        console.log("👤 Clearing user authentication state on direct landing");
-        dispatch(logout()); // Use the correct action name
-        console.log(
-          "User authentication cleared - will require re-auth for orders!"
-        );
-      }
+      // if (user) {
+      //   console.log("👤 Clearing user authentication state on direct landing");
+      //   dispatch(logout()); // Use the correct action name
+      //   console.log(
+      //     "User authentication cleared - will require re-auth for orders!"
+      //   );
+      // }
     }
   }, [dispatch, location.state]);
 
