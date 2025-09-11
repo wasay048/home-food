@@ -6,6 +6,13 @@ import {
   increment,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import dayjs from "../lib/dayjs";
+
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 /**
  * Create and place an order in Firestore
@@ -61,6 +68,12 @@ export const placeOrder = async (orderData) => {
     throw error;
   }
 };
+
+function formatDate(date) {
+  return dayjs(date)
+    .tz("Etc/GMT-5")
+    .format("MMMM D, YYYY [at] h:mm:ss A [UTC+5]");
+}
 
 /**
  * Generate a unique order ID (6-digit number)
@@ -121,51 +134,46 @@ export const createOrderObject = ({
     numOfSoldItem: item.food?.numOfSoldItem || 0,
     numberOfAvailableItem: item.food?.numberOfAvailableItem || 0,
     quantity: parseInt(item.quantity || 1),
+    orderStatus: "inProgress",
+    orderType:
+      item.pickupDetails.orderType === "PRE_ORDER" ? "preOrder" : "grabAndGo",
     rating: 0,
     specialInstructions: item.specialInstructions || "",
-    // Include preOrder details if available
-    ...(item.food?.preOrder && {
-      preOrder: {
-        availableTimes: item.food.preOrder.availableTimes || [],
-        foodItemId: item.foodId || item.id,
-        id: generateUniqueId(),
-        nameOfFood: item.food?.name || "Unknown Item",
-        numOfAvailableItems: item.food?.numberOfAvailableItem || 0,
-        price: parseFloat(item.food?.cost || item.food?.price || 0),
-      },
-    }),
-    // Include pickup details
-    pickupDetails: item.pickupDetails || {},
+    preOrder: {
+      availableTimes: [],
+      foodItemId: item.foodId || item.id,
+      id: generateUniqueId(),
+      isLimitedOrder: item?.food?.isLimitedOrder || false,
+      nameOfFood: item.food?.name || "Unknown Item",
+      numOfAvailableItems: item.food?.numberOfAvailableItem || 0,
+      price: parseFloat(item.food?.cost || item.food?.price || 0),
+    },
+    pickupDate: formatDate(item.pickupDetails?.date),
+    pickupTime: item.pickupDetails?.time || "4:30 PM",
   }));
 
   // Create the order object
   const orderObject = {
-    datePickedUp: datePickedUp,
-    datePlaced: now,
-    kitchenId: kitchenInfo?.id || kitchenInfo?.kitchenId || "unknown",
-    kitchenName: kitchenInfo?.name || "Unknown Kitchen",
+    datePickedUp: formatDate(datePickedUp),
+    datePlaced: formatDate(now),
+    kitchenId: kitchenInfo?.id || kitchenInfo?.kitchenId,
+    kitchenName: kitchenInfo?.name,
     orderID: orderID,
     orderIDKey: "", // Will be set after document creation
     orderPaymentImage: firebaseImageUrl || "",
-    orderStatus: "pending",
+    orderStatus: "inProgress",
     orderTotalCoast: parseFloat(paymentCalculation.totalPayment),
     orderType: orderType,
     orderedFoodItems: orderedFoodItems,
     paymentVia: {
-      other: {
-        // You can add payment method details here
-        method: "manual_upload",
-        uploadedAt: firebaseImageUrl ? now : null,
-      },
+      other: {},
     },
-    pickUpAddress: kitchenInfo?.address || "Address not available",
+    pickUpAddress: kitchenInfo?.address,
     userId: currentUser?.id,
     // Additional metadata
     subtotal: parseFloat(paymentCalculation.subtotal),
     salesTax: parseFloat(paymentCalculation.salesTax),
     taxRate: 0.0725,
-    createdAt: now,
-    updatedAt: now,
   };
 
   return orderObject;

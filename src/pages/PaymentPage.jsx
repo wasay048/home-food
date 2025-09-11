@@ -368,7 +368,7 @@ export default function PaymentPage() {
         paymentCalculation,
         groupedCartItems,
       });
-
+      
       console.log("Order data to be placed:", orderData);
 
       // Place the order in Firestore
