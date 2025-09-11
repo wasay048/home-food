@@ -110,7 +110,8 @@ export default function PaymentPage() {
   // Handle pickup details update from modal
   const handleModalPickupUpdate = async () => {
     if (editingItem && modalSelectedDate && modalSelectedTime) {
-      const isPreOrder = modalSelectedDate !== dayjs().format("YYYY-MM-DD");
+      // eslint-disable-next-line no-debugger
+      const isPreOrder = editingItem.orderType === "PRE_ORDER";
 
       const pickupDetails = {
         date: modalSelectedDate,
@@ -219,34 +220,6 @@ export default function PaymentPage() {
     return dayjs(dateString).format("MMM D ddd");
   };
 
-  // Get summary of pickup dates and times from cart
-  const pickupSummary = useMemo(() => {
-    const summary = [];
-
-    // Add Go&Grab items
-    if (groupedCartItems.grabAndGo.length > 0) {
-      const firstGrabItem = groupedCartItems.grabAndGo[0];
-      summary.push({
-        type: "Go&Grab",
-        date: "Today",
-        time: firstGrabItem.displayPickupClock,
-        count: groupedCartItems.grabAndGo.length,
-      });
-    }
-
-    // Add Pre-Order items by date
-    Object.entries(groupedCartItems.preOrders).forEach(([date, items]) => {
-      const firstItem = items[0];
-      summary.push({
-        type: "Pre-Order",
-        date: formatDate(date),
-        time: firstItem.displayPickupClock,
-        count: items.length,
-      });
-    });
-
-    return summary;
-  }, [groupedCartItems, formatDate]);
 
   // Calculate payment totals
   const paymentCalculation = useMemo(() => {

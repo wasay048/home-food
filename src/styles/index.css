@@ -2140,7 +2140,7 @@ body,
   min-width: 300px;
   max-width: 300px;
   margin: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  /* box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); */
 }
 
 .modal-header {

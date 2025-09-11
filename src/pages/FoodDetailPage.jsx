@@ -236,6 +236,10 @@ export default function FoodDetailPage() {
   const { getCartQuantity, handleQuantityChange: handleCartQuantityChange } =
     useGenericCart();
 
+  useEffect(() => {
+    localStorage.setItem("detailPage", window.location.href);
+  }, []);
+
   const getPageParams = () => {
     console.log("🔍 [FoodDetailPage] Current pathname:", location.pathname);
     console.log("🔍 [FoodDetailPage] Search params:", searchParams.toString());

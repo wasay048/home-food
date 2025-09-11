@@ -312,7 +312,20 @@ export default function SuccessPage() {
             {/* <Link to="/order" className="action-button secondary mb-12">
               View Order Details
             </Link> */}
-            <Link to="/" className="action-button">
+            <Link
+              onClick={() => {
+                const detailPage = localStorage.getItem("detailPage");
+                if (detailPage) {
+                  console.log(
+                    "Going back to detailPage from localStorage:",
+                    detailPage
+                  );
+                  window.location.href = detailPage;
+                  return;
+                }
+              }}
+              className="action-button"
+            >
               Back to Home
             </Link>
           </div>

@@ -59,6 +59,12 @@ export default function ListingPage() {
 
   // Function to go back to previous page in history
   const handleGoBack = () => {
+    const detailPage = localStorage.getItem("detailPage");
+    if (detailPage) {
+      console.log("Going back to detailPage from localStorage:", detailPage);
+      window.location.href = detailPage;
+      return;
+    }
     // Check if we have state from FoodDetailPage with the exact params
     if (location.state?.from?.fullUrl) {
       console.log(
