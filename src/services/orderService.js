@@ -4,6 +4,7 @@ import {
   doc,
   updateDoc,
   increment,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import dayjs from "../lib/dayjs";
@@ -69,12 +70,6 @@ export const placeOrder = async (orderData) => {
   }
 };
 
-function formatDate(date) {
-  return dayjs(date)
-    .tz("Etc/GMT-5")
-    .format("MMMM D, YYYY [at] h:mm:ss A [UTC+5]");
-}
-
 /**
  * Generate a unique order ID (6-digit number)
  * @returns {string} - A unique 6-digit order ID
@@ -96,7 +91,7 @@ export const createOrderObject = ({
   paymentCalculation,
   groupedCartItems,
 }) => {
-  const now = new Date().toISOString();
+  const now = new Date();
   const orderID = generateOrderID();
 
   // Determine order type based on cart items
@@ -117,7 +112,7 @@ export const createOrderObject = ({
     const preOrderDates = Object.keys(groupedCartItems.preOrders);
     if (preOrderDates.length > 0) {
       const earliestDate = preOrderDates.sort()[0];
-      datePickedUp = new Date(earliestDate).toISOString();
+      datePickedUp = new Date(earliestDate);
     }
   }
 
@@ -148,14 +143,15 @@ export const createOrderObject = ({
       numOfAvailableItems: item.food?.numberOfAvailableItem || 0,
       price: parseFloat(item.food?.cost || item.food?.price || 0),
     },
-    pickupDate: formatDate(item.pickupDetails?.date),
+    price: parseFloat(item.food?.cost || item.food?.price || 0),
+    pickupDate: Timestamp.fromDate(item.pickupDetails?.date),
     pickupTime: item.pickupDetails?.time || "4:30 PM",
   }));
 
   // Create the order object
   const orderObject = {
-    datePickedUp: formatDate(datePickedUp),
-    datePlaced: formatDate(now),
+    datePickedUp: Timestamp.fromDate(datePickedUp),
+    datePlaced: Timestamp.fromDate(now),
     kitchenId: kitchenInfo?.id || kitchenInfo?.kitchenId,
     kitchenName: kitchenInfo?.name,
     orderID: orderID,
