@@ -40,7 +40,7 @@ const WeChatCallbackPage = () => {
           credentials: "omit",
         });
         const json = await res.json();
-        alert("res: " + JSON.stringify(json));
+        // alert("res: " + JSON.stringify(json));
 
         if (!res.ok || json.error) {
           // alert("error:" + JSON.stringify(json.error));

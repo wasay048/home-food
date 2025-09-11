@@ -79,7 +79,7 @@ export const toggleFoodLike = createAsyncThunk(
     const { auth, food } = getState();
     const userId = auth.user?.id;
     const kitchenId = food.currentKitchen?.id;
-    alert("auth Obj:" + JSON.stringify(auth));
+    // alert("auth Obj:" + JSON.stringify(auth));
     console.log("🔄 Toggle like action:", {
       foodId,
       userId,

@@ -308,7 +308,7 @@ export default function PaymentPage() {
         return;
       }
       console.log("Placing order for user:", currentUser);
-      alert("Placing order for user: " + JSON.stringify(currentUser));
+      // alert("Placing order for user: " + JSON.stringify(currentUser));
       console.log("Placing order for isAuthenticated:", isAuthenticated);
       // Check authentication FIRST before other validations
       if (!isAuthenticated || !currentUser) {

@@ -168,9 +168,9 @@ export const useUserAccount = () => {
         const data = { id: accountDoc.id, ...accountDoc.data() };
 
         console.log("[useUserAccount] Account found:", accountDoc.id);
-        alert(
-          `✅ Existing account found!\nID: ${accountDoc.id}\nEmail: ${data.email}`
-        );
+        // alert(
+        //   `✅ Existing account found!\nID: ${accountDoc.id}\nEmail: ${data.email}`
+        // );
 
         return {
           exists: true,
@@ -277,9 +277,9 @@ export const useUserAccount = () => {
         await setDoc(newAccountRef, newAccountData);
 
         console.log("[useUserAccount] Account created:", newAccountRef.id);
-        alert(
-          `✅ New account created!\nFirestore ID: ${newAccountRef.id}\nFirebase UID: ${firebaseAuth.firebaseUid}\nEmail: ${email}`
-        );
+        // alert(
+        //   `✅ New account created!\nFirestore ID: ${newAccountRef.id}\nFirebase UID: ${firebaseAuth.firebaseUid}\nEmail: ${email}`
+        // );
 
         return {
           success: true,
@@ -370,9 +370,9 @@ export const useUserAccount = () => {
         // Generate email
         const email = generateEmailFromWeChatUser(unionid, nickname);
 
-        alert(
-          `🔄 Processing WeChat account:\nNickname: ${nickname}\nEmail: ${email}`
-        );
+        // alert(
+        //   `🔄 Processing WeChat account:\nNickname: ${nickname}\nEmail: ${email}`
+        // );
 
         // Check if account exists
         const accountCheck = await checkAccountExists(email);
@@ -413,14 +413,14 @@ export const useUserAccount = () => {
 
           setAccountData(result);
 
-          alert(
-            `✅ Existing user logged in!\n` +
-              `- Document ID: ${result.documentId}\n` +
-              `- Stored Firebase UID: ${
-                result.firebaseUid || "Not available"
-              }\n` +
-              `- Email: ${result.email}`
-          );
+          // alert(
+          //   `✅ Existing user logged in!\n` +
+          //     `- Document ID: ${result.documentId}\n` +
+          //     `- Stored Firebase UID: ${
+          //       result.firebaseUid || "Not available"
+          //     }\n` +
+          //     `- Email: ${result.email}`
+          // );
 
           return result;
         }

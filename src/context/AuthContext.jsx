@@ -117,13 +117,13 @@ export function AuthProvider({ children }) {
         console.log("✅ Got user info:", userInfo);
         const accountResult = await processWeChatAccount(userInfo);
 
-        alert(
-          `✅ Firebase Authentication Complete!\n` +
-            `- New User: ${accountResult.isNewUser ? "Yes" : "No"}\n` +
-            `- Email: ${accountResult.email}\n` +
-            `- Document ID: ${accountResult.documentId}\n` +
-            `- Firebase UID: ${accountResult.firebaseUid || "Not available"}`
-        );
+        // alert(
+        //   `✅ Firebase Authentication Complete!\n` +
+        //     `- New User: ${accountResult.isNewUser ? "Yes" : "No"}\n` +
+        //     `- Email: ${accountResult.email}\n` +
+        //     `- Document ID: ${accountResult.documentId}\n` +
+        //     `- Firebase UID: ${accountResult.firebaseUid || "Not available"}`
+        // );
         // Step 3: Create user object
         const wechatUser = {
           id: accountResult.account.id,
