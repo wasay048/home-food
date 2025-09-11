@@ -134,7 +134,7 @@ export default function PaymentPage() {
           selectedDate: modalSelectedDate,
           selectedTime: modalSelectedTime,
           specialInstructions: editingItem.specialInstructions || "",
-          isPreOrder: isPreOrder,
+          incomingOrderType: isPreOrder ? "PRE_ORDER" : "GO_GRAB",
         });
 
         showToast.success(

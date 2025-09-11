@@ -14,7 +14,16 @@ export const useGenericCart = () => {
 
   // ✅ CONSOLIDATED: Single function to calculate availability (moved from QuantitySelector)
   const calculateAvailability = useCallback(
-    (food, kitchen, selectedDate = null, maxQuantity = 99) => {
+    (
+      food,
+      kitchen,
+      selectedDate = null,
+      maxQuantity = 99,
+      incomingOrderType = null
+    ) => {
+      if (!incomingOrderType) {
+        return;
+      }
       // CASE 1: No food object provided
       if (!food) {
         return {
@@ -35,7 +44,7 @@ export const useGenericCart = () => {
 
       // CASE 2: Go&Grab items with availability > 0 (HIGHEST PRIORITY)
       // This case ignores date completely - if items are available, it's Go&Grab
-      if (numAvailable > 0) {
+      if (numAvailable > 0 && incomingOrderType === "GO_GRAB") {
         return {
           isAvailable: true,
           maxAvailable: Math.min(numAvailable, maxQuantity),
@@ -47,7 +56,7 @@ export const useGenericCart = () => {
       }
 
       // CASE 3: Selected date provided, but need to validate it's not in the past
-      if (selectedDate) {
+      if (selectedDate && incomingOrderType === "PRE_ORDER") {
         const orderDate = dayjs(selectedDate).startOf("day");
 
         // CASE 3A: Past date selected - ignore Pre-Order, fall back to current availability
@@ -170,14 +179,18 @@ export const useGenericCart = () => {
 
   // ✅ FIXED: Function to get cart quantity for a specific food item
   const getCartQuantity = useCallback(
-    (foodId, selectedDate = null) => {
+    (foodId, selectedDate = null, orderType = null) => {
       if (!foodId || !cartItems || cartItems.length === 0) {
         return 0;
       }
 
+      console.log("orderType getCartQuantity", orderType);
       // ✅ CRITICAL FIX: For Go&Grab items, always match regardless of date
       const matchingItems = cartItems.filter((item) => {
-        const matchesFood = String(item.foodId) === String(foodId);
+        console.log("item getCartQuantity", item);
+        const matchesFood =
+          String(item.foodId) === String(foodId) &&
+          item.orderType === orderType;
 
         // ✅ IMPROVED: Always prioritize Go&Grab matching
         const isGoGrabOrderType =
@@ -201,12 +214,12 @@ export const useGenericCart = () => {
 
         return matchesFood && matchesDate;
       });
-
+      console.log("matchedItems getCartQuantity", matchingItems);
       // Sum up quantities from all matching items
       const totalQuantity = matchingItems.reduce((total, item) => {
         return total + (item.quantity || 1);
       }, 0);
-
+      console.log("totalQuantity", totalQuantity);
       return totalQuantity;
     },
     [cartItems]
@@ -221,16 +234,34 @@ export const useGenericCart = () => {
       selectedDate = null,
       selectedTime = null,
       specialInstructions = "",
+      incomingOrderType,
     }) => {
+      console.log("🔥 handleQuantityChange called with:", incomingOrderType);
       try {
         // ✅ NEW: Use calculateAvailability to determine proper order type
-        const availability = calculateAvailability(food, kitchen, selectedDate);
+
+        const availability = calculateAvailability(
+          food,
+          kitchen,
+          selectedDate,
+          99,
+          incomingOrderType
+        );
+        if (!availability) {
+          console.log("🔥 Missing availability data");
+          return;
+        }
         const orderType = availability.orderType;
-        const isGoGrab = orderType === "GO_GRAB";
+        const isGoGrab =
+          orderType === "GO_GRAB" ||
+          orderType === "Go&Grab" ||
+          orderType === "Go & Grab";
 
         // ✅ CRITICAL FIX: Find matching cart item with proper Go&Grab logic
         const matchingItem = cartItems.find((item) => {
-          const matchesFood = String(item.foodId) === String(food.id);
+          const matchesFood =
+            String(item.foodId) === String(food.id) &&
+            item.orderType === orderType;
 
           // ✅ IMPROVED: For Go&Grab, match ANY item with this food regardless of date
           const itemIsGoGrab =
@@ -292,7 +323,7 @@ export const useGenericCart = () => {
             updateData.selectedTime = selectedTime;
             updateData.orderType = "PRE_ORDER";
           }
-
+          console.log("Updating cart item with data:", updateData);
           dispatch(updateCartItem(updateData));
         } else {
           // Add new item
@@ -317,7 +348,8 @@ export const useGenericCart = () => {
             isPreOrder: orderType === "PRE_ORDER",
             orderType,
           };
-
+          console.log("Adding new cart item:", cartItem);
+          console.log("orderType", orderType);
           dispatch(addToCart(cartItem));
         }
       } catch (error) {

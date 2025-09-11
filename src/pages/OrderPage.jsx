@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import dayjs from "dayjs";
 import { clearCart } from "../store/slices/cartSlice";
 import { showToast } from "../utils/toast";
-import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
+import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
 
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
 import { useGenericCart } from "../hooks/useGenericCart";
@@ -18,14 +18,12 @@ export default function OrderPage() {
   const cartItems = useSelector((state) => state.cart.items);
 
   // Use generic cart hook for reliable quantity updates
-  const { getCartQuantity, handleQuantityChange } = useGenericCart();
+  const { getCartQuantity } = useGenericCart();
 
   // State for tracking which items are in edit mode for pickup date/time
   const [editModeItems, setEditModeItems] = useState(new Set());
 
   const [showRemoveAllDialog, setShowRemoveAllDialog] = useState(false);
-  const [showRemoveItemDialog, setShowRemoveItemDialog] = useState(false);
-  const [pendingRemovalItem, setPendingRemovalItem] = useState(null);
 
   // Handle navigation from PaymentPage edit functionality
   useEffect(() => {
@@ -64,8 +62,8 @@ export default function OrderPage() {
   }, [foods]);
 
   const getItemCartQuantity = useCallback(
-    (foodId, selectedDate = null) => {
-      return getCartQuantity(foodId, selectedDate);
+    (foodId, selectedDate = null, orderType) => {
+      return getCartQuantity(foodId, selectedDate, orderType);
     },
     [getCartQuantity]
   );
@@ -230,39 +228,6 @@ export default function OrderPage() {
     setShowRemoveAllDialog(false);
   };
 
-  // ✅ NEW: Enhanced quantity change handler with confirmation for removal
-  const handleQuantityChangeWithConfirmation = async (params) => {
-    console.log("params", params);
-    const { newQuantity, currentQuantity, food } = params;
-
-    console.log("OrderPage - handleQuantityChangeWithConfirmation:", {
-      params,
-    });
-    if (currentQuantity === 1 && newQuantity === 0) {
-      setPendingRemovalItem({
-        ...params,
-        itemName: food.name || "this item",
-      });
-      setShowRemoveItemDialog(true);
-      return;
-    }
-
-    // For all other quantity changes, proceed normally
-    await handleQuantityChange(params);
-  };
-
-  const confirmRemoveItem = async () => {
-    if (pendingRemovalItem) {
-      await handleQuantityChange(pendingRemovalItem);
-      setPendingRemovalItem(null);
-      setShowRemoveItemDialog(false);
-    }
-  };
-
-  const cancelRemoveItem = () => {
-    setPendingRemovalItem(null);
-    setShowRemoveItemDialog(false);
-  };
   // Format date for display
   const formatDate = (dateString) => {
     return dayjs(dateString).format("MMM D ddd");
@@ -330,7 +295,11 @@ export default function OrderPage() {
                   <h2 className="small-title mb-20">Go&Grab</h2>
                   <div className="menu-listing">
                     {groupedCartItems.grabAndGo.map((item, index) => {
-                      const cartQty = getItemCartQuantity(item.foodId);
+                      const cartQty = getItemCartQuantity(
+                        item.foodId,
+                        null,
+                        "GO_GRAB"
+                      );
                       return (
                         <div
                           key={`grab-${item.foodId}-${index}`}
@@ -373,30 +342,7 @@ export default function OrderPage() {
                                 size="small"
                                 initialQuantity={cartQty}
                                 minQuantity={0}
-                                onQuantityChange={(newQuantity) => {
-                                  // Removed async
-                                  console.log(
-                                    "🛒 OrderPage Go&Grab quantity change:",
-                                    {
-                                      foodId: item.foodId,
-                                      newQuantity,
-                                      currentQty: cartQty,
-                                    }
-                                  );
-
-                                  const enrichedFood =
-                                    getEnrichedFoodData(item);
-                                  handleQuantityChangeWithConfirmation({
-                                    food: enrichedFood,
-                                    kitchen: kitchen || item.kitchen,
-                                    newQuantity,
-                                    currentQuantity: cartQty,
-                                    selectedDate: null,
-                                    specialInstructions:
-                                      item.specialInstructions || "",
-                                    isPreOrder: false,
-                                  });
-                                }}
+                                orderType="GO_GRAB"
                               />
                             </div>
                           </div>
@@ -416,7 +362,11 @@ export default function OrderPage() {
                     </h2>
                     <div className="menu-listing">
                       {items.map((item, index) => {
-                        const cartQty = getItemCartQuantity(item.foodId, date);
+                        const cartQty = getItemCartQuantity(
+                          item.foodId,
+                          date,
+                          "PRE_ORDER"
+                        );
                         return (
                           <div
                             key={`preorder-${item.foodId}-${date}-${index}`}
@@ -459,31 +409,7 @@ export default function OrderPage() {
                                   size="small"
                                   initialQuantity={cartQty}
                                   minQuantity={0}
-                                  onQuantityChange={(newQuantity) => {
-                                    // Removed async
-                                    console.log(
-                                      "🛒 OrderPage Pre-Order quantity change:",
-                                      {
-                                        foodId: item.foodId,
-                                        date,
-                                        newQuantity,
-                                        currentQty: cartQty,
-                                      }
-                                    );
-
-                                    const enrichedFood =
-                                      getEnrichedFoodData(item);
-                                    handleQuantityChangeWithConfirmation({
-                                      food: enrichedFood,
-                                      kitchen: kitchen || item.kitchen,
-                                      newQuantity,
-                                      currentQuantity: cartQty,
-                                      selectedDate: date,
-                                      specialInstructions:
-                                        item.specialInstructions || "",
-                                      isPreOrder: true,
-                                    });
-                                  }}
+                                  orderType="PRE_ORDER"
                                 />
                               </div>
                               <div className="title">
@@ -610,54 +536,6 @@ export default function OrderPage() {
                 }}
               >
                 Remove All
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ✅ NEW: Remove Single Item Confirmation Dialog */}
-      {showRemoveItemDialog && pendingRemovalItem && (
-        <div className="modal-overlay" onClick={cancelRemoveItem}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Remove Item</h3>
-            </div>
-            <div className="modal-body">
-              <p>
-                Are you sure you want to remove &quot;
-                {pendingRemovalItem.itemName}&quot; from your cart?
-              </p>
-            </div>
-            <div className="modal-footer">
-              <button
-                className="btn-secondary"
-                onClick={cancelRemoveItem}
-                style={{
-                  padding: "10px 20px",
-                  border: "1px solid #ccc",
-                  borderRadius: "4px",
-                  backgroundColor: "white",
-                  cursor: "pointer",
-                  width: "100%",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn-danger"
-                onClick={confirmRemoveItem}
-                style={{
-                  padding: "10px 20px",
-                  border: "none",
-                  borderRadius: "4px",
-                  backgroundColor: "#dc3545",
-                  color: "white",
-                  cursor: "pointer",
-                  width: "100%",
-                }}
-              >
-                Remove Item
               </button>
             </div>
           </div>

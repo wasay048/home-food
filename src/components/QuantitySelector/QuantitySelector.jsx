@@ -2,23 +2,21 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useGenericCart } from "../../hooks/useGenericCart";
 import "./QuantitySelector.css";
 
-const QuantitySelector = ({
+export const QuantitySelector = ({
   food = null,
   kitchen = null,
   selectedDate = null,
-  initialQuantity = 1,
   maxQuantity = 99,
   minQuantity = 1,
-  onQuantityChange = () => {},
   onAvailabilityChange = () => {},
   onError = () => {},
   onWarning = () => {},
-  showAvailabilityInfo = true,
-  showErrorMessages = true,
   size = "medium",
   className = "",
   disabled = false,
+  orderType,
 }) => {
+  console.log("OrderType in QuantitySelector:", orderType);
   // ✅ USE: Get functions from useGenericCart hook
   const {
     calculateAvailability,
@@ -32,13 +30,21 @@ const QuantitySelector = ({
   // ✅ CRITICAL FIX: Always sync with cart quantity
   const cartQuantity = useMemo(() => {
     if (!food?.id) return 0;
-    return getCartQuantity(food.id, selectedDate);
+    return getCartQuantity(food.id, selectedDate, orderType);
   }, [food?.id, selectedDate, getCartQuantity]);
 
+  console.log("cartQuantity", cartQuantity);
   // ✅ USE: Get availability from useGenericCart
   const availabilityStatus = useMemo(
-    () => calculateAvailability(food, kitchen, selectedDate, maxQuantity),
-    [calculateAvailability, food, kitchen, selectedDate, maxQuantity]
+    () =>
+      calculateAvailability(
+        food,
+        kitchen,
+        selectedDate,
+        maxQuantity,
+        orderType
+      ),
+    [calculateAvailability, food, kitchen, selectedDate, maxQuantity, orderType]
   );
 
   // ✅ CRITICAL FIX: Only call cart operations, don't call parent callback to prevent double operations
@@ -73,12 +79,11 @@ const QuantitySelector = ({
         return;
       }
 
-      console.log("🔥 Calling useGenericCart handleQuantityChange:", {
-        newQuantity,
-        currentCartQuantity: cartQuantity,
-        selectedDate,
+      console.log("🔥 Calling useGenericCart food:", {
+        food,
       });
-
+      console.log("newQuantity:", newQuantity);
+      console.log("orderType:", orderType);
       // ✅ FIXED: Only call cart operations - don't call parent callback here
       handleCartQuantityChange({
         food,
@@ -88,7 +93,8 @@ const QuantitySelector = ({
         selectedDate,
         selectedTime: null,
         specialInstructions: "",
-        isPreOrder: availabilityStatus.orderType === "PRE_ORDER",
+        incomingOrderType: orderType,
+        // isPreOrder: availabilityStatus.orderType === "PRE_ORDER",
       });
 
       // ✅ REMOVED: Don't call parent callback here to prevent double operations
@@ -96,13 +102,14 @@ const QuantitySelector = ({
     },
     [
       cartQuantity,
-      availabilityStatus.maxAvailable,
-      availabilityStatus.orderType,
+      availabilityStatus?.maxAvailable,
+      availabilityStatus?.orderType,
       onError,
       food,
       kitchen,
       selectedDate,
       handleCartQuantityChange,
+      orderType,
     ]
   );
 
@@ -111,12 +118,12 @@ const QuantitySelector = ({
     onAvailabilityChange(availabilityStatus);
 
     // Handle warnings
-    if (availabilityStatus.warning) {
+    if (availabilityStatus && availabilityStatus?.warning) {
       onWarning(availabilityStatus.warning);
     }
 
     // Handle errors
-    if (availabilityStatus.message && !availabilityStatus.isAvailable) {
+    if (availabilityStatus?.message && !availabilityStatus?.isAvailable) {
       // onError(availabilityStatus.message);
     }
   }, [availabilityStatus, onAvailabilityChange, onWarning, onError]);
@@ -162,8 +169,8 @@ const QuantitySelector = ({
     handleQuantityChangeLocal(newQuantity);
   }, [
     disabled,
-    availabilityStatus.isAvailable,
-    availabilityStatus.maxAvailable,
+    availabilityStatus?.isAvailable,
+    availabilityStatus?.maxAvailable,
     cartQuantity,
     handleQuantityChangeLocal,
   ]);
@@ -202,11 +209,11 @@ const QuantitySelector = ({
     `quantity-selector--${size}`,
     className,
     disabled && "quantity-selector--disabled",
-    !availabilityStatus.isAvailable && "quantity-selector--unavailable",
+    !availabilityStatus?.isAvailable && "quantity-selector--unavailable",
   ]
     .filter(Boolean)
     .join(" ");
-
+  console.log("getCartQuantity", getCartQuantity);
   return (
     <div className={containerClasses}>
       {showModal && (
@@ -290,5 +297,3 @@ const QuantitySelector = ({
     </div>
   );
 };
-
-export default QuantitySelector;

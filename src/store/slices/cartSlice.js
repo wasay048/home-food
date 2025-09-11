@@ -17,16 +17,15 @@ const cartSlice = createSlice({
       console.log("🛒 Adding to cart:", action.payload);
 
       const newItem = action.payload;
+      console.log("newItem redux item:", newItem);
+      console.log("state item length redux items:", state?.items?.length);
 
       // Find existing item with same foodId, selectedDate, specialInstructions, and orderType
       const existingItemIndex = state.items.findIndex(
         (item) =>
-          item.foodId === newItem.foodId &&
-          item.selectedDate === newItem.selectedDate &&
-          (item.specialInstructions || "") ===
-            (newItem.specialInstructions || "") &&
-          item.orderType === newItem.orderType
+          item.foodId === newItem.foodId && item.orderType === newItem.orderType
       );
+      console.log("existingItemIndex", existingItemIndex);
 
       if (existingItemIndex !== -1) {
         // Update existing item quantity
@@ -94,11 +93,15 @@ const cartSlice = createSlice({
 
     // Update cart item (quantity and special instructions)
     updateCartItem: (state, action) => {
-      const { cartItemId, quantity, specialInstructions } = action.payload;
+      const { cartItemId, quantity, specialInstructions, orderType } =
+        action.payload;
+
       console.log("📝 Updating cart item:", action.payload);
-
-      const itemIndex = state.items.findIndex((item) => item.id === cartItemId);
-
+      console.log("state item length redux items:", state?.items?.length);
+      const itemIndex = state.items.findIndex(
+        (item) => item.id === cartItemId && item.orderType === orderType
+      );
+      console.log("itemIndex redux items:", itemIndex);
       if (itemIndex !== -1) {
         if (quantity !== undefined) {
           state.items[itemIndex].quantity = quantity;
@@ -107,7 +110,7 @@ const cartSlice = createSlice({
           state.items[itemIndex].specialInstructions = specialInstructions;
         }
         state.items[itemIndex].updatedAt = new Date().toISOString();
-
+        console.log("Updated cart redux items:", state.items);
         console.log("📝 Updated cart item:", {
           itemId: cartItemId,
           newQuantity: quantity,

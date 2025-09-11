@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import qrCode from "../assets/images/home-food-qr.svg";
-import dayjs from "dayjs";
 import { useGenericCart } from "../hooks/useGenericCart";
-import { showToast } from "../utils/toast";
 // import Edit from "../assets/images/edit.svg";
-import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
+import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import { useSelector } from "react-redux";
 
@@ -24,7 +22,7 @@ export default function ListingPage() {
   } = useSelector((state) => state.listing);
 
   // Use the generic cart hook for all cart operations
-  const { cartItems, getCartQuantity, handleQuantityChange } = useGenericCart();
+  const { cartItems, getCartQuantity } = useGenericCart();
 
   // State for managing pickup dates and times for each food item
   const [pickupDates, setPickupDates] = useState({});
@@ -275,36 +273,7 @@ export default function ListingPage() {
                             size="small"
                             initialQuantity={cartQty}
                             minQuantity={0}
-                            onQuantityChange={(newQuantity) => {
-                              try {
-                                const currentQty = getMemoizedCartQuantity(
-                                  food.id
-                                );
-                                const selectedDate = pickupDates[food.id];
-                                const selectedTime = pickupTimes[food.id];
-                                const isToday = selectedDate
-                                  ? dayjs(selectedDate).isSame(dayjs(), "day")
-                                  : true;
-
-                                handleQuantityChange({
-                                  // Removed await
-                                  food,
-                                  kitchen,
-                                  newQuantity,
-                                  currentQuantity: currentQty,
-                                  selectedDate: selectedDate,
-                                  selectedTime: selectedTime,
-                                  specialInstructions: "",
-                                  isPreOrder: !isToday,
-                                });
-                              } catch (error) {
-                                console.error(
-                                  "Error updating quantity:",
-                                  error
-                                );
-                                showToast.error("Failed to update cart");
-                              }
-                            }}
+                            orderType={"GO_GRAB"}
                           />
                         </div>
                         <div className="pickup-time-section">
@@ -339,7 +308,7 @@ export default function ListingPage() {
             const preOrderItemsForDate = getPreOrderItemsForDate(
               dateInfo.dateString
             );
-
+            console.log("preOrderItemsForDate", preOrderItemsForDate);
             if (preOrderItemsForDate.length === 0) return null;
 
             return (
@@ -393,45 +362,7 @@ export default function ListingPage() {
                               size="small"
                               initialQuantity={cartQty}
                               minQuantity={0}
-                              onQuantityChange={(newQuantity) => {
-                                // Removed async
-                                try {
-                                  const currentQty = getMemoizedCartQuantity(
-                                    food.id,
-                                    dateInfo.dateString
-                                  );
-                                  const selectedTime =
-                                    pickupTimes[`${food.id}_preorder`];
-
-                                  console.log(
-                                    "🛒 ListingPage Pre-Order quantity change:",
-                                    {
-                                      foodId: food.id,
-                                      date: dateInfo.dateString,
-                                      newQuantity,
-                                      currentQty,
-                                    }
-                                  );
-
-                                  handleQuantityChange({
-                                    // Removed await
-                                    food,
-                                    kitchen,
-                                    newQuantity,
-                                    currentQuantity: currentQty,
-                                    selectedDate: dateInfo.dateString,
-                                    selectedTime: selectedTime,
-                                    specialInstructions: "",
-                                    isPreOrder: true,
-                                  });
-                                } catch (error) {
-                                  console.error(
-                                    "Error updating pre-order quantity:",
-                                    error
-                                  );
-                                  showToast.error("Failed to update cart");
-                                }
-                              }}
+                              orderType={"PRE_ORDER"}
                             />
                           </div>
                           <div className="pickup-time-section">

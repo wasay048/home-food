@@ -11,7 +11,7 @@ import {
   debugReviewsQuery,
   testFirestoreConnection,
 } from "../services/foodService";
-import QuantitySelector from "../components/QuantitySelector/QuantitySelector";
+import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
 // import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import "../styles/FoodDetailPage.css";
@@ -25,6 +25,7 @@ import {
 } from "../store/slices/listingSlice";
 import dayjs from "dayjs";
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
+import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 
 // Custom Slider Component
 // Enhanced Custom Slider Component with better styling
@@ -245,6 +246,7 @@ export default function FoodDetailPage() {
         kitchenId: searchParams.get("kitchenId"),
         foodId: searchParams.get("foodId"),
         selectedDate: searchParams.get("date"),
+        toggle: searchParams.get("toggle"),
       };
       console.log("🔍 [FoodDetailPage] Extracted params:", params);
       return params;
@@ -258,10 +260,11 @@ export default function FoodDetailPage() {
       kitchenId: null,
       foodId: null,
       selectedDate: null,
+      toggle: null,
     };
   };
 
-  const { kitchenId, foodId, selectedDate } = getPageParams();
+  const { kitchenId, foodId, selectedDate, toggle } = getPageParams();
 
   if (!kitchenId || !foodId) {
     return (
@@ -289,16 +292,15 @@ export default function FoodDetailPage() {
   const [activeTab, setActiveTab] = useState("reviews");
   const [selectedQuantity, setSelectedQuantity] = useState(0);
   const [specialInstructions, setSpecialInstructions] = useState("");
-  // const [showWeChatDialog, setShowWeChatDialog] = useState(false);
+
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const currentUser = useSelector((state) => state.auth.user);
+  const [showWeChatDialog, setShowWeChatDialog] = useState(false);
+  const handleWeChatDialog = (show) => setShowWeChatDialog(show);
 
   // Date and time picker states
   const [pickupDate, setPickupDate] = useState(selectedDate);
   const [pickupTime, setPickupTime] = useState(null); // Let DateTimePicker set appropriate default
-
-  // // Debug: Log showWeChatDialog state changes
-  // useEffect(() => {
-  //   console.log("🔍 showWeChatDialog state changed to:", showWeChatDialog);
-  // }, [showWeChatDialog]);
 
   const [availabilityStatus, setAvailabilityStatus] = useState({
     isAvailable: true,
@@ -317,7 +319,6 @@ export default function FoodDetailPage() {
     isLiked,
     toggleLike,
   } = useFoodDetailRedux(foodId, kitchenId);
-  const cartQuantity = getCartQuantity(foodId, pickupDate || selectedDate);
 
   // Determine order type based on availability and selected date
   const orderType = React.useMemo(() => {
@@ -359,20 +360,12 @@ export default function FoodDetailPage() {
     return "GO_GRAB"; // Default fallback
   }, [selectedDate, food, kitchen]);
 
+  const cartQuantity = getCartQuantity(
+    foodId,
+    pickupDate || selectedDate,
+    orderType
+  );
   // Update handleQuantityChange to use useGenericCart
-  const handleQuantityChangeGeneric = useCallback((newQuantity) => {
-    console.log(`[FoodDetailPage] Quantity changed to: ${newQuantity}`);
-
-    // ✅ FIXED: Only update local state - QuantitySelector handles cart operations
-    setSelectedQuantity(newQuantity);
-
-    // ✅ NOTE: QuantitySelector already calls handleCartQuantityChange internally
-    // No need to call it again here to prevent double operations
-
-    console.log(
-      `[FoodDetailPage] Local quantity state updated to: ${newQuantity}`
-    );
-  }, []);
 
   console.log("FoodDetailPage data:", {
     food,
@@ -404,16 +397,6 @@ export default function FoodDetailPage() {
 
   const handleAvailabilityChange = useCallback((availabilityData) => {
     setAvailabilityStatus(availabilityData);
-  }, []);
-
-  const handleQuantityError = useCallback((errorMessage) => {
-    console.error(`[FoodDetailPage] Quantity error: ${errorMessage}`);
-    showToast.error(errorMessage);
-  }, []);
-
-  const handleQuantityWarning = useCallback((warningMessage) => {
-    console.warn(`[FoodDetailPage] Quantity warning: ${warningMessage}`);
-    showToast.warning(warningMessage);
   }, []);
 
   // Update handleAddToCart to use useGenericCart
@@ -494,10 +477,6 @@ export default function FoodDetailPage() {
     navigate,
     location,
   ]);
-
-  // const handleWeChatDialogClose = useCallback(() => {
-  //   setShowWeChatDialog(false);
-  // }, []);
 
   // Sync selectedQuantity with cart quantity when cart changes
   useEffect(() => {
@@ -590,9 +569,27 @@ export default function FoodDetailPage() {
       : [];
 
   const handleLikeToggle = useCallback(() => {
+    if (!isAuthenticated && !currentUser) {
+      console.log("🔒 Authentication required for placing order");
+      localStorage.setItem(
+        "page",
+        JSON.stringify({
+          isDetailPage: true,
+          detailPageUrl: window.location.href + "&toggle=like",
+        })
+      );
+      handleWeChatDialog(true);
+      return;
+    }
     toggleLike();
     console.log(`[FoodDetailPage] Food ${isLiked ? "unliked" : "liked"}`);
   }, [toggleLike, isLiked]);
+
+  useEffect(() => {
+    if (toggle === "like") {
+      handleLikeToggle();
+    }
+  }, [toggle]);
 
   useEffect(() => {
     // Check if user landed directly on this page (not from navigation within app)
@@ -856,16 +853,11 @@ export default function FoodDetailPage() {
                 food={food}
                 kitchen={kitchen}
                 selectedDate={pickupDate || selectedDate} // Use picker date first, then fallback to URL date
-                initialQuantity={cartQuantity}
                 minQuantity={0}
-                onQuantityChange={handleQuantityChangeGeneric}
                 onAvailabilityChange={handleAvailabilityChange}
-                onError={handleQuantityError}
-                onWarning={handleQuantityWarning}
-                showAvailabilityInfo={false}
-                showErrorMessages={true}
                 size="large"
                 className="food-detail-quantity"
+                orderType={orderType}
               />
             </div>
 
@@ -1069,9 +1061,9 @@ export default function FoodDetailPage() {
       </div>
 
       {/* WeChat Authentication Dialog */}
-      {/* {showWeChatDialog && (
-        <WeChatAuthDialog onClose={handleWeChatDialogClose} />
-      )} */}
+      {showWeChatDialog && (
+        <WeChatAuthDialog onClose={() => handleWeChatDialog(false)} />
+      )}
     </div>
   );
 }

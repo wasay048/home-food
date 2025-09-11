@@ -1,34 +1,15 @@
-import React, { useContext } from "react";
+import React from "react";
 import {
   generateWeChatAuthUrlWeb,
   generateWeChatAuthUrlMobile,
   isMobileDevice,
   isWeChatBrowser,
 } from "../../config/wechat";
-import AuthContext from "../../context/AuthContext";
 import wechatIcon from "../../assets/wechat-icon.svg";
 import "./WeChatAuthDialog.css";
 
 const WeChatAuthDialog = ({ onClose, firebaseImageUrl }) => {
   console.log("🚀 WeChatAuthDialog rendered!");
-
-  const { signInWithWeChatUser } = useContext(AuthContext);
-
-  // TEMPORARY: Handle test user bypass
-  const handleTestUserBypass = async () => {
-    try {
-      console.log("🧪 Using test user bypass");
-      await signInWithWeChatUser();
-
-      // Clear any pending cart actions since we're now "authenticated"
-      sessionStorage.removeItem("wechat_pending_cart_action");
-
-      // Close the dialog
-      onClose();
-    } catch (error) {
-      console.error("❌ Error with test user bypass:", error);
-    }
-  };
 
   const handleWeChatAuth = async () => {
     try {
@@ -111,7 +92,7 @@ const WeChatAuthDialog = ({ onClose, firebaseImageUrl }) => {
           </button>
 
           {/* TEMPORARY: Test bypass button */}
-          <button
+          {/* <button
             className="wechat-auth-button"
             onClick={handleTestUserBypass}
             style={{
@@ -121,7 +102,7 @@ const WeChatAuthDialog = ({ onClose, firebaseImageUrl }) => {
             }}
           >
             🧪 Skip for Testing (Temporary)
-          </button>
+          </button> */}
 
           <p className="wechat-auth-note">
             {isMobileDevice() && !isWeChatBrowser()

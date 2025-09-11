@@ -16,7 +16,6 @@ const WeChatCallbackPage = () => {
       // alert("code: " + code);
       console.log("code", code);
       const state = params.get("state");
-      const expectedState = sessionStorage.getItem("wx_state");
 
       if (!code) {
         alert("missing code");
@@ -72,6 +71,13 @@ const WeChatCallbackPage = () => {
 
         //   }
         // })
+        const allowRedirectToCheckout = JSON.stringify(
+          localStorage.getItem("page")
+        );
+        if (allowRedirectToCheckout.isDetailPage) {
+          navigate(allowRedirectToCheckout.detailPageUrl, { replace: true });
+          return;
+        }
         navigate(
           "/checkout?" + new URLSearchParams({ firebaseImageUrl: state }),
           { replace: true }
