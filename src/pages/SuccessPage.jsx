@@ -21,6 +21,36 @@ export default function SuccessPage() {
     orderedItems: orderedItems,
   });
 
+  const closeWeChatWindow = () => {
+    if (window.WeixinJSBridge) {
+      // If WeChat bridge is available, close the window
+      window.WeixinJSBridge.call("closeWindow");
+      return true; // Indicate that WeChat closing was attempted
+    }
+    return false; // Not in WeChat or bridge not available
+  };
+
+  const handleBackToHome = () => {
+    // First, try to close WeChat window if in WeChat
+    const weChatClosed = closeWeChatWindow();
+
+    if (weChatClosed) {
+      console.log("Closed WeChat window");
+      return; // Don't proceed with redirect if WeChat window was closed
+    }
+
+    // Fallback: Use existing redirect logic
+    const detailPage = localStorage.getItem("detailPage");
+    if (detailPage) {
+      console.log("Going back to detailPage from localStorage:", detailPage);
+      window.location.href = detailPage;
+      return;
+    }
+
+    // Default: Go to home page
+    window.location.href = "/";
+  };
+
   // Format date function similar to OrderPage
   const formatDate = (dateString) => {
     if (!dateString) return "Today";
@@ -85,7 +115,7 @@ export default function SuccessPage() {
       return sum + price * quantity;
     }, 0);
 
-    const tax = subtotal * 0.0725; // 7.25% tax
+    const tax = subtotal * 0; // 0% tax
     const total = subtotal + tax;
 
     return {
@@ -274,7 +304,7 @@ export default function SuccessPage() {
                     marginBottom: "8px",
                   }}
                 >
-                  <span>Tax (7.25%):</span>
+                  <span>Tax (0%):</span>
                   <span>${totals.tax}</span>
                 </div>
                 <div
@@ -312,20 +342,7 @@ export default function SuccessPage() {
             {/* <Link to="/order" className="action-button secondary mb-12">
               View Order Details
             </Link> */}
-            <Link
-              onClick={() => {
-                const detailPage = localStorage.getItem("detailPage");
-                if (detailPage) {
-                  console.log(
-                    "Going back to detailPage from localStorage:",
-                    detailPage
-                  );
-                  window.location.href = detailPage;
-                  return;
-                }
-              }}
-              className="action-button"
-            >
+            <Link onClick={handleBackToHome} className="action-button">
               Back to Home
             </Link>
           </div>

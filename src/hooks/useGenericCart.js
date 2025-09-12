@@ -5,7 +5,6 @@ import {
   removeFromCart,
   updateCartItem,
 } from "../store/slices/cartSlice";
-import { showToast } from "../utils/toast";
 import dayjs from "dayjs";
 
 export const useGenericCart = () => {
@@ -366,10 +365,64 @@ export const useGenericCart = () => {
     [dispatch, cartItems, calculateAvailability]
   );
 
+  const validateCartSelections = (cartItems) => {
+    console.log("🔍 Validating cart selections for", cartItems.length, "items");
+    let hasErrors = false;
+    cartItems.forEach((item, index) => {
+      const itemName = item.name || item.food?.name || "Unknown Item";
+      const orderTypeText =
+        item.orderType === "PRE_ORDER" ? "Pre-Order" : "Go & Grab";
+
+      console.log(
+        `📦 Checking item ${index + 1}: ${itemName} (${orderTypeText})`
+      );
+
+      // For Pre-Order items: Both date and time are required
+      if (item.orderType === "PRE_ORDER" || item.isPreOrder) {
+        if (!item.selectedDate) {
+          const errorMsg = `Please select a pickup date for "${itemName}" (${orderTypeText})`;
+          alert(errorMsg);
+          hasErrors = true;
+          console.warn("⚠️ Missing date:", errorMsg);
+        }
+
+        if (!item.selectedTime) {
+          const errorMsg = `Please select a pickup time for "${itemName}" (${orderTypeText})`;
+          alert(errorMsg);
+          hasErrors = true;
+          console.warn("⚠️ Missing time:", errorMsg);
+        }
+      }
+
+      // For Go & Grab items: Only time is required (date is usually today)
+      else if (item.orderType === "GO_GRAB" || item.orderType === "Go&Grab") {
+        if (!item.selectedDate) {
+          const errorMsg = `Please select a pickup date for "${itemName}" (${orderTypeText})`;
+          alert(errorMsg);
+          hasErrors = true;
+          console.warn("⚠️ Missing date:", errorMsg);
+        }
+        if (!item.selectedTime) {
+          const errorMsg = `Please select a pickup time for "${itemName}" (${orderTypeText})`;
+          alert(errorMsg);
+          hasErrors = true;
+          console.warn("⚠️ Missing time:", errorMsg);
+        }
+      }
+    });
+
+    console.log("✅ All cart items validated successfully");
+    return {
+      isValid: !hasErrors,
+      errors: [],
+      message: "All selections are valid",
+    };
+  };
   return {
     cartItems,
     getCartQuantity,
     handleQuantityChange,
+    validateCartSelections: () => validateCartSelections(cartItems),
     calculateAvailability,
   };
 };

@@ -658,34 +658,61 @@ const DateTimePicker = ({
       }
     }
 
-    // Auto-select date for Go&Grab if none provided
+    // ✅ NEW: Auto-select date if null (use current/first available date)
     if (
-      orderType === "GO_GRAB" &&
       !hasAutoSelectedDate.current &&
       !internalDate &&
       availableDates.length > 0
     ) {
-      const firstDate = availableDates[0].date;
-      console.log("🔄 Auto-selecting date:", firstDate);
-      setInternalDate(firstDate);
-      onDateChange(firstDate);
+      const defaultDate = availableDates[0].date; // First available date (current date for Go&Grab)
+      console.log("🔄 Auto-selecting default date:", defaultDate);
+      setInternalDate(defaultDate);
+      onDateChange(defaultDate); // Notify parent with default date
       hasAutoSelectedDate.current = true;
       hasChanges = true;
     }
 
-    // Auto-select time if date is set but no time selected
+    // ✅ NEW: Auto-select time if null (use first available time slot)
     if (
       !hasAutoSelectedTime.current &&
       internalDate &&
       !internalTime &&
       availableTimeSlots.length > 0
     ) {
-      const firstTime = availableTimeSlots[0].value;
-      console.log("🔄 Auto-selecting time:", firstTime);
-      setInternalTime(firstTime);
-      onTimeChange(firstTime);
+      const defaultTime = availableTimeSlots[0].value; // First available time slot
+      console.log("🔄 Auto-selecting default time:", defaultTime);
+      setInternalTime(defaultTime);
+      onTimeChange(defaultTime); // Notify parent with default time
       hasAutoSelectedTime.current = true;
-      // eslint-disable-next-line no-unused-vars
+      hasChanges = true;
+    }
+
+    // ✅ NEW: Handle case where selectedDate is null from parent
+    if (
+      selectedDate === null &&
+      !hasAutoSelectedDate.current &&
+      availableDates.length > 0
+    ) {
+      const defaultDate = availableDates[0].date;
+      console.log("🔄 Parent passed null date, setting default:", defaultDate);
+      setInternalDate(defaultDate);
+      onDateChange(defaultDate);
+      hasAutoSelectedDate.current = true;
+      hasChanges = true;
+    }
+
+    // ✅ NEW: Handle case where selectedTime is null from parent
+    if (
+      selectedTime === null &&
+      !hasAutoSelectedTime.current &&
+      internalDate &&
+      availableTimeSlots.length > 0
+    ) {
+      const defaultTime = availableTimeSlots[0].value;
+      console.log("🔄 Parent passed null time, setting default:", defaultTime);
+      setInternalTime(defaultTime);
+      onTimeChange(defaultTime);
+      hasAutoSelectedTime.current = true;
       hasChanges = true;
     }
 
@@ -878,7 +905,7 @@ const DateTimePicker = ({
           value={internalTime || ""}
           onChange={(e) => handleTimeChange(e.target.value)}
         >
-          <option value="" disabled>
+          <option value="" disabled selected>
             Select time
           </option>
           {availableTimeSlots.map((timeOption) => (

@@ -18,7 +18,6 @@ import "../styles/FoodDetailPage.css";
 import { clearCart } from "../store/slices/cartSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useGenericCart } from "../hooks/useGenericCart";
-import { logout } from "../store/slices/authSlice";
 import {
   setListingData,
   setListingLoading,
@@ -231,7 +230,6 @@ export default function FoodDetailPage() {
   const dispatch = useDispatch();
   const location = useLocation();
   const navigate = useNavigate();
-  const user = useSelector((state) => state.auth.user);
 
   const { getCartQuantity, handleQuantityChange: handleCartQuantityChange } =
     useGenericCart();
@@ -303,7 +301,9 @@ export default function FoodDetailPage() {
   const handleWeChatDialog = (show) => setShowWeChatDialog(show);
 
   // Date and time picker states
-  const [pickupDate, setPickupDate] = useState(selectedDate);
+  const [pickupDate, setPickupDate] = useState(
+    selectedDate && dayjs(selectedDate, "M/D/YYYY").format("YYYY-MM-DD")
+  );
   const [pickupTime, setPickupTime] = useState(null); // Let DateTimePicker set appropriate default
 
   const [availabilityStatus, setAvailabilityStatus] = useState({
@@ -331,7 +331,7 @@ export default function FoodDetailPage() {
       food?.availability?.numAvailable || food?.numAvailable || 0;
 
     // PRIORITY: If food has availability > 0, it's Go&Grab regardless of date
-    if (currentAvailability > 0) {
+    if (currentAvailability > 0 && !selectedDate) {
       console.log(
         "DEBUG - Setting orderType to GO_GRAB due to availability:",
         currentAvailability
@@ -629,13 +629,10 @@ export default function FoodDetailPage() {
       !document.referrer || !document.referrer.includes(window.location.origin);
 
     // Also check if there's no navigation state (indicating direct access)
-    const hasNavigationState =
-      location.state && (location.state.from || location.state.editItem);
 
-    if (isDirectLanding && !hasNavigationState) {
+    if (isDirectLanding) {
       console.log("🛒 Clearing cart on direct landing to FoodDetailPage");
       dispatch(clearCart());
-      console.log("Existing cart data cleard!");
       console.log("Existing cart data cleared!");
 
       // ✅ NEW: Clear user authentication state on direct landing
@@ -882,7 +879,11 @@ export default function FoodDetailPage() {
               <QuantitySelector
                 food={food}
                 kitchen={kitchen}
-                selectedDate={pickupDate || selectedDate} // Use picker date first, then fallback to URL date
+                selectedDate={
+                  pickupDate ||
+                  (selectedDate &&
+                    dayjs(selectedDate, "M/D/YYYY").format("YYYY-MM-DD"))
+                } // Use picker date first, then fallback to URL date
                 minQuantity={0}
                 onAvailabilityChange={handleAvailabilityChange}
                 size="large"
@@ -942,7 +943,7 @@ export default function FoodDetailPage() {
               placeholder="Enter your special instructions here..."
               value={specialInstructions}
               onChange={(e) => setSpecialInstructions(e.target.value)}
-              rows={3}
+              rows={1}
               style={{
                 width: "100%",
                 padding: "12px",

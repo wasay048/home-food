@@ -223,7 +223,7 @@ export default function PaymentPage() {
       return total + itemPrice * quantity;
     }, 0);
 
-    const salesTaxRate = 0.0725; // 7.25%
+    const salesTaxRate = 0; // 0%
     const salesTax = subtotal * salesTaxRate;
     const totalPayment = subtotal + salesTax;
 
@@ -461,7 +461,7 @@ export default function PaymentPage() {
                 <span>${paymentCalculation.subtotal}</span>
               </div>
               <div className="item-flex">
-                <span>Sales Tax (7.25%)</span>
+                <span>Sales Tax (0%)</span>
                 <span>${paymentCalculation.salesTax}</span>
               </div>
               <div className="hr mb-12"></div>

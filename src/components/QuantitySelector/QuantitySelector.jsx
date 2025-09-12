@@ -16,7 +16,7 @@ export const QuantitySelector = ({
   disabled = false,
   orderType,
 }) => {
-  console.log("OrderType in QuantitySelector:", orderType);
+  console.log("selectedDate in QuantitySelector:", selectedDate);
   // ✅ USE: Get functions from useGenericCart hook
   const {
     calculateAvailability,

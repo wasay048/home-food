@@ -197,7 +197,7 @@ export default function OrderPage() {
       return total + numericCost * item.quantity;
     }, 0);
 
-    const tax = subtotal * 0.0725; // 7.25% tax rate
+    const tax = subtotal * 0; // 0% tax rate
     const total = subtotal + tax;
 
     console.log("OrderPage - Total calculation:", {
@@ -346,14 +346,20 @@ export default function OrderPage() {
                               />
                             </div>
                             <div className="title">
-                              {dayjs(item.selectedDate).format("MMMM D, YYYY")}{" "}
+                              {item.selectedDate
+                                ? dayjs(item.selectedDate).format(
+                                    "MMMM D, YYYY"
+                                  )
+                                : dayjs().format("MMMM D, YYYY")}{" "}
                             </div>
                             <div className="bottom">
                               <div className="time">
                                 at{" "}
-                                {dayjs(item?.selectedTime, "h:mm A").format(
-                                  "h:mm A"
-                                ) || "5:30 PM"}
+                                {item?.selectedTime
+                                  ? dayjs(item?.selectedTime, "h:mm A").format(
+                                      "h:mm A"
+                                    )
+                                  : "5:30 PM"}
                               </div>
                             </div>
                           </div>
@@ -424,11 +430,19 @@ export default function OrderPage() {
                                 />
                               </div>
                               <div className="title">
-                                {item.displayPickupTime}
+                                {dayjs(item.selectedDate).format(
+                                  "MMMM D, YYYY"
+                                )}{" "}
                               </div>
                               <div className="bottom">
                                 <div className="time">
-                                  {item.displayPickupClock}
+                                  at{" "}
+                                  {item?.selectedTime
+                                    ? dayjs(
+                                        item?.selectedTime,
+                                        "h:mm A"
+                                      ).format("h:mm A")
+                                    : "5:30 PM"}
                                 </div>
                               </div>
                             </div>
@@ -473,7 +487,7 @@ export default function OrderPage() {
                     marginBottom: "8px",
                   }}
                 >
-                  <span>Tax (7.25%):</span>
+                  <span>Tax (0%):</span>
                   <span>${totals.tax}</span>
                 </div>
                 <div
