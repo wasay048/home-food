@@ -1,11 +1,4 @@
-import {
-  collection,
-  addDoc,
-  doc,
-  updateDoc,
-  increment,
-  getDoc,
-} from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import dayjs from "../lib/dayjs";
 
@@ -104,40 +97,40 @@ export const placeOrder = async (orderData) => {
               });
 
               // Verify the update by reading the document again
-              console.log("🔍 [ORDER SERVICE] Verifying update...");
-              const verificationDoc = await getDoc(foodRef);
-              if (verificationDoc.exists()) {
-                const verificationData = verificationDoc.data();
-                console.log("✅ [ORDER SERVICE] Update verification:", {
-                  beforeUpdate: {
-                    sold: currentSold,
-                    available: currentAvailable,
-                  },
-                  afterUpdate: {
-                    sold: verificationData.numOfSoldItem,
-                    available: verificationData.numAvailable,
-                  },
-                  updateSuccessful: {
-                    soldUpdated:
-                      verificationData.numOfSoldItem === newSoldItems,
-                    availableUpdated:
-                      verificationData.numAvailable === newAvailableItems,
-                  },
-                });
+              //   console.log("🔍 [ORDER SERVICE] Verifying update...");
+              // const verificationDoc = await getDoc(foodRef);
+              // if (verificationDoc.exists()) {
+              //   const verificationData = verificationDoc.data();
+              //   console.log("✅ [ORDER SERVICE] Update verification:", {
+              //     beforeUpdate: {
+              //       sold: currentSold,
+              //       available: currentAvailable,
+              //     },
+              //     afterUpdate: {
+              //       sold: verificationData.numOfSoldItem,
+              //       available: verificationData.numAvailable,
+              //     },
+              //     updateSuccessful: {
+              //       soldUpdated:
+              //         verificationData.numOfSoldItem === newSoldItems,
+              //       availableUpdated:
+              //         verificationData.numAvailable === newAvailableItems,
+              //     },
+              //   });
 
-                if (
-                  verificationData.numOfSoldItem !== newSoldItems ||
-                  verificationData.numAvailable !== newAvailableItems
-                ) {
-                  console.error(
-                    "❌ [ORDER SERVICE] Update verification failed!"
-                  );
-                } else {
-                  console.log(
-                    `✅ [ORDER SERVICE] Successfully updated Go&Grab food item ${item.foodItemId}: sold ${currentSold} -> ${newSoldItems}, available ${currentAvailable} -> ${newAvailableItems}`
-                  );
-                }
-              }
+              //   if (
+              //     verificationData.numOfSoldItem !== newSoldItems ||
+              //     verificationData.numAvailable !== newAvailableItems
+              //   ) {
+              //     console.error(
+              //       "❌ [ORDER SERVICE] Update verification failed!"
+              //     );
+              //   } else {
+              //     console.log(
+              //       `✅ [ORDER SERVICE] Successfully updated Go&Grab food item ${item.foodItemId}: sold ${currentSold} -> ${newSoldItems}, available ${currentAvailable} -> ${newAvailableItems}`
+              //     );
+              //   }
+              // }
             } else {
               console.error(
                 `❌ [ORDER SERVICE] Food item document not found: ${item.foodItemId}`
@@ -151,7 +144,7 @@ export const placeOrder = async (orderData) => {
               console.log(
                 "🔍 [ORDER SERVICE] Checking if document exists in collection..."
               );
-              const foodItemsRef = collection(db, "foodItems");
+
               // You might want to add a query here to find the document by name or other field
             }
           } catch (error) {

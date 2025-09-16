@@ -140,21 +140,21 @@ ld {
 }
 
 .pickup-details .date-time-picker .picker-label {
-  font-size: 13px;
+  font-size: 14px;
   color: #666;
   margin-bottom: 4px;
 }
 
 .pickup-details .date-time-picker .picker-select {
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: 14px;
   border-radius: 6px;
   border: 1px solid #ddd;
 }
 
 .pickup-details .date-time-picker .picker-value {
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: 14px;
   border-radius: 6px;
   border: 1px solid #ddd;
 }
@@ -309,9 +309,9 @@ ld {
 .date-display-text {
   /* Style to match existing picker-select */
   width: 100%;
-  padding: 4px 5px;
+  padding: 6px 5px;
   padding-right: 18px;
-  font-size: 12px;
+  font-size: 14px;
   border-radius: 6px;
   border: 1px solid #e0e0e0;
   background: #f8f9fa;
