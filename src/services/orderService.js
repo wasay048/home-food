@@ -41,7 +41,7 @@ export const placeOrder = async (orderData) => {
           const foodRef = doc(db, "foodItems", item.foodItemId);
           await updateDoc(foodRef, {
             numOfSoldItem: increment(item.quantity),
-            numberOfAvailableItem: increment(-item.quantity),
+            numAvailable: increment(-item.quantity),
           });
           console.log(
             `Updated Go&Grab food item ${item.foodItemId}: sold +${item.quantity}, available -${item.quantity}`
