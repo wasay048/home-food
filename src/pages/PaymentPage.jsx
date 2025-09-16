@@ -58,23 +58,19 @@ export default function PaymentPage() {
       console.log("kitchen", kitchen);
       if (kitchen) {
         return {
-          id: kitchen.id || kitchen.ownerId || "PKcWQYMxEZQxnKSLp4de", // Use fallback kitchen ID
-          name: kitchen.name || "James Kitchen",
-          address:
-            kitchen.address || "120 Lane San Francisco, East Falmouth MA",
+          id: kitchen.id || kitchen.ownerId || "", // Use fallback kitchen ID
+          name: kitchen.name || "",
+          address: kitchen.address || "",
           latitude: kitchen.location?.lat || kitchen.latitude || 41.5742,
           longitude: kitchen.location?.lng || kitchen.longitude || -70.6109,
           preorderSchedule: kitchen?.preorderSchedule || null,
+          paypal: kitchen?.paypal || "",
+          venmo: kitchen?.venmo || "",
+          zelle: kitchen?.zelle || "",
         };
       }
     }
-    return {
-      id: "PKcWQYMxEZQxnKSLp4de", // Fallback kitchen ID
-      name: "James Kitchen",
-      address: "120 Lane San Francisco, East Falmouth MA",
-      latitude: 41.5742,
-      longitude: -70.6109,
-    };
+    return null;
   }, [currentKitchen]);
 
   // Handle edit pickup time
@@ -422,36 +418,58 @@ export default function PaymentPage() {
             {/* <div className="payment-method mb-20"> ... */}
             <div className="other-payments-wrapper mb-20">
               <h2 className="title">
-                Other Payments acceptable to James Kitchen Kitchen
+                Other Payments acceptable to{" "}
+                {kitchenInfo?.name || "the Kitchen"}
               </h2>
-              <div className="item-flex">
-                <div className="left">
-                  <div className="text">PayPal to</div>
-                  <a className="email">jamesPayPal00@gmail.com</a>
-                </div>
-                <div className="copy">
-                  <Copy
+              {kitchenInfo?.paypal && kitchenInfo?.paypal !== "" && (
+                <div className="item-flex">
+                  <div className="left">
+                    <div className="text">PayPal to</div>
+                    <a className="email">{kitchenInfo?.paypal}</a>
+                  </div>
+                  <div
+                    className="copy"
                     onClick={async () =>
-                      await handleCopyEmail("jamesPayPal00@gmail.com")
+                      await handleCopyEmail(kitchenInfo?.paypal)
                     }
-                  />{" "}
-                  Copy
+                  >
+                    <Copy /> Copy
+                  </div>
                 </div>
-              </div>
-              <div className="item-flex">
-                <div className="left">
-                  <div className="text">Venmo to</div>
-                  <a className="email">jamesVenmo00@gmail.com</a>
-                </div>
-                <div className="copy">
-                  <Copy
+              )}
+              {kitchenInfo?.venmo && kitchenInfo?.venmo !== "" && (
+                <div className="item-flex">
+                  <div className="left">
+                    <div className="text">Venmo to</div>
+                    <a className="email">{kitchenInfo?.venmo}</a>
+                  </div>
+                  <div
+                    className="copy"
                     onClick={async () =>
-                      await handleCopyEmail("jamesVenmo00@gmail.com")
+                      await handleCopyEmail(kitchenInfo?.venmo)
                     }
-                  />{" "}
-                  Copy
+                  >
+                    <Copy /> Copy
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {kitchenInfo?.zelle && kitchenInfo?.zelle !== "" && (
+                <div className="item-flex">
+                  <div className="left">
+                    <div className="text">Zelle to</div>
+                    <a className="email">{kitchenInfo?.zelle}</a>
+                  </div>
+                  <div
+                    className="copy"
+                    onClick={async () =>
+                      await handleCopyEmail(kitchenInfo?.zelle)
+                    }
+                  >
+                    <Copy /> Copy
+                  </div>
+                </div>
+              )}
             </div>
             <div className="payment-method mb-20">
               <h5 className="medium-title mb-20">Payment Details</h5>
