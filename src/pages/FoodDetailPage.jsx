@@ -57,7 +57,7 @@ const CustomSlider = ({ food, isLiked, handleLikeToggle }) => {
 
   const sliderImages = generateSliderImages() || []; // Ensure it's always an array
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAutoSliding, setIsAutoSliding] = useState(false);
+  const [isAutoSliding, setIsAutoSliding] = useState(true);
 
   // Auto-slide functionality with proper null checks
   useEffect(() => {
@@ -74,17 +74,17 @@ const CustomSlider = ({ food, isLiked, handleLikeToggle }) => {
   // Initialize auto-sliding only when we have multiple images
   useEffect(() => {
     if (sliderImages && sliderImages.length > 1) {
-      setIsAutoSliding(false);
+      setIsAutoSliding(true);
     }
   }, [sliderImages]);
 
   // Pause auto-sliding on user interaction
   const pauseAutoSliding = () => {
-    setIsAutoSliding(false);
+    setIsAutoSliding(true);
     // Resume after 3 seconds
     setTimeout(() => {
       if (sliderImages && sliderImages.length > 1) {
-        setIsAutoSliding(false);
+        setIsAutoSliding(true);
       }
     }, 3000);
   };
