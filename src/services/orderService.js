@@ -37,17 +37,152 @@ export const placeOrder = async (orderData) => {
     for (const item of orderData.orderedFoodItems) {
       try {
         if (item.orderType === "grabAndGo") {
-          // For Go&Grab: Update the foodItems collection
-          const foodRef = doc(db, "foodItems", item.foodItemId);
-          await updateDoc(foodRef, {
-            numOfSoldItem: increment(item.quantity),
-            numAvailable: increment(-item.quantity),
+          console.log("🏃 [ORDER SERVICE] Processing Go&Grab item...");
+          console.log("🏃 [ORDER SERVICE] Item details:", {
+            foodItemId: item.foodItemId,
+            quantity: item.quantity,
+            quantityType: typeof item.quantity,
           });
-          console.log(
-            `Updated Go&Grab food item ${item.foodItemId}: sold +${item.quantity}, available -${item.quantity}`
-          );
-        }
-        if (item.orderType === "preOrder") {
+
+          const foodRef = doc(db, "foodItems", item.foodItemId);
+
+          try {
+            // First, read the current document
+            console.log(
+              "📖 [ORDER SERVICE] Reading current food item document..."
+            );
+            const currentDoc = await getDoc(foodRef);
+
+            if (currentDoc.exists()) {
+              const currentData = currentDoc.data();
+
+              console.log("📄 [ORDER SERVICE] Current food item data:", {
+                documentId: item.foodItemId,
+                exists: true,
+                currentData: {
+                  numAvailable: currentData.numAvailable,
+                  numOfSoldItem: currentData.numOfSoldItem,
+                  name: currentData.name,
+                  allFields: Object.keys(currentData),
+                },
+              });
+
+              // Calculate new values
+              const currentSold = currentData.numOfSoldItem || 0;
+              const currentAvailable = currentData.numAvailable || 0;
+              const orderQuantity = parseInt(item.quantity);
+
+              const newSoldItems = currentSold + orderQuantity;
+              const newAvailableItems = Math.max(
+                0,
+                currentAvailable - orderQuantity
+              );
+
+              console.log("📊 [ORDER SERVICE] Inventory calculation:", {
+                currentSold,
+                currentAvailable,
+                orderQuantity,
+                newSoldItems,
+                newAvailableItems,
+                calculation: `Sold: ${currentSold} + ${orderQuantity} = ${newSoldItems}, Available: ${currentAvailable} - ${orderQuantity} = ${newAvailableItems}`,
+              });
+
+              // Validate the calculation
+              if (isNaN(newSoldItems) || isNaN(newAvailableItems)) {
+                throw new Error(
+                  `Invalid calculation: newSoldItems=${newSoldItems}, newAvailableItems=${newAvailableItems}`
+                );
+              }
+
+              // Update with absolute values
+              console.log(
+                "🔄 [ORDER SERVICE] Updating document with new values..."
+              );
+              await updateDoc(foodRef, {
+                numOfSoldItem: newSoldItems,
+                numAvailable: newAvailableItems,
+              });
+
+              // Verify the update by reading the document again
+              console.log("🔍 [ORDER SERVICE] Verifying update...");
+              const verificationDoc = await getDoc(foodRef);
+              if (verificationDoc.exists()) {
+                const verificationData = verificationDoc.data();
+                console.log("✅ [ORDER SERVICE] Update verification:", {
+                  beforeUpdate: {
+                    sold: currentSold,
+                    available: currentAvailable,
+                  },
+                  afterUpdate: {
+                    sold: verificationData.numOfSoldItem,
+                    available: verificationData.numAvailable,
+                  },
+                  updateSuccessful: {
+                    soldUpdated:
+                      verificationData.numOfSoldItem === newSoldItems,
+                    availableUpdated:
+                      verificationData.numAvailable === newAvailableItems,
+                  },
+                });
+
+                if (
+                  verificationData.numOfSoldItem !== newSoldItems ||
+                  verificationData.numAvailable !== newAvailableItems
+                ) {
+                  console.error(
+                    "❌ [ORDER SERVICE] Update verification failed!"
+                  );
+                } else {
+                  console.log(
+                    `✅ [ORDER SERVICE] Successfully updated Go&Grab food item ${item.foodItemId}: sold ${currentSold} -> ${newSoldItems}, available ${currentAvailable} -> ${newAvailableItems}`
+                  );
+                }
+              }
+            } else {
+              console.error(
+                `❌ [ORDER SERVICE] Food item document not found: ${item.foodItemId}`
+              );
+              console.error(
+                "❌ [ORDER SERVICE] Document path attempted:",
+                `foodItems/${item.foodItemId}`
+              );
+
+              // Let's also check if the document exists with a different ID format
+              console.log(
+                "🔍 [ORDER SERVICE] Checking if document exists in collection..."
+              );
+              const foodItemsRef = collection(db, "foodItems");
+              // You might want to add a query here to find the document by name or other field
+            }
+          } catch (error) {
+            console.error(
+              "❌ [ORDER SERVICE] Error in Go&Grab update process:",
+              {
+                foodItemId: item.foodItemId,
+                error: error.message,
+                code: error.code,
+                stack: error.stack,
+                firebaseError: error,
+              }
+            );
+
+            // Check if it's a permissions error
+            if (error.code === "permission-denied") {
+              console.error(
+                "🚫 [ORDER SERVICE] Permission denied - check Firestore security rules"
+              );
+            }
+
+            // Check if it's a network error
+            if (error.code === "unavailable") {
+              console.error(
+                "🌐 [ORDER SERVICE] Network error - check internet connection"
+              );
+            }
+
+            throw error;
+          }
+        } else if (item.orderType === "preOrder") {
           console.log("📅 [ORDER SERVICE] Processing PreOrder item...");
 
           // For PreOrder: Update the kitchen's preorderSchedule
