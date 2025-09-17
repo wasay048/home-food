@@ -181,7 +181,7 @@
 }
 
 .quantity-selector--large .quantity-number {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
 }
 
@@ -191,8 +191,8 @@
 }
 
 .quantity-selector--large .quantity-btn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   background-color: white;
   color: #111;
 }

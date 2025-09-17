@@ -441,7 +441,8 @@ export default function FoodDetailPage() {
 
     // Check availability
     if (!availabilityStatus.isAvailable) {
-      showToast.error("This item is currently unavailable");
+      // showToast.error("This item is currently unavailable");
+      console.log("This item is currently unavailable");
       return;
     }
 
@@ -943,10 +944,44 @@ export default function FoodDetailPage() {
             />
 
             <div className="quantity-warpper">
-              <div className="price">
-                <sup>$</sup>
-                {food?.cost && parseFloat(food?.cost).toFixed(2)}
+              <div
+                className="price"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <span className="currency">$</span>
+                  {food?.cost && parseFloat(food?.cost).toFixed(2)}
+                </div>
+                <div className="availability-status">
+                  {(() => {
+                    const currentAvailability =
+                      food?.availability?.numAvailable ||
+                      food?.numAvailable ||
+                      food?.numberOfAvailableItem ||
+                      0;
+
+                    console.log(
+                      "🔢 [FoodDetailPage] Current availability:",
+                      currentAvailability
+                    );
+
+                    if (currentAvailability === 0) {
+                      return <span className="status sold-out">Sold Out</span>;
+                    } else if (currentAvailability <= 3) {
+                      return (
+                        <span className="status low-stock">
+                          {currentAvailability} left
+                        </span>
+                      );
+                    }
+                    return null; // Don't show anything if availability is > 3
+                  })()}
+                </div>
               </div>
+
               <QuantitySelector
                 food={food}
                 kitchen={kitchen}
@@ -962,7 +997,34 @@ export default function FoodDetailPage() {
                 orderType={orderType}
               />
             </div>
+            {/* <div className="price-quantity-section">
+                
+              <div className="availability-status">
+                {(() => {
+                  const currentAvailability =
+                    food?.availability?.numAvailable ||
+                    food?.numAvailable ||
+                    food?.numberOfAvailableItem ||
+                    0;
 
+                  console.log(
+                    "🔢 [FoodDetailPage] Current availability:",
+                    currentAvailability
+                  );
+
+                  if (currentAvailability === 0) {
+                    return <span className="status sold-out">Sold Out</span>;
+                  } else if (currentAvailability <= 3) {
+                    return (
+                      <span className="status low-stock">
+                        {currentAvailability} left
+                      </span>
+                    );
+                  }
+                  return null; // Don't show anything if availability is > 3
+                })()}
+              </div>
+            </div> */}
             {/* Dynamic Date Time Picker */}
             <div className="pickup-details">
               <DateTimePicker
@@ -1038,16 +1100,33 @@ export default function FoodDetailPage() {
                     typeof handleAddToCart
                   );
                   if (!availabilityStatus.isAvailable) {
-                    alert(
-                      "♡ this food to the chef that we want it! When it is added to Go&Grab or Pre-Order, you will be notified."
-                    );
+                    // alert(
+                    //   "♡ this food to the chef that we want it! When it is added to Go&Grab or Pre-Order, you will be notified."
+                    // );
+                    navigate("/foods", {
+                      replace: true,
+                    });
                   }
                   handleAddToCart(e);
                 }}
-                disabled={!availabilityStatus.isAvailable}
+                // disabled={!availabilityStatus.isAvailable}
                 style={{ pointerEvents: "auto" }}
               >
-                {!availabilityStatus.isAvailable ? "Sold Out" : "Add to Cart"}
+                {(() => {
+                  const currentAvailability =
+                    food?.availability?.numAvailable ||
+                    food?.numAvailable ||
+                    food?.numberOfAvailableItem ||
+                    0;
+
+                  if (
+                    !availabilityStatus.isAvailable ||
+                    currentAvailability === 0
+                  ) {
+                    return "What else is available?";
+                  }
+                  return "Add to Cart";
+                })()}
               </button>
               <div className="icon">
                 <svg
