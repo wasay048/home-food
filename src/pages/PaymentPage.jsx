@@ -58,11 +58,11 @@ export default function PaymentPage() {
       console.log("kitchen", kitchen);
       if (kitchen) {
         return {
-          id: kitchen.id || kitchen.ownerId || "", // Use fallback kitchen ID
-          name: kitchen.name || "",
-          address: kitchen.address || "",
-          latitude: kitchen.location?.lat || kitchen.latitude || 41.5742,
-          longitude: kitchen.location?.lng || kitchen.longitude || -70.6109,
+          id: kitchen?.id || kitchen?.ownerId || "", // Use fallback kitchen ID
+          name: kitchen?.name || "",
+          address: kitchen?.address || "",
+          latitude: kitchen?.location?.lat || kitchen?.latitude || 41.5742,
+          longitude: kitchen?.location?.lng || kitchen?.longitude || -70.6109,
           preorderSchedule: kitchen?.preorderSchedule || null,
           paypal: kitchen?.paypal || "",
           venmo: kitchen?.venmo || "",
@@ -348,11 +348,11 @@ export default function PaymentPage() {
       setTimeout(() => {
         navigate("/success", {
           state: {
-            orderID: orderData.orderID,
+            orderID: orderData?.orderID,
             orderDocId: orderDocId,
-            totalAmount: paymentCalculation.totalPayment,
-            kitchenName: kitchenInfo.name,
-            pickupAddress: kitchenInfo.address,
+            totalAmount: paymentCalculation?.totalPayment,
+            kitchenName: kitchenInfo?.name,
+            pickupAddress: kitchenInfo?.address,
             orderedItems: cartItems.map((item) => {
               const pickupDate = item.pickupDetails?.date || item.selectedDate;
               const orderType = item.pickupDetails?.orderType;
@@ -370,20 +370,20 @@ export default function PaymentPage() {
               });
 
               return {
-                id: item.foodId || item.id,
-                foodItemId: item.foodId || item.id,
-                name: item.food?.name || "Unknown Item",
+                id: item?.foodId || item?.id,
+                foodItemId: item?.foodId || item?.id,
+                name: item?.food?.name || "Unknown Item",
                 description:
-                  item.food?.description ||
+                  item?.food?.description ||
                   "This dish features tender, juicy flavors",
-                imageUrl: item.food?.imageUrl || item.food?.image,
-                price: item.food?.cost || item.food?.price || "0.00",
-                quantity: item.quantity || 1,
+                imageUrl: item?.food?.imageUrl || item?.food?.image,
+                price: item?.food?.cost || item?.food?.price || "0.00",
+                quantity: item?.quantity || 1,
                 pickupDate: pickupDate,
-                pickupTime: item.pickupDetails?.time,
+                pickupTime: item?.pickupDetails?.time,
                 isPreOrder: isPreOrderItem,
                 orderType: orderType,
-                isFromPreorder: item.isFromPreorder || isPreOrderItem,
+                isFromPreorder: item?.isFromPreorder || isPreOrderItem,
               };
             }),
           },
@@ -411,7 +411,7 @@ export default function PaymentPage() {
         <div className="mobile-container">
           <div className="padding-20 order-page">
             <h4 className="medium-title mb-12">Pickup Address</h4>
-            <p className="body-text-med mb-20">{kitchenInfo.address}</p>
+            <p className="body-text-med mb-20">{kitchenInfo?.address}</p>
 
             <div className="hr mb-18"></div>
 

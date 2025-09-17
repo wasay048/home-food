@@ -175,7 +175,7 @@ export const placeOrder = async (orderData) => {
 
             throw error;
           }
-        } else if (item.orderType === "preOrder") {
+        } else if (item.orderType === "preorder") {
           console.log("📅 [ORDER SERVICE] Processing PreOrder item...");
 
           // For PreOrder: Update the kitchen's preorderSchedule
@@ -373,7 +373,7 @@ export const createOrderObject = ({
 
   let orderType = "grabAndGo";
   if (hasPreOrder && !hasGrabAndGo) {
-    orderType = "preOrder";
+    orderType = "preorder";
   } else if (hasPreOrder && hasGrabAndGo) {
     orderType = "mixed";
   }
@@ -404,7 +404,7 @@ export const createOrderObject = ({
     quantity: parseInt(item.quantity || 1),
     orderStatus: "inProgress",
     orderType:
-      item.pickupDetails.orderType === "PRE_ORDER" ? "preOrder" : "grabAndGo",
+      item.pickupDetails.orderType === "PRE_ORDER" ? "preorder" : "grabAndGo",
     rating: 0,
     specialInstructions: item.specialInstructions || "",
     preOrder: {
