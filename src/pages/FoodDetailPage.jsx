@@ -349,17 +349,17 @@ export default function FoodDetailPage() {
     }
 
     // Check if food is in preorder schedule (fallback)
-    if (kitchen?.preorderSchedule?.dates) {
-      const preorderDates = Object.values(
-        kitchen.preorderSchedule.dates
-      ).flat();
-      const hasPreorder = preorderDates.some(
-        (item) => item.foodItemId === food?.id
-      );
-      if (hasPreorder) {
-        return "PRE_ORDER";
-      }
-    }
+    // if (kitchen?.preorderSchedule?.dates) {
+    //   const preorderDates = Object.values(
+    //     kitchen.preorderSchedule.dates
+    //   ).flat();
+    //   const hasPreorder = preorderDates.some(
+    //     (item) => item.foodItemId === food?.id
+    //   );
+    //   if (hasPreorder) {
+    //     return "PRE_ORDER";
+    //   }
+    // }
 
     return "GO_GRAB"; // Default fallback
   }, [selectedDate, food, kitchen]);
@@ -390,7 +390,8 @@ export default function FoodDetailPage() {
 
   const getCurrentAvailability = useMemo(() => {
     let currentAvailability = 0;
-
+    // eslint-disable-next-line no-debugger
+    debugger;
     if (orderType === "GO_GRAB") {
       // For Go&Grab: Check direct food availability
       currentAvailability =
