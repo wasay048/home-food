@@ -147,7 +147,7 @@ const CustomSlider = ({ food, isLiked, handleLikeToggle }) => {
         </div>
 
         {/* Heart Icon */}
-        <div
+        {/* <div
           className={`icon heart-icon ${isLiked ? "liked" : ""}`}
           onClick={handleLikeToggle}
         >
@@ -165,7 +165,7 @@ const CustomSlider = ({ food, isLiked, handleLikeToggle }) => {
               strokeWidth="1.20512"
             />
           </svg>
-        </div>
+        </div> */}
 
         {/* Previous Button - only show if there are multiple images */}
         {sliderImages.length > 1 && (
