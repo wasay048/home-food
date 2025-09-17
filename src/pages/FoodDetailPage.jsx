@@ -668,51 +668,122 @@ export default function FoodDetailPage() {
       let preOrderItems = [];
       let availablePreorderDates = [];
 
+      // if (fullKitchen?.preorderSchedule?.dates) {
+      //   // Get available preorder dates
+      //   const today = dayjs();
+      //   const todayStr = today.format("YYYY-MM-DD");
+
+      //   // Generate next 2 days
+      //   const nextTwoDays = [];
+      //   for (let i = 1; i <= 2; i++) {
+      //     const nextDay = today.add(i, "day");
+      //     const dateString = nextDay.format("YYYY-MM-DD");
+      //     nextTwoDays.push(dateString);
+      //   }
+
+      //   // Filter to only include dates in preorder schedule
+      //   const availableDateStrings = nextTwoDays.filter((dateStr) => {
+      //     const hasSchedule = fullKitchen.preorderSchedule.dates[dateStr];
+      //     const isNotToday = dateStr !== todayStr;
+      //     return hasSchedule && isNotToday;
+      //   });
+
+      //   // Map to display format
+      //   availablePreorderDates = availableDateStrings.map((dateString) => {
+      //     const date = dayjs(dateString);
+      //     return {
+      //       dateString,
+      //       displayDate: date.format("ddd, MMM D"),
+      //       scheduleItems: fullKitchen.preorderSchedule.dates[dateString] || [],
+      //     };
+      //   });
+
+      //   // Get all food IDs in preorder schedule
+      //   const preorderFoodIds = new Set();
+      //   Object.values(fullKitchen.preorderSchedule.dates)
+      //     .flat()
+      //     .forEach((item) => {
+      //       preorderFoodIds.add(item.foodItemId);
+      //     });
+
+      //   // Filter foods that are in preorder schedule
+      //   preOrderItems = allFoods.filter((food) => {
+      //     return preorderFoodIds.has(food.id) && food.kitchenId === kitchenId;
+      //   });
+      // }
+
+      // Dispatch to Redux store
+
       if (fullKitchen?.preorderSchedule?.dates) {
-        // Get available preorder dates
+        // Get today's date only
         const today = dayjs();
         const todayStr = today.format("YYYY-MM-DD");
 
-        // Generate next 2 days
-        const nextTwoDays = [];
-        for (let i = 1; i <= 2; i++) {
-          const nextDay = today.add(i, "day");
-          const dateString = nextDay.format("YYYY-MM-DD");
-          nextTwoDays.push(dateString);
-        }
+        console.log(
+          "📅 [FoodDetailPage] Checking preorder for today only:",
+          todayStr
+        );
 
-        // Filter to only include dates in preorder schedule
-        const availableDateStrings = nextTwoDays.filter((dateStr) => {
-          const hasSchedule = fullKitchen.preorderSchedule.dates[dateStr];
-          const isNotToday = dateStr !== todayStr;
-          return hasSchedule && isNotToday;
-        });
+        // Check if today has preorder schedule
+        const todaySchedule = fullKitchen.preorderSchedule.dates[todayStr];
 
-        // Map to display format
-        availablePreorderDates = availableDateStrings.map((dateString) => {
-          const date = dayjs(dateString);
-          return {
-            dateString,
-            displayDate: date.format("ddd, MMM D"),
-            scheduleItems: fullKitchen.preorderSchedule.dates[dateString] || [],
-          };
-        });
+        if (
+          todaySchedule &&
+          Array.isArray(todaySchedule) &&
+          todaySchedule.length > 0
+        ) {
+          // Map today's schedule to display format
+          availablePreorderDates = [
+            {
+              dateString: todayStr,
+              displayDate: `Today, ${today.format("MMM D")}`,
+              scheduleItems: todaySchedule,
+            },
+          ];
 
-        // Get all food IDs in preorder schedule
-        const preorderFoodIds = new Set();
-        Object.values(fullKitchen.preorderSchedule.dates)
-          .flat()
-          .forEach((item) => {
+          console.log("📅 [FoodDetailPage] Today's preorder schedule found:", {
+            date: todayStr,
+            itemsCount: todaySchedule.length,
+            items: todaySchedule.map((item) => ({
+              foodItemId: item.foodItemId,
+              nameOfFood: item.nameOfFood,
+              numOfAvailableItems: item.numOfAvailableItems,
+            })),
+          });
+
+          // Get food IDs available for preorder today
+          const preorderFoodIds = new Set();
+          todaySchedule.forEach((item) => {
             preorderFoodIds.add(item.foodItemId);
           });
 
-        // Filter foods that are in preorder schedule
-        preOrderItems = allFoods.filter((food) => {
-          return preorderFoodIds.has(food.id) && food.kitchenId === kitchenId;
-        });
-      }
+          // Filter foods that are in today's preorder schedule
+          preOrderItems = allFoods.filter((food) => {
+            return preorderFoodIds.has(food.id) && food.kitchenId === kitchenId;
+          });
 
-      // Dispatch to Redux store
+          console.log(
+            "📅 [FoodDetailPage] Foods available for preorder today:",
+            {
+              totalFoodsFound: preOrderItems.length,
+              foodIds: preOrderItems.map((food) => food.id),
+              foodNames: preOrderItems.map((food) => food.name),
+            }
+          );
+        } else {
+          console.log(
+            "📅 [FoodDetailPage] No preorder schedule found for today"
+          );
+          availablePreorderDates = [];
+          preOrderItems = [];
+        }
+      } else {
+        console.log(
+          "📅 [FoodDetailPage] No preorder schedule found in kitchen data"
+        );
+        availablePreorderDates = [];
+        preOrderItems = [];
+      }
       const listingData = {
         goGrabItems,
         preOrderItems,

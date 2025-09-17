@@ -22,7 +22,7 @@ export default function ListingPage() {
   } = useSelector((state) => state.listing);
 
   // Use the generic cart hook for all cart operations
-  const { cartItems, getCartQuantity, handleQuantityChange } = useGenericCart();
+  const { cartItems, getCartQuantity } = useGenericCart();
 
   // State for managing pickup dates and times for each food item
   const [pickupDates, setPickupDates] = useState({});
