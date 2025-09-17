@@ -20,6 +20,8 @@ export const useGenericCart = () => {
       maxQuantity = 99,
       incomingOrderType = null
     ) => {
+      // eslint-disable-next-line no-debugger
+      debugger;
       if (!incomingOrderType) {
         return;
       }
@@ -135,7 +137,7 @@ export const useGenericCart = () => {
         }
 
         // CASE 3B-4: Food found in schedule - check if it's limited order
-        if (foodSchedule.isLimitedOrder === false) {
+        if (foodSchedule.isLimitedOrder === true) {
           // Limited quantity pre-order
           const availableItems = foodSchedule.numOfAvailableItems || 0;
 

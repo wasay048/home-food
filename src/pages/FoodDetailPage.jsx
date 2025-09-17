@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import { showToast } from "../utils/toast";
 import ProductImage from "../assets/images/product.png";
@@ -388,6 +388,38 @@ export default function FoodDetailPage() {
     kitchenPreorderSchedule: kitchen?.preorderSchedule,
   });
 
+  const getCurrentAvailability = useMemo(() => {
+    let currentAvailability = 0;
+
+    if (orderType === "GO_GRAB") {
+      // For Go&Grab: Check direct food availability
+      currentAvailability =
+        food?.availability?.numAvailable ||
+        food?.numAvailable ||
+        food?.numberOfAvailableItem ||
+        0;
+    } else if (orderType === "PRE_ORDER") {
+      // For Pre-Order: Check availability in kitchen's preorder schedule
+      const scheduleForDate = kitchen?.preorderSchedule?.dates?.[pickupDate];
+      if (scheduleForDate && Array.isArray(scheduleForDate)) {
+        const foodInSchedule = scheduleForDate.find(
+          (item) => item.foodItemId === food?.id
+        );
+        currentAvailability = foodInSchedule?.numOfAvailableItems || 0;
+      }
+    }
+
+    console.log("🔢 [FoodDetailPage] getCurrentAvailability:", {
+      orderType,
+      pickupDate,
+      foodId: food?.id,
+      currentAvailability,
+      scheduleExists: !!kitchen?.preorderSchedule?.dates?.[pickupDate],
+    });
+
+    return currentAvailability;
+  }, [orderType, pickupDate, food, kitchen]);
+  console.log("getCurrentAvailability", getCurrentAvailability);
   // Date/Time picker handlers
   // const handleDateChange = useCallback((newDate) => {
   //   // eslint-disable-next-line no-debugger
@@ -955,31 +987,24 @@ export default function FoodDetailPage() {
                   <span className="currency">$</span>
                   {food?.cost && parseFloat(food?.cost).toFixed(2)}
                 </div>
-                <div className="availability-status">
-                  {(() => {
-                    const currentAvailability =
-                      food?.availability?.numAvailable ||
-                      food?.numAvailable ||
-                      food?.numberOfAvailableItem ||
-                      0;
-
-                    console.log(
-                      "🔢 [FoodDetailPage] Current availability:",
-                      currentAvailability
-                    );
-
-                    if (currentAvailability === 0) {
-                      return <span className="status sold-out">Sold Out</span>;
-                    } else if (currentAvailability <= 3) {
-                      return (
-                        <span className="status low-stock">
-                          {currentAvailability} left
-                        </span>
-                      );
-                    }
-                    return null; // Don't show anything if availability is > 3
-                  })()}
-                </div>
+                {getCurrentAvailability < 4 && (
+                  <div className="availability-status">
+                    {(() => {
+                      if (getCurrentAvailability === 0) {
+                        return (
+                          <span className="status sold-out">Sold Out</span>
+                        );
+                      } else if (getCurrentAvailability <= 3) {
+                        return (
+                          <span className="status low-stock">
+                            {getCurrentAvailability} left
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                )}
               </div>
 
               <QuantitySelector
@@ -1113,15 +1138,9 @@ export default function FoodDetailPage() {
                 style={{ pointerEvents: "auto" }}
               >
                 {(() => {
-                  const currentAvailability =
-                    food?.availability?.numAvailable ||
-                    food?.numAvailable ||
-                    food?.numberOfAvailableItem ||
-                    0;
-
                   if (
                     !availabilityStatus.isAvailable ||
-                    currentAvailability === 0
+                    getCurrentAvailability === 0
                   ) {
                     return "What else is available?";
                   }
