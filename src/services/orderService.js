@@ -331,7 +331,7 @@ export const createOrderObject = ({
   if (hasPreOrder && !hasGrabAndGo) {
     orderType = "preorder";
   } else if (hasPreOrder && hasGrabAndGo) {
-    orderType = "mixed";
+    orderType = "preorder";
   }
   alert("Order type determined: " + orderType);
   // Calculate pickup date based on order type
