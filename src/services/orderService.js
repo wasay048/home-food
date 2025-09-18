@@ -21,10 +21,7 @@ export const placeOrder = async (orderData) => {
     const orderRef = await addDoc(collection(db, "orders"), orderData);
 
     console.log("Order placed successfully with ID:", orderRef.id);
-    alert(`✅ Order created with ID: ${orderRef.id}`);
-    alert("Order details: " + JSON.stringify(orderData));
 
-    alert(`📝 Processing ${orderData.orderedFoodItems.length} food items...`);
     // Update the order document with the orderIDKey (using the document ID)
     await updateDoc(orderRef, {
       orderIDKey: orderRef.id,
@@ -32,9 +29,6 @@ export const placeOrder = async (orderData) => {
 
     for (const item of orderData.orderedFoodItems) {
       try {
-        alert(
-          `🔄 Processing: ${item.name || "Unknown"} (Type: ${item.orderType})`
-        );
         if (item.orderType === "grabAndGo") {
           console.log("🏃 [ORDER SERVICE] Processing Go&Grab item...");
           console.log("🏃 [ORDER SERVICE] Item details:", {
@@ -42,7 +36,6 @@ export const placeOrder = async (orderData) => {
             quantity: item.quantity,
             quantityType: typeof item.quantity,
           });
-          alert(`🏃 Go&Grab: ${item.foodItemId} (Qty: ${item.quantity})`);
 
           // 🆕 Try to find the food document using the same pattern as foodService.js
           let foodRef = null;
@@ -50,9 +43,6 @@ export const placeOrder = async (orderData) => {
 
           // First, try to find it in the kitchen's subcollection
           if (orderData.kitchenId) {
-            alert(
-              `📍 Trying kitchen subcollection: kitchens/${orderData.kitchenId}/foodItems/${item.foodItemId}`
-            );
             foodRef = doc(
               db,
               "kitchens",
@@ -63,38 +53,19 @@ export const placeOrder = async (orderData) => {
 
             try {
               currentDoc = await getDoc(foodRef);
-              if (currentDoc.exists()) {
-                alert(`✅ Found in kitchen subcollection!`);
-              } else {
-                alert(
-                  `❌ Not found in kitchen subcollection, trying top-level...`
-                );
-                currentDoc = null;
-              }
             } catch (error) {
-              alert(
-                `⚠️ Error checking kitchen subcollection: ${error.message}`
-              );
               currentDoc = null;
             }
           }
 
           // If not found in kitchen subcollection, try top-level foodItems collection
           if (!currentDoc || !currentDoc.exists()) {
-            alert(
-              `📍 Trying top-level collection: foodItems/${item.foodItemId}`
-            );
             foodRef = doc(db, "foodItems", item.foodItemId);
 
             try {
               currentDoc = await getDoc(foodRef);
-              if (currentDoc.exists()) {
-                alert(`✅ Found in top-level collection!`);
-              } else {
-                alert(`❌ Not found in top-level collection either!`);
-              }
             } catch (error) {
-              alert(`⚠️ Error checking top-level collection: ${error.message}`);
+              console.log("error", error);
             }
           }
 
@@ -113,10 +84,6 @@ export const placeOrder = async (orderData) => {
                 allFields: Object.keys(currentData),
               },
             });
-
-            alert(
-              `📄 Found food: ${currentData.name}\nPath: ${foodRef.path}\nAvailable: ${currentData.numAvailable}\nSold: ${currentData.numOfSoldItem}`
-            );
 
             // Continue with your existing calculation logic...
             const currentSold = currentData.numOfSoldItem || 0;
@@ -139,14 +106,9 @@ export const placeOrder = async (orderData) => {
               calculation: `Sold: ${currentSold} + ${orderQuantity} = ${newSoldItems}, Available: ${currentAvailable} - ${orderQuantity} = ${newAvailableItems}`,
             });
 
-            alert(
-              `📊 Calculation:\nBefore: ${currentAvailable} available, ${currentSold} sold\nOrdering: ${orderQuantity}\nAfter: ${newAvailableItems} available, ${newSoldItems} sold`
-            );
-
             // Validate the calculation
             if (isNaN(newSoldItems) || isNaN(newAvailableItems)) {
               const errorMsg = `Invalid calculation: newSoldItems=${newSoldItems}, newAvailableItems=${newAvailableItems}`;
-              alert(`❌ Error: ${errorMsg}`);
               throw new Error(errorMsg);
             }
 
@@ -154,16 +116,11 @@ export const placeOrder = async (orderData) => {
             console.log(
               "🔄 [ORDER SERVICE] Updating document with new values..."
             );
-            alert(`🔄 Updating inventory...`);
 
             await updateDoc(foodRef, {
               numOfSoldItem: newSoldItems,
               numAvailable: newAvailableItems,
             });
-
-            alert(
-              `✅ Go&Grab updated!\n${currentData.name}: ${currentAvailable}→${newAvailableItems} available`
-            );
           } else {
             const errorMsg = `Food item document not found: ${item.foodItemId}`;
             console.error(`❌ [ORDER SERVICE] ${errorMsg}`);
@@ -171,9 +128,6 @@ export const placeOrder = async (orderData) => {
               `kitchens/${orderData.kitchenId}/foodItems/${item.foodItemId}`,
               `foodItems/${item.foodItemId}`,
             ]);
-            alert(
-              `❌ Error: ${errorMsg}\nTried both kitchen subcollection and top-level collection`
-            );
           }
         } else if (item.orderType === "preorder") {
           console.log("📅 [ORDER SERVICE] Processing PreOrder item...");
@@ -194,9 +148,7 @@ export const placeOrder = async (orderData) => {
             foodItemId: item.foodItemId,
             quantity: item.quantity,
           });
-          alert(
-            `📅 PreOrder: ${item.foodItemId}\nDate: ${pickupDate}\nQty: ${item.quantity}`
-          );
+
           // First, get the current kitchen data to find the correct array index
           const kitchenDoc = await getDoc(kitchenRef);
           if (kitchenDoc.exists()) {
@@ -212,10 +164,7 @@ export const placeOrder = async (orderData) => {
 
             const dateSchedule =
               kitchenData.preorderSchedule?.dates?.[pickupDate];
-            alert(
-              "📅 Date schedule found: dateSchedule" +
-                (dateSchedule ? "Yes" : "No")
-            );
+
             console.log(
               "📅 [ORDER SERVICE] Date schedule for",
               pickupDate,
@@ -246,7 +195,6 @@ export const placeOrder = async (orderData) => {
               });
 
               if (foodIndex !== -1) {
-                alert(`🔍 Found food at index ${foodIndex}`);
                 // Get the current food item data to preserve all attributes
                 const currentFoodItem = dateSchedule[foodIndex];
                 const currentAvailable =
@@ -263,21 +211,19 @@ export const placeOrder = async (orderData) => {
                   newAvailable: newAvailable,
                   calculation: `${currentAvailable} - ${item.quantity} = ${newAvailable}`,
                 });
-                alert(
-                  `📊 PreOrder Calculation:\n${currentFoodItem.nameOfFood}\nBefore: ${currentAvailable} available\nOrdering: ${item.quantity}\nAfter: ${newAvailable} available`
-                );
+
                 // Create updated food item object preserving all attributes
                 const updatedFoodItem = {
                   ...currentFoodItem,
-                  numOfAvailableItems: newAvailable,
+                  numOfAvailableItems: !currentFoodItem?.isLimitedOrder
+                    ? currentAvailable
+                    : newAvailable,
                 };
 
                 console.log(
                   "🔄 [ORDER SERVICE] Updated food item object:",
                   updatedFoodItem
                 );
-
-                alert(`🔄 Updating preorder schedule...`);
 
                 // Create new array with updated item
                 const updatedDateSchedule = [...dateSchedule];
@@ -301,24 +247,17 @@ export const placeOrder = async (orderData) => {
                 await updateDoc(kitchenRef, {
                   [updatePath]: updatedDateSchedule,
                 });
-                alert(
-                  "🔍 Verifying update..." + JSON.stringify(updatedDateSchedule)
-                );
-                alert(
-                  `✅ PreOrder updated!\n${currentFoodItem.nameOfFood}: ${currentAvailable}→${newAvailable} available`
-                );
+
                 console.log(
                   `✅ [ORDER SERVICE] Updated PreOrder for food ${item.foodItemId} on ${pickupDate}: available ${currentAvailable} -> ${newAvailable} (ordered: ${item.quantity})`
                 );
               } else {
                 const errorMsg = `Food item ${item.foodItemId} not found in preorder schedule for ${pickupDate}`;
                 console.warn(`⚠️ [ORDER SERVICE] ${errorMsg}`);
-                alert(`⚠️ Warning: ${errorMsg}`);
 
-                const availableItems = dateSchedule
-                  .map((scheduleItem) => scheduleItem.nameOfFood)
-                  .join(", ");
-                alert(`Available items: ${availableItems}`);
+                // const availableItems = dateSchedule
+                //   .map((scheduleItem) => scheduleItem.nameOfFood)
+                //   .join(", ");
 
                 console.warn(
                   "⚠️ [ORDER SERVICE] Available food items in schedule:",
@@ -331,7 +270,6 @@ export const placeOrder = async (orderData) => {
             } else {
               const errorMsg = `No preorder schedule found for date ${pickupDate}`;
               console.warn(`⚠️ [ORDER SERVICE] ${errorMsg}`);
-              alert(`⚠️ Warning: ${errorMsg}`);
 
               console.warn(
                 "⚠️ [ORDER SERVICE] Available dates:",
@@ -343,20 +281,16 @@ export const placeOrder = async (orderData) => {
           } else {
             const errorMsg = `Kitchen document not found: ${orderData.kitchenId}`;
             console.error(`❌ [ORDER SERVICE] ${errorMsg}`);
-            alert(`❌ Error: ${errorMsg}`);
           }
         } else {
           const errorMsg = `Unknown order type: ${item.orderType}`;
           console.warn(`⚠️ [ORDER SERVICE] ${errorMsg}`);
-          alert(`⚠️ Warning: ${errorMsg}`);
         }
       } catch (error) {
         const errorMsg = `Could not update item ${item.foodItemId} (${item.orderType}): ${error.message}`;
         console.error(errorMsg, error);
-        alert(`❌ Item Error: ${errorMsg}`);
       }
     }
-    alert(`🎉 Order completed successfully!\nOrder ID: ${orderRef.id}`);
     return orderRef.id;
   } catch (error) {
     console.error("Error placing order:", error);
@@ -391,6 +325,7 @@ export const createOrderObject = ({
   // Determine order type based on cart items
   const hasPreOrder = Object.keys(groupedCartItems.preOrders).length > 0;
   const hasGrabAndGo = groupedCartItems.grabAndGo.length > 0;
+  alert("groupedCartItems: " + JSON.stringify(groupedCartItems));
 
   let orderType = "grabAndGo";
   if (hasPreOrder && !hasGrabAndGo) {
@@ -398,7 +333,7 @@ export const createOrderObject = ({
   } else if (hasPreOrder && hasGrabAndGo) {
     orderType = "mixed";
   }
-
+  alert("Order type determined: " + orderType);
   // Calculate pickup date based on order type
   let datePickedUp = now;
   if (hasPreOrder) {
