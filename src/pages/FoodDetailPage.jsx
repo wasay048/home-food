@@ -1145,7 +1145,7 @@ export default function FoodDetailPage() {
               />
             </div>
           </div>
-          <div className="hr"></div>
+
           <div className="padding-20">
             <h3 className="small-title mb-8">Special Request</h3>
             {/* <p className="body-text mb-16">
@@ -1166,7 +1166,7 @@ export default function FoodDetailPage() {
                 fontSize: "14px",
                 fontFamily: "inherit",
                 resize: "vertical",
-                marginBottom: "16px",
+                marginBottom: "10px",
               }}
             />
             <div className="add-to-cart-action mt-2">
@@ -1175,25 +1175,41 @@ export default function FoodDetailPage() {
                   !availabilityStatus.isAvailable ? "sold-out" : ""
                 }`}
                 onClick={(e) => {
-                  console.log("🔥 BUTTON CLICKED! Event:", e);
-                  console.log(
-                    "🔥 handleAddToCart type:",
-                    typeof handleAddToCart
-                  );
-                  if (!availabilityStatus.isAvailable) {
-                    // alert(
-                    //   "♡ this food to the chef that we want it! When it is added to Go&Grab or Pre-Order, you will be notified."
-                    // );
-                    navigate("/foods", {
-                      replace: true,
-                    });
-                  }
-                  handleAddToCart(e);
+                  console.log("e", e);
+                  // console.log("🔥 BUTTON CLICKED! Event:", e);
+                  // console.log(
+                  //   "🔥 handleAddToCart type:",
+                  //   typeof handleAddToCart
+                  // );
+                  // if (!availabilityStatus.isAvailable) {
+                  //   // alert(
+                  //   //   "♡ this food to the chef that we want it! When it is added to Go&Grab or Pre-Order, you will be notified."
+                  //   // );
+                  //   navigate("/foods", {
+                  //     replace: true,
+                  //   });
+                  // }
+                  // handleAddToCart(e);
+                  const currentPageParams = new URLSearchParams({
+                    kitchenId: kitchenId || "",
+                    foodId: foodId || "",
+                    ...(selectedDate && { date: selectedDate }),
+                  }).toString();
+                  navigate("/foods", {
+                    replace: true,
+                    state: {
+                      from: {
+                        pathname: location.pathname,
+                        search: location.search,
+                        fullUrl: `/share?${currentPageParams}`,
+                      },
+                    },
+                  });
                 }}
                 // disabled={!availabilityStatus.isAvailable}
                 style={{ pointerEvents: "auto" }}
               >
-                {(() => {
+                {/* {(() => {
                   if (
                     !availabilityStatus.isAvailable ||
                     getCurrentAvailability === 0
@@ -1201,9 +1217,10 @@ export default function FoodDetailPage() {
                     return "What else is available?";
                   }
                   return "Add to Cart";
-                })()}
+                })()} */}
+                Show Me The Menu
               </button>
-              <div className="icon">
+              {/* <div className="icon">
                 <svg
                   width="24"
                   height="24"
@@ -1250,7 +1267,7 @@ export default function FoodDetailPage() {
                     strokeLinejoin="round"
                   />
                 </svg>
-              </div>
+              </div> */}
             </div>
             <div className="custom-accordian">
               <button

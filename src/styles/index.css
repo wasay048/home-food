@@ -92,7 +92,7 @@ body,
   border-radius: 2px;
 }
 .padding-20 {
-  padding: 20px;
+  padding: 8px 20px;
 }
 .mobile-container .back-link {
   height: 36px;
@@ -1414,7 +1414,7 @@ body,
   .pickup-details {
     text-align: left;
     margin-left: 0;
-    margin-top: 12px;
+    margin-top: 0px;
     width: 100%;
     display: flex;
     justify-content: space-between;
