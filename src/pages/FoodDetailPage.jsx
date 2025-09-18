@@ -663,34 +663,73 @@ export default function FoodDetailPage() {
     // Check if user landed directly on this page
     const isDirectLanding =
       !document.referrer || !document.referrer.includes(window.location.origin);
+
     if (isDirectLanding) {
+      console.log("🛒 Clearing cart on direct landing to FoodDetailPage");
       dispatch(clearCart());
     }
-    // Wait for food and kitchen data to be loaded, then add default quantity
-    if (isDirectLanding && food && kitchen && cartQuantity === 0) {
-      console.log(
-        "🔄 Direct landing detected - adding default quantity to cart"
-      );
-      handleCartQuantityChange({
-        food,
-        kitchen,
-        newQuantity: 1, // Default quantity
-        currentQuantity: 0,
-        selectedDate: pickupDate || dayjs().format("YYYY-MM-DD"), // Use pickupDate or today
-        selectedTime: null, // Will be set by DateTimePicker
-        specialInstructions: "",
-        incomingOrderType: orderType,
-      });
+  }, [dispatch]);
+
+  // 🆕 SEPARATE useEffect for adding default quantity with proper conditions
+  useEffect(() => {
+    // Only proceed if we have all required data
+    if (!food?.id || !kitchen?.id) {
+      return;
     }
-  }, [
-    food,
-    kitchen,
-    cartQuantity,
-    orderType,
-    pickupDate,
-    handleCartQuantityChange,
-    dispatch,
-  ]);
+
+    // Check if user landed directly on this page
+    const isDirectLanding =
+      !document.referrer || !document.referrer.includes(window.location.origin);
+
+    if (isDirectLanding && cartQuantity === 0) {
+      console.log(
+        "🔄 Direct landing detected - adding default quantity to cart",
+        {
+          foodId: food.id,
+          kitchenId: kitchen.id,
+          orderType,
+          currentCartQuantity: cartQuantity,
+        }
+      );
+
+      // Add a flag to prevent multiple executions
+      const hasProcessed = sessionStorage.getItem(
+        `direct-landing-processed-${food.id}`
+      );
+
+      if (!hasProcessed) {
+        sessionStorage.setItem(`direct-landing-processed-${food.id}`, "true");
+        console.log("getCurrentAvailability", getCurrentAvailability);
+        // Use setTimeout to ensure this runs after all other state updates
+        const timer = setTimeout(() => {
+          handleCartQuantityChange({
+            food,
+            kitchen,
+            newQuantity: getCurrentAvailability === 0 ? 0 : 1, // Default quantity
+            currentQuantity: 0,
+            selectedDate: pickupDate || dayjs().format("YYYY-MM-DD"),
+            selectedTime: null,
+            specialInstructions: "",
+            incomingOrderType: orderType,
+          });
+        }, 100); // Small delay to break the update cycle
+
+        return () => {
+          clearTimeout(timer);
+        };
+      }
+    }
+  }, [food?.id, kitchen?.id, cartQuantity, getCurrentAvailability]); // ✅ Minimal dependencies to prevent infinite loop
+
+  // 🆕 Cleanup sessionStorage when navigating away
+  useEffect(() => {
+    return () => {
+      // Clean up the session storage when component unmounts
+      if (food?.id) {
+        sessionStorage.removeItem(`direct-landing-processed-${food.id}`);
+      }
+    };
+  }, [food?.id]);
 
   // Add this useEffect after the existing useEffects to process and store listing data
   useEffect(() => {
@@ -1181,9 +1220,7 @@ export default function FoodDetailPage() {
             />
             <div className="add-to-cart-action mt-2">
               <button
-                className={`button ${
-                  !availabilityStatus.isAvailable ? "sold-out" : ""
-                }`}
+                className={`button`}
                 onClick={(e) => {
                   console.log("e", e);
                   // console.log("🔥 BUTTON CLICKED! Event:", e);
