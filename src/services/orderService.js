@@ -16,7 +16,6 @@ dayjs.extend(timezone);
 export const placeOrder = async (orderData) => {
   try {
     console.log("Placing order with data:", orderData);
-    alert("Placing order...", JSON.stringify(orderData));
     // Add the order to the 'orders' collection
     const orderRef = await addDoc(collection(db, "orders"), orderData);
 
@@ -325,7 +324,6 @@ export const createOrderObject = ({
   // Determine order type based on cart items
   const hasPreOrder = Object.keys(groupedCartItems.preOrders).length > 0;
   const hasGrabAndGo = groupedCartItems.grabAndGo.length > 0;
-  alert("groupedCartItems: " + JSON.stringify(groupedCartItems));
 
   let orderType = "grabAndGo";
   if (hasPreOrder && !hasGrabAndGo) {
@@ -333,7 +331,6 @@ export const createOrderObject = ({
   } else if (hasPreOrder && hasGrabAndGo) {
     orderType = "preorder";
   }
-  alert("Order type determined: " + orderType);
   // Calculate pickup date based on order type
   let datePickedUp = now;
   if (hasPreOrder) {
