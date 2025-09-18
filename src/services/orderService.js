@@ -43,158 +43,137 @@ export const placeOrder = async (orderData) => {
             quantityType: typeof item.quantity,
           });
           alert(`🏃 Go&Grab: ${item.foodItemId} (Qty: ${item.quantity})`);
-          const foodRef = doc(db, "foodItems", item.foodItemId);
 
-          try {
-            // First, read the current document
-            console.log(
-              "📖 [ORDER SERVICE] Reading current food item document..."
-            );
-            const currentDoc = await getDoc(foodRef);
+          // 🆕 Try to find the food document using the same pattern as foodService.js
+          let foodRef = null;
+          let currentDoc = null;
 
-            if (currentDoc.exists()) {
-              const currentData = currentDoc.data();
-
-              console.log("📄 [ORDER SERVICE] Current food item data:", {
-                documentId: item.foodItemId,
-                exists: true,
-                currentData: {
-                  numAvailable: currentData.numAvailable,
-                  numOfSoldItem: currentData.numOfSoldItem,
-                  name: currentData.name,
-                  allFields: Object.keys(currentData),
-                },
-              });
-              alert(
-                `📄 Found food: ${currentData.name}\nAvailable: ${currentData.numAvailable}\nSold: ${currentData.numOfSoldItem}`
-              );
-              // Calculate new values
-              const currentSold = currentData.numOfSoldItem || 0;
-              const currentAvailable = currentData.numAvailable || 0;
-              const orderQuantity = parseInt(item.quantity);
-
-              const newSoldItems = currentSold + orderQuantity;
-              const newAvailableItems = Math.max(
-                0,
-                currentAvailable - orderQuantity
-              );
-
-              console.log("📊 [ORDER SERVICE] Inventory calculation:", {
-                currentSold,
-                currentAvailable,
-                orderQuantity,
-                newSoldItems,
-                newAvailableItems,
-                calculation: `Sold: ${currentSold} + ${orderQuantity} = ${newSoldItems}, Available: ${currentAvailable} - ${orderQuantity} = ${newAvailableItems}`,
-              });
-              alert(
-                `📊 Calculation:\nBefore: ${currentAvailable} available, ${currentSold} sold\nOrdering: ${orderQuantity}\nAfter: ${newAvailableItems} available, ${newSoldItems} sold`
-              );
-              // Validate the calculation
-              if (isNaN(newSoldItems) || isNaN(newAvailableItems)) {
-                const errorMsg = `Invalid calculation: newSoldItems=${newSoldItems}, newAvailableItems=${newAvailableItems}`;
-                alert(`❌ Error: ${errorMsg}`);
-                throw new Error(errorMsg);
-              }
-
-              // Update with absolute values
-              console.log(
-                "🔄 [ORDER SERVICE] Updating document with new values..."
-              );
-              alert(`🔄 Updating inventory...`);
-              await updateDoc(foodRef, {
-                numOfSoldItem: newSoldItems,
-                numAvailable: newAvailableItems,
-              });
-
-              // Verify the update by reading the document again
-              //   console.log("🔍 [ORDER SERVICE] Verifying update...");
-              // const verificationDoc = await getDoc(foodRef);
-              // if (verificationDoc.exists()) {
-              //   const verificationData = verificationDoc.data();
-              //   console.log("✅ [ORDER SERVICE] Update verification:", {
-              //     beforeUpdate: {
-              //       sold: currentSold,
-              //       available: currentAvailable,
-              //     },
-              //     afterUpdate: {
-              //       sold: verificationData.numOfSoldItem,
-              //       available: verificationData.numAvailable,
-              //     },
-              //     updateSuccessful: {
-              //       soldUpdated:
-              //         verificationData.numOfSoldItem === newSoldItems,
-              //       availableUpdated:
-              //         verificationData.numAvailable === newAvailableItems,
-              //     },
-              //   });
-
-              //   if (
-              //     verificationData.numOfSoldItem !== newSoldItems ||
-              //     verificationData.numAvailable !== newAvailableItems
-              //   ) {
-              //     console.error(
-              //       "❌ [ORDER SERVICE] Update verification failed!"
-              //     );
-              //   } else {
-              //     console.log(
-              //       `✅ [ORDER SERVICE] Successfully updated Go&Grab food item ${item.foodItemId}: sold ${currentSold} -> ${newSoldItems}, available ${currentAvailable} -> ${newAvailableItems}`
-              //     );
-              //   }
-              // }
-              alert(
-                `✅ Go&Grab updated!\n${currentData.name}: ${currentAvailable}→${newAvailableItems} available`
-              );
-            } else {
-              const errorMsg = `Food item document not found: ${item.foodItemId}`;
-              console.error(
-                `❌ [ORDER SERVICE] Food item document not found: ${item.foodItemId}`
-              );
-              console.error(
-                "❌ [ORDER SERVICE] Document path attempted:",
-                `foodItems/${item.foodItemId}`
-              );
-              alert(`❌ Error: ${errorMsg}`);
-              // Let's also check if the document exists with a different ID format
-              console.log(
-                "🔍 [ORDER SERVICE] Checking if document exists in collection..."
-              );
-
-              // You might want to add a query here to find the document by name or other field
-            }
-          } catch (error) {
-            console.error(
-              "❌ [ORDER SERVICE] Error in Go&Grab update process:",
-              {
-                foodItemId: item.foodItemId,
-                error: error.message,
-                code: error.code,
-                stack: error.stack,
-                firebaseError: error,
-              }
-            );
+          // First, try to find it in the kitchen's subcollection
+          if (orderData.kitchenId) {
             alert(
-              `❌ Go&Grab Error: ${error.message}\nCode: ${
-                error.code || "Unknown"
-              }`
+              `📍 Trying kitchen subcollection: kitchens/${orderData.kitchenId}/foodItems/${item.foodItemId}`
             );
-            // Check if it's a permissions error
-            if (error.code === "permission-denied") {
-              console.error(
-                "🚫 [ORDER SERVICE] Permission denied - check Firestore security rules"
+            foodRef = doc(
+              db,
+              "kitchens",
+              orderData.kitchenId,
+              "foodItems",
+              item.foodItemId
+            );
+
+            try {
+              currentDoc = await getDoc(foodRef);
+              if (currentDoc.exists()) {
+                alert(`✅ Found in kitchen subcollection!`);
+              } else {
+                alert(
+                  `❌ Not found in kitchen subcollection, trying top-level...`
+                );
+                currentDoc = null;
+              }
+            } catch (error) {
+              alert(
+                `⚠️ Error checking kitchen subcollection: ${error.message}`
               );
-              alert("🚫 Permission denied - check Firestore security rules");
+              currentDoc = null;
+            }
+          }
+
+          // If not found in kitchen subcollection, try top-level foodItems collection
+          if (!currentDoc || !currentDoc.exists()) {
+            alert(
+              `📍 Trying top-level collection: foodItems/${item.foodItemId}`
+            );
+            foodRef = doc(db, "foodItems", item.foodItemId);
+
+            try {
+              currentDoc = await getDoc(foodRef);
+              if (currentDoc.exists()) {
+                alert(`✅ Found in top-level collection!`);
+              } else {
+                alert(`❌ Not found in top-level collection either!`);
+              }
+            } catch (error) {
+              alert(`⚠️ Error checking top-level collection: ${error.message}`);
+            }
+          }
+
+          // Continue with the existing logic if document is found
+          if (currentDoc && currentDoc.exists()) {
+            const currentData = currentDoc.data();
+
+            console.log("📄 [ORDER SERVICE] Current food item data:", {
+              documentId: item.foodItemId,
+              exists: true,
+              foundIn: foodRef.path, // This will show the actual path used
+              currentData: {
+                numAvailable: currentData.numAvailable,
+                numOfSoldItem: currentData.numOfSoldItem,
+                name: currentData.name,
+                allFields: Object.keys(currentData),
+              },
+            });
+
+            alert(
+              `📄 Found food: ${currentData.name}\nPath: ${foodRef.path}\nAvailable: ${currentData.numAvailable}\nSold: ${currentData.numOfSoldItem}`
+            );
+
+            // Continue with your existing calculation logic...
+            const currentSold = currentData.numOfSoldItem || 0;
+            const currentAvailable = currentData.numAvailable || 0;
+            const orderQuantity = parseInt(item.quantity);
+
+            const newSoldItems = currentSold + orderQuantity;
+            const newAvailableItems = Math.max(
+              0,
+              currentAvailable - orderQuantity
+            );
+
+            // ... rest of your existing update logic
+            console.log("📊 [ORDER SERVICE] Inventory calculation:", {
+              currentSold,
+              currentAvailable,
+              orderQuantity,
+              newSoldItems,
+              newAvailableItems,
+              calculation: `Sold: ${currentSold} + ${orderQuantity} = ${newSoldItems}, Available: ${currentAvailable} - ${orderQuantity} = ${newAvailableItems}`,
+            });
+
+            alert(
+              `📊 Calculation:\nBefore: ${currentAvailable} available, ${currentSold} sold\nOrdering: ${orderQuantity}\nAfter: ${newAvailableItems} available, ${newSoldItems} sold`
+            );
+
+            // Validate the calculation
+            if (isNaN(newSoldItems) || isNaN(newAvailableItems)) {
+              const errorMsg = `Invalid calculation: newSoldItems=${newSoldItems}, newAvailableItems=${newAvailableItems}`;
+              alert(`❌ Error: ${errorMsg}`);
+              throw new Error(errorMsg);
             }
 
-            // Check if it's a network error
-            if (error.code === "unavailable") {
-              console.error(
-                "🌐 [ORDER SERVICE] Network error - check internet connection"
-              );
-              alert("🌐 Network error - check internet connection");
-            }
+            // Update with absolute values
+            console.log(
+              "🔄 [ORDER SERVICE] Updating document with new values..."
+            );
+            alert(`🔄 Updating inventory...`);
 
-            throw error;
+            await updateDoc(foodRef, {
+              numOfSoldItem: newSoldItems,
+              numAvailable: newAvailableItems,
+            });
+
+            alert(
+              `✅ Go&Grab updated!\n${currentData.name}: ${currentAvailable}→${newAvailableItems} available`
+            );
+          } else {
+            const errorMsg = `Food item document not found: ${item.foodItemId}`;
+            console.error(`❌ [ORDER SERVICE] ${errorMsg}`);
+            console.error("❌ [ORDER SERVICE] Tried both paths:", [
+              `kitchens/${orderData.kitchenId}/foodItems/${item.foodItemId}`,
+              `foodItems/${item.foodItemId}`,
+            ]);
+            alert(
+              `❌ Error: ${errorMsg}\nTried both kitchen subcollection and top-level collection`
+            );
           }
         } else if (item.orderType === "preorder") {
           console.log("📅 [ORDER SERVICE] Processing PreOrder item...");
