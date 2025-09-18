@@ -16,12 +16,15 @@ dayjs.extend(timezone);
 export const placeOrder = async (orderData) => {
   try {
     console.log("Placing order with data:", orderData);
-
+    alert("Placing order...", JSON.stringify(orderData));
     // Add the order to the 'orders' collection
     const orderRef = await addDoc(collection(db, "orders"), orderData);
 
     console.log("Order placed successfully with ID:", orderRef.id);
+    alert(`✅ Order created with ID: ${orderRef.id}`);
+    alert("Order details: " + JSON.stringify(orderData));
 
+    alert(`📝 Processing ${orderData.orderedFoodItems.length} food items...`);
     // Update the order document with the orderIDKey (using the document ID)
     await updateDoc(orderRef, {
       orderIDKey: orderRef.id,
@@ -29,6 +32,9 @@ export const placeOrder = async (orderData) => {
 
     for (const item of orderData.orderedFoodItems) {
       try {
+        alert(
+          `🔄 Processing: ${item.name || "Unknown"} (Type: ${item.orderType})`
+        );
         if (item.orderType === "grabAndGo") {
           console.log("🏃 [ORDER SERVICE] Processing Go&Grab item...");
           console.log("🏃 [ORDER SERVICE] Item details:", {
@@ -36,7 +42,7 @@ export const placeOrder = async (orderData) => {
             quantity: item.quantity,
             quantityType: typeof item.quantity,
           });
-
+          alert(`🏃 Go&Grab: ${item.foodItemId} (Qty: ${item.quantity})`);
           const foodRef = doc(db, "foodItems", item.foodItemId);
 
           try {
@@ -59,7 +65,9 @@ export const placeOrder = async (orderData) => {
                   allFields: Object.keys(currentData),
                 },
               });
-
+              alert(
+                `📄 Found food: ${currentData.name}\nAvailable: ${currentData.numAvailable}\nSold: ${currentData.numOfSoldItem}`
+              );
               // Calculate new values
               const currentSold = currentData.numOfSoldItem || 0;
               const currentAvailable = currentData.numAvailable || 0;
@@ -79,18 +87,21 @@ export const placeOrder = async (orderData) => {
                 newAvailableItems,
                 calculation: `Sold: ${currentSold} + ${orderQuantity} = ${newSoldItems}, Available: ${currentAvailable} - ${orderQuantity} = ${newAvailableItems}`,
               });
-
+              alert(
+                `📊 Calculation:\nBefore: ${currentAvailable} available, ${currentSold} sold\nOrdering: ${orderQuantity}\nAfter: ${newAvailableItems} available, ${newSoldItems} sold`
+              );
               // Validate the calculation
               if (isNaN(newSoldItems) || isNaN(newAvailableItems)) {
-                throw new Error(
-                  `Invalid calculation: newSoldItems=${newSoldItems}, newAvailableItems=${newAvailableItems}`
-                );
+                const errorMsg = `Invalid calculation: newSoldItems=${newSoldItems}, newAvailableItems=${newAvailableItems}`;
+                alert(`❌ Error: ${errorMsg}`);
+                throw new Error(errorMsg);
               }
 
               // Update with absolute values
               console.log(
                 "🔄 [ORDER SERVICE] Updating document with new values..."
               );
+              alert(`🔄 Updating inventory...`);
               await updateDoc(foodRef, {
                 numOfSoldItem: newSoldItems,
                 numAvailable: newAvailableItems,
@@ -131,7 +142,11 @@ export const placeOrder = async (orderData) => {
               //     );
               //   }
               // }
+              alert(
+                `✅ Go&Grab updated!\n${currentData.name}: ${currentAvailable}→${newAvailableItems} available`
+              );
             } else {
+              const errorMsg = `Food item document not found: ${item.foodItemId}`;
               console.error(
                 `❌ [ORDER SERVICE] Food item document not found: ${item.foodItemId}`
               );
@@ -139,7 +154,7 @@ export const placeOrder = async (orderData) => {
                 "❌ [ORDER SERVICE] Document path attempted:",
                 `foodItems/${item.foodItemId}`
               );
-
+              alert(`❌ Error: ${errorMsg}`);
               // Let's also check if the document exists with a different ID format
               console.log(
                 "🔍 [ORDER SERVICE] Checking if document exists in collection..."
@@ -158,12 +173,17 @@ export const placeOrder = async (orderData) => {
                 firebaseError: error,
               }
             );
-
+            alert(
+              `❌ Go&Grab Error: ${error.message}\nCode: ${
+                error.code || "Unknown"
+              }`
+            );
             // Check if it's a permissions error
             if (error.code === "permission-denied") {
               console.error(
                 "🚫 [ORDER SERVICE] Permission denied - check Firestore security rules"
               );
+              alert("🚫 Permission denied - check Firestore security rules");
             }
 
             // Check if it's a network error
@@ -171,6 +191,7 @@ export const placeOrder = async (orderData) => {
               console.error(
                 "🌐 [ORDER SERVICE] Network error - check internet connection"
               );
+              alert("🌐 Network error - check internet connection");
             }
 
             throw error;
@@ -194,7 +215,9 @@ export const placeOrder = async (orderData) => {
             foodItemId: item.foodItemId,
             quantity: item.quantity,
           });
-
+          alert(
+            `📅 PreOrder: ${item.foodItemId}\nDate: ${pickupDate}\nQty: ${item.quantity}`
+          );
           // First, get the current kitchen data to find the correct array index
           const kitchenDoc = await getDoc(kitchenRef);
           if (kitchenDoc.exists()) {
@@ -210,7 +233,10 @@ export const placeOrder = async (orderData) => {
 
             const dateSchedule =
               kitchenData.preorderSchedule?.dates?.[pickupDate];
-
+            alert(
+              "📅 Date schedule found: dateSchedule" +
+                (dateSchedule ? "Yes" : "No")
+            );
             console.log(
               "📅 [ORDER SERVICE] Date schedule for",
               pickupDate,
@@ -241,6 +267,7 @@ export const placeOrder = async (orderData) => {
               });
 
               if (foodIndex !== -1) {
+                alert(`🔍 Found food at index ${foodIndex}`);
                 // Get the current food item data to preserve all attributes
                 const currentFoodItem = dateSchedule[foodIndex];
                 const currentAvailable =
@@ -257,7 +284,9 @@ export const placeOrder = async (orderData) => {
                   newAvailable: newAvailable,
                   calculation: `${currentAvailable} - ${item.quantity} = ${newAvailable}`,
                 });
-
+                alert(
+                  `📊 PreOrder Calculation:\n${currentFoodItem.nameOfFood}\nBefore: ${currentAvailable} available\nOrdering: ${item.quantity}\nAfter: ${newAvailable} available`
+                );
                 // Create updated food item object preserving all attributes
                 const updatedFoodItem = {
                   ...currentFoodItem,
@@ -268,6 +297,8 @@ export const placeOrder = async (orderData) => {
                   "🔄 [ORDER SERVICE] Updated food item object:",
                   updatedFoodItem
                 );
+
+                alert(`🔄 Updating preorder schedule...`);
 
                 // Create new array with updated item
                 const updatedDateSchedule = [...dateSchedule];
@@ -291,14 +322,25 @@ export const placeOrder = async (orderData) => {
                 await updateDoc(kitchenRef, {
                   [updatePath]: updatedDateSchedule,
                 });
-
+                alert(
+                  "🔍 Verifying update..." + JSON.stringify(updatedDateSchedule)
+                );
+                alert(
+                  `✅ PreOrder updated!\n${currentFoodItem.nameOfFood}: ${currentAvailable}→${newAvailable} available`
+                );
                 console.log(
                   `✅ [ORDER SERVICE] Updated PreOrder for food ${item.foodItemId} on ${pickupDate}: available ${currentAvailable} -> ${newAvailable} (ordered: ${item.quantity})`
                 );
               } else {
-                console.warn(
-                  `⚠️ [ORDER SERVICE] Food item ${item.foodItemId} not found in preorder schedule for ${pickupDate}`
-                );
+                const errorMsg = `Food item ${item.foodItemId} not found in preorder schedule for ${pickupDate}`;
+                console.warn(`⚠️ [ORDER SERVICE] ${errorMsg}`);
+                alert(`⚠️ Warning: ${errorMsg}`);
+
+                const availableItems = dateSchedule
+                  .map((scheduleItem) => scheduleItem.nameOfFood)
+                  .join(", ");
+                alert(`Available items: ${availableItems}`);
+
                 console.warn(
                   "⚠️ [ORDER SERVICE] Available food items in schedule:",
                   dateSchedule.map((scheduleItem) => ({
@@ -308,9 +350,10 @@ export const placeOrder = async (orderData) => {
                 );
               }
             } else {
-              console.warn(
-                `⚠️ [ORDER SERVICE] No preorder schedule found for date ${pickupDate}`
-              );
+              const errorMsg = `No preorder schedule found for date ${pickupDate}`;
+              console.warn(`⚠️ [ORDER SERVICE] ${errorMsg}`);
+              alert(`⚠️ Warning: ${errorMsg}`);
+
               console.warn(
                 "⚠️ [ORDER SERVICE] Available dates:",
                 kitchenData.preorderSchedule?.dates
@@ -319,23 +362,22 @@ export const placeOrder = async (orderData) => {
               );
             }
           } else {
-            console.error(
-              `❌ [ORDER SERVICE] Kitchen document not found: ${orderData.kitchenId}`
-            );
+            const errorMsg = `Kitchen document not found: ${orderData.kitchenId}`;
+            console.error(`❌ [ORDER SERVICE] ${errorMsg}`);
+            alert(`❌ Error: ${errorMsg}`);
           }
         } else {
-          console.warn(
-            `⚠️ [ORDER SERVICE] Unknown order type: ${item.orderType}`
-          );
+          const errorMsg = `Unknown order type: ${item.orderType}`;
+          console.warn(`⚠️ [ORDER SERVICE] ${errorMsg}`);
+          alert(`⚠️ Warning: ${errorMsg}`);
         }
       } catch (error) {
-        console.error(
-          `Could not update item ${item.foodItemId} (${item.orderType}):`,
-          error
-        );
+        const errorMsg = `Could not update item ${item.foodItemId} (${item.orderType}): ${error.message}`;
+        console.error(errorMsg, error);
+        alert(`❌ Item Error: ${errorMsg}`);
       }
     }
-
+    alert(`🎉 Order completed successfully!\nOrder ID: ${orderRef.id}`);
     return orderRef.id;
   } catch (error) {
     console.error("Error placing order:", error);

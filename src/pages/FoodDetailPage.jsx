@@ -29,7 +29,7 @@ import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 // Custom Slider Component
 // Enhanced Custom Slider Component with better styling
 // Enhanced Custom Slider Component with better styling and error handling
-const CustomSlider = ({ food, isLiked, handleLikeToggle }) => {
+const CustomSlider = ({ food, isLiked }) => {
   console.log("🚀 ~ CustomSlider ~ isLiked:", isLiked);
   // Generate slider images based on food data
   const generateSliderImages = () => {
