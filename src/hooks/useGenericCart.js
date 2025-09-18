@@ -137,7 +137,7 @@ export const useGenericCart = () => {
         }
 
         // CASE 3B-4: Food found in schedule - check if it's limited order
-        if (foodSchedule.isLimitedOrder === true) {
+        if (foodSchedule.isLimitedOrder === false) {
           // Limited quantity pre-order
           const availableItems = foodSchedule.numOfAvailableItems || 0;
 

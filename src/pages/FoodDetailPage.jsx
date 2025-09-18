@@ -406,7 +406,9 @@ export default function FoodDetailPage() {
         const foodInSchedule = scheduleForDate.find(
           (item) => item.foodItemId === food?.id
         );
-        currentAvailability = foodInSchedule?.numOfAvailableItems || 0;
+        currentAvailability = !foodInSchedule?.isLimitedOrder
+          ? foodInSchedule?.numOfAvailableItems || 0
+          : 99;
       }
     }
 
