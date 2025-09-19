@@ -122,6 +122,7 @@ export default function ListingPage() {
   // ✅ Get preorder items for a specific date (using Redux data)
   const getPreOrderItemsForDate = useCallback(
     (dateString) => {
+      debugger
       if (!kitchen?.preorderSchedule?.dates?.[dateString]) return [];
       if (!preOrderItems || preOrderItems.length === 0) return [];
 

@@ -23,7 +23,8 @@ export async function getFoodReviews(
 
   if (firebaseDisabled) {
     console.warn("[getFoodReviews] Firebase disabled, returning mock data");
-    return getMockReviews(foodId);
+    // return getMockReviews(foodId);
+    return [];
   }
 
   if (!foodId || foodId.trim() === "") {
@@ -152,7 +153,8 @@ export async function getFoodReviews(
   } catch (error) {
     console.error("[getFoodReviews] Error fetching food reviews:", error);
     console.log("[getFoodReviews] Returning mock data due to error");
-    return getMockReviews(cleanFoodId);
+    // return getMockReviews(cleanFoodId);
+    return [];
   }
 }
 
@@ -268,7 +270,8 @@ export async function getFoodLikes(foodId, kitchenId = null) {
 
   if (firebaseDisabled) {
     console.warn("[getFoodLikes] Firebase disabled, returning mock data");
-    return getMockLikes(foodId);
+    // return getMockLikes(foodId);
+    return [];
   }
 
   if (!foodId || foodId.trim() === "") {
@@ -352,7 +355,8 @@ export async function getFoodLikes(foodId, kitchenId = null) {
   } catch (error) {
     console.error("[getFoodLikes] Error fetching food likes:", error);
     console.log("[getFoodLikes] Returning mock data due to error");
-    return getMockLikes(foodId);
+    // return getMockLikes(foodId);
+    return [];
   }
 }
 
@@ -527,7 +531,8 @@ export async function getFoodById(foodId, kitchenId = null) {
 
   if (firebaseDisabled) {
     console.warn("[getFoodById] Firebase disabled, returning mock data");
-    return getMockFoodData(foodId);
+    // return getMockFoodData(foodId);
+    return null;
   }
 
   if (!foodId || foodId.trim() === "") {
@@ -611,10 +616,12 @@ export async function getFoodById(foodId, kitchenId = null) {
     console.warn(
       `[getFoodById] Food item with ID '${foodId}' not found anywhere`
     );
-    return getMockFoodData(foodId);
+    // return getMockFoodData(foodId);
+    return null;
   } catch (error) {
     console.error("[getFoodById] Error fetching food item:", error);
-    return getMockFoodData(foodId);
+    // return getMockFoodData(foodId);
+    return null;
   }
 }
 
@@ -623,7 +630,8 @@ export async function getKitchenById(kitchenId) {
 
   if (firebaseDisabled) {
     console.warn("[getKitchenById] Firebase disabled, returning mock data");
-    return getMockKitchenData(kitchenId);
+    // return getMockKitchenData(kitchenId);
+    return null;
   }
 
   if (!kitchenId || kitchenId.trim() === "") {
@@ -644,7 +652,8 @@ export async function getKitchenById(kitchenId) {
         `[getKitchenById] Kitchen with ID '${kitchenId}' not found in Firestore`
       );
       console.log("[getKitchenById] Returning mock data as fallback");
-      return getMockKitchenData(kitchenId);
+      // return getMockKitchenData(kitchenId);
+      return null;
     }
 
     const kitchenData = {
@@ -660,7 +669,8 @@ export async function getKitchenById(kitchenId) {
   } catch (error) {
     console.error("[getKitchenById] Error fetching kitchen:", error);
     console.log("[getKitchenById] Returning mock data due to error");
-    return getMockKitchenData(kitchenId);
+    // return getMockKitchenData(kitchenId);
+    return null;
   }
 }
 
@@ -712,7 +722,8 @@ export async function getFoodsByKitchenId(kitchenId, limitCount = 10) {
     `[getFoodsByKitchenId] Starting fetch for kitchenId: ${kitchenId}`
   );
   if (firebaseDisabled || !kitchenId) {
-    return getMockFoodsByKitchen(kitchenId);
+    // return getMockFoodsByKitchen(kitchenId);
+    return [];
   }
   try {
     const subcollectionQuery = query(
@@ -739,14 +750,16 @@ export async function getFoodsByKitchenId(kitchenId, limitCount = 10) {
     return foods.length > 0 ? foods : getMockFoodsByKitchen(kitchenId);
   } catch (error) {
     console.error("[getFoodsByKitchenId] Error:", error);
-    return getMockFoodsByKitchen(kitchenId);
+    // return getMockFoodsByKitchen(kitchenId);
+    return [];
   }
 }
 
 export async function getFeaturedFoods(limitCount = 10) {
   console.log(`[getFeaturedFoods] Starting fetch with limit: ${limitCount}`);
   if (firebaseDisabled) {
-    return getMockFeaturedFoods();
+    // return getMockFeaturedFoods();
+    return [];
   }
   try {
     const q = query(
@@ -762,14 +775,16 @@ export async function getFeaturedFoods(limitCount = 10) {
     return foods.length > 0 ? foods : getMockFeaturedFoods();
   } catch (error) {
     console.error("[getFeaturedFoods] Error:", error);
-    return getMockFeaturedFoods();
+    // return getMockFeaturedFoods();
+    return [];
   }
 }
 
 export async function getAllFoods(limitCount = 20) {
   console.log(`[getAllFoods] Starting fetch with limit: ${limitCount}`);
   if (firebaseDisabled) {
-    return getMockAllFoods();
+    // return getMockAllFoods();
+    return [];
   }
   try {
     const q = query(collection(db, "foodItems"), limit(limitCount));
@@ -781,7 +796,8 @@ export async function getAllFoods(limitCount = 20) {
     return foods.length > 0 ? foods : getMockAllFoods();
   } catch (error) {
     console.error("[getAllFoods] Error:", error);
-    return getMockAllFoods();
+    // return getMockAllFoods();
+    return [];
   }
 }
 
@@ -833,7 +849,8 @@ export async function getKitchenAllReviews(kitchenId, limitCount = 1000) {
     console.warn(
       "[getKitchenAllReviews] Firebase disabled, returning mock data"
     );
-    return getMockKitchenReviews(kitchenId);
+    // return getMockKitchenReviews(kitchenId);
+    return [];
   }
 
   if (!kitchenId || kitchenId.trim() === "") {
@@ -901,7 +918,8 @@ export async function getKitchenAllReviews(kitchenId, limitCount = 1000) {
       error
     );
     console.log("[getKitchenAllReviews] Returning mock data due to error");
-    return getMockKitchenReviews(kitchenId);
+    // return getMockKitchenReviews(kitchenId);
+    return [];
   }
 }
 
@@ -1249,9 +1267,13 @@ export async function getKitchenWithFoodItems(kitchenId) {
   } catch (error) {
     console.error("[getKitchenWithFoodItems] Error:", error);
     // Return mock data as fallback
+    // return {
+    //   kitchen: getMockKitchenData(kitchenId),
+    //   foods: getMockAllFoods(),
+    // };
     return {
-      kitchen: getMockKitchenData(kitchenId),
-      foods: getMockAllFoods(),
+      kitchen: null,
+      foods: [],  
     };
   }
 }
@@ -1269,12 +1291,13 @@ export async function getAllKitchensWithFoodItems(limitKitchens = 10) {
     console.warn(
       "[getAllKitchensWithFoodItems] Firebase disabled, returning mock data"
     );
-    return [
-      {
-        kitchen: getMockKitchenData("mock-kitchen-1"),
-        foods: getMockAllFoods(),
-      },
-    ];
+    // return [
+    //   {
+    //     kitchen: getMockKitchenData("mock-kitchen-1"),
+    //     foods: getMockAllFoods(),
+    //   },
+    // ];
+    return [];
   }
 
   try {
@@ -1326,11 +1349,12 @@ export async function getAllKitchensWithFoodItems(limitKitchens = 10) {
   } catch (error) {
     console.error("[getAllKitchensWithFoodItems] Error:", error);
     // Return mock data as fallback
-    return [
-      {
-        kitchen: getMockKitchenData("mock-kitchen-1"),
-        foods: getMockAllFoods(),
-      },
-    ];
+    // return [
+    //   {
+    //     kitchen: getMockKitchenData("mock-kitchen-1"),
+    //     foods: getMockAllFoods(),
+    //   },
+    // ];
+    return [];
   }
 }
