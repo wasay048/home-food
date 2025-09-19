@@ -317,6 +317,7 @@ export const createOrderObject = ({
   currentUser,
   paymentCalculation,
   groupedCartItems,
+  paymentType
 }) => {
   const now = new Date();
   const orderID = generateOrderID();
@@ -341,7 +342,7 @@ export const createOrderObject = ({
       datePickedUp = new Date(earliestDate);
     }
   }
-
+  console.log("kitchenInfo:", kitchenInfo);
   // Transform cart items to order format
   const orderedFoodItems = cartItems.map((item) => ({
     countRating: 0,
@@ -372,6 +373,7 @@ export const createOrderObject = ({
     price: parseFloat(item.food?.cost || item.food?.price || 0),
     pickupDate: new Date(item.selectedDate),
     pickupTime: item.selectedTime || "4:30 PM",
+    paymentType: paymentType || "online",
   }));
 
   // Create the order object
@@ -396,6 +398,8 @@ export const createOrderObject = ({
     subtotal: parseFloat(paymentCalculation.subtotal),
     salesTax: parseFloat(paymentCalculation.salesTax),
     taxRate: 0.0725,
+    paymentType: paymentType || "online",
+
   };
 
   return orderObject;

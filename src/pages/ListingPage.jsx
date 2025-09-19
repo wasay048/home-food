@@ -181,8 +181,8 @@ export default function ListingPage() {
   );
 
   useEffect(() => {
-    console.log("pickupDates updated:", pickupDates);
-    console.log("pickupTimes updated:", pickupTimes);
+    console.log("pickeup pickupDates updated:", pickupDates);
+    console.log("pickeup pickupTimes updated time:", pickupTimes);
   }, [pickupDates, pickupTimes]);
 
   console.log(
@@ -256,11 +256,12 @@ export default function ListingPage() {
                           <QuantitySelector
                             food={food}
                             kitchen={kitchen}
-                            selectedDate={null}
+                            selectedDate={pickupDates[food.id]}
                             size="small"
                             initialQuantity={cartQty}
                             minQuantity={0}
                             orderType={"GO_GRAB"}
+                            selectedTime={pickupTimes[food.id]}
                           />
                         </div>
                         <div className="pickup-time-section">
@@ -345,11 +346,15 @@ export default function ListingPage() {
                             <QuantitySelector
                               food={food}
                               kitchen={kitchen}
-                              selectedDate={dateInfo.dateString}
-                              size="small"
+                              selectedDate={
+                                pickupDates[`${food.id}_preorder`] ||
+                                dateInfo.dateString
+                              } size="small"
                               initialQuantity={cartQty}
                               minQuantity={0}
                               orderType={"PRE_ORDER"}
+                              selectedTime={pickupTimes[`${food.id}_preorder`]}
+
                             />
                           </div>
                           <div className="pickup-time-section">

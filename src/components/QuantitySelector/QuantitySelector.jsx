@@ -5,7 +5,7 @@ import "./QuantitySelector.css";
 export const QuantitySelector = ({
   food = null,
   kitchen = null,
-  selectedDate = null,
+  selectedDate,
   maxQuantity = 99,
   minQuantity = 1,
   onAvailabilityChange = () => {},
@@ -15,6 +15,7 @@ export const QuantitySelector = ({
   className = "",
   disabled = false,
   orderType,
+  selectedTime
 }) => {
   console.log("selectedDate in QuantitySelector:", selectedDate);
   // ✅ USE: Get functions from useGenericCart hook
@@ -91,7 +92,7 @@ export const QuantitySelector = ({
         newQuantity,
         currentQuantity: cartQuantity,
         selectedDate,
-        selectedTime: null,
+        selectedTime,
         specialInstructions: "",
         incomingOrderType: orderType,
         // isPreOrder: availabilityStatus.orderType === "PRE_ORDER",

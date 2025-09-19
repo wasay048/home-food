@@ -26,7 +26,7 @@ export default function PaymentPage() {
   const [modalSelectedTime, setModalSelectedTime] = useState(null);
 
   const [showWeChatDialog, setShowWeChatDialog] = useState(false);
-
+  const [paymentType, setPaymentType] = useState("online"); // "online" or "cash"
   const { handleQuantityChange } = useGenericCart();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -155,7 +155,7 @@ export default function PaymentPage() {
       grabAndGo: [],
       preOrders: {},
     };
-
+    console.log("Grouping cart items:", cartItems);
     cartItems.forEach((item) => {
       const orderType =
         item.pickupDetails?.orderType ||
@@ -313,7 +313,7 @@ export default function PaymentPage() {
         return;
       }
 
-      if (!firebaseImageUrl) {
+      if (paymentType === "online" && !firebaseImageUrl) {
         showToast.error(
           "Please upload a payment confirmation screenshot before placing your order."
         );
@@ -330,6 +330,7 @@ export default function PaymentPage() {
         currentUser,
         paymentCalculation,
         groupedCartItems,
+        paymentType
       });
 
       console.log("Order data to be placed:", orderData);
@@ -601,7 +602,21 @@ export default function PaymentPage() {
                 </div>
               )}
             </div>
-
+            <div className="mb-4">
+              <div>
+              <input type="radio" id="paymentType" value="online" checked={paymentType === "online"} name="paymentType" required onChange={() => setPaymentType("online")} />
+              <label htmlFor="paymentType" className="body-text-med ms-2">
+                 Online payment
+              </label>
+              </div>
+              <div>
+              <input type="radio" id="paymentType2" value="cash" checked={paymentType === "cash"} name="paymentType" onChange={() => setPaymentType("cash")} />
+              <label htmlFor="paymentType2" className="body-text-med ms-2">
+                 I will pay cash
+              </label>
+              </div>
+            </div>
+            {paymentType === "online" && (
             <div className="upload-section mb-20">
               <h5 className="medium-title mb-12">Payment Confirmation</h5>
               <p className="body-text-med mb-16">
@@ -658,7 +673,9 @@ export default function PaymentPage() {
                   </div>
                 </div>
               )}
+              
             </div>
+            )}
             <button
               className="action-button"
               onClick={handlePlaceOrder}
