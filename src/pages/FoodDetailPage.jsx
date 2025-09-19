@@ -1220,7 +1220,7 @@ export default function FoodDetailPage() {
             />
             <div className="add-to-cart-action mt-2">
               <button
-                className={`button`}
+                className={`button text-bold font-size-18`}
                 onClick={(e) => {
                   console.log("e", e);
                   // console.log("🔥 BUTTON CLICKED! Event:", e);
@@ -1254,7 +1254,7 @@ export default function FoodDetailPage() {
                   });
                 }}
                 // disabled={!availabilityStatus.isAvailable}
-                style={{ pointerEvents: "auto" }}
+                style={{ pointerEvents: "auto", fontSize: "18px" }}
               >
                 {/* {(() => {
                   if (
