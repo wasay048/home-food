@@ -319,7 +319,12 @@ export default function PaymentPage() {
         );
         return;
       }
-
+      if (!kitchenInfo || !kitchenInfo.id || !cartItems[0]?.kitchenId) {
+        showToast.error(
+          "Kitchen information is missing. Please return to the listing page and try again."
+        );
+        return;
+      }
       setIsPlacingOrder(true);
 
       // Create order object
