@@ -380,7 +380,7 @@ export const createOrderObject = ({
   const orderObject = {
     datePickedUp: datePickedUp,
     datePlaced: now,
-    kitchenId: kitchenInfo?.id || kitchenInfo?.kitchenId,
+    kitchenId: kitchenInfo?.id || kitchenInfo?.kitchenId || cartItems[0]?.kitchenId,
     kitchenName: kitchenInfo?.name,
     orderID: orderID,
     orderIDKey: "", // Will be set after document creation
