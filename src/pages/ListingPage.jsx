@@ -122,7 +122,6 @@ export default function ListingPage() {
   // ✅ Get preorder items for a specific date (using Redux data)
   const getPreOrderItemsForDate = useCallback(
     (dateString) => {
-      debugger
       if (!kitchen?.preorderSchedule?.dates?.[dateString]) return [];
       if (!preOrderItems || preOrderItems.length === 0) return [];
 
@@ -350,12 +349,12 @@ export default function ListingPage() {
                               selectedDate={
                                 pickupDates[`${food.id}_preorder`] ||
                                 dateInfo.dateString
-                              } size="small"
+                              }
+                              size="small"
                               initialQuantity={cartQty}
                               minQuantity={0}
                               orderType={"PRE_ORDER"}
                               selectedTime={pickupTimes[`${food.id}_preorder`]}
-
                             />
                           </div>
                           <div className="pickup-time-section">

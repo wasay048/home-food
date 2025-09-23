@@ -335,7 +335,7 @@ export default function PaymentPage() {
         currentUser,
         paymentCalculation,
         groupedCartItems,
-        paymentType
+        paymentType,
       });
 
       console.log("Order data to be placed:", orderData);
@@ -352,6 +352,11 @@ export default function PaymentPage() {
 
       // Navigate to success page with order details
       setTimeout(() => {
+        try {
+          localStorage.removeItem("skipListing");
+        } catch (error) {
+          console.error("Error removing skipListing from localStorage:", error);
+        }
         navigate("/success", {
           state: {
             orderID: orderData?.orderID,
@@ -609,77 +614,93 @@ export default function PaymentPage() {
             </div>
             <div className="mb-4">
               <div>
-              <input type="radio" id="paymentType" value="online" checked={paymentType === "online"} name="paymentType" required onChange={() => setPaymentType("online")} />
-              <label htmlFor="paymentType" className="body-text-med ms-2">
-                 Online payment
-              </label>
+                <input
+                  type="radio"
+                  id="paymentType"
+                  value="online"
+                  checked={paymentType === "online"}
+                  name="paymentType"
+                  required
+                  onChange={() => setPaymentType("online")}
+                />
+                <label htmlFor="paymentType" className="body-text-med ms-2">
+                  Online payment
+                </label>
               </div>
               <div>
-              <input type="radio" id="paymentType2" value="cash" checked={paymentType === "cash"} name="paymentType" onChange={() => setPaymentType("cash")} />
-              <label htmlFor="paymentType2" className="body-text-med ms-2">
-                 I will pay cash
-              </label>
+                <input
+                  type="radio"
+                  id="paymentType2"
+                  value="cash"
+                  checked={paymentType === "cash"}
+                  name="paymentType"
+                  onChange={() => setPaymentType("cash")}
+                />
+                <label htmlFor="paymentType2" className="body-text-med ms-2">
+                  I will pay cash
+                </label>
               </div>
             </div>
             {paymentType === "online" && (
-            <div className="upload-section mb-20">
-              <h5 className="medium-title mb-12">Payment Confirmation</h5>
-              <p className="body-text-med mb-16">
-                Upload payment confirmation screenshot
-              </p>
+              <div className="upload-section mb-20">
+                <h5 className="medium-title mb-12">Payment Confirmation</h5>
+                <p className="body-text-med mb-16">
+                  Upload payment confirmation screenshot
+                </p>
 
-              {uploadPreview ? (
-                <div className="upload-preview-container">
-                  <div className="upload-preview">
-                    <img
-                      src={uploadPreview}
-                      alt="Payment confirmation preview"
-                      className="preview-image"
-                    />
-                    <button
-                      type="button"
-                      className="remove-image-btn"
-                      onClick={removeImage}
-                      aria-label="Remove image"
-                      disabled={isUploading}
-                    >
-                      <X size={16} />
-                    </button>
+                {uploadPreview ? (
+                  <div className="upload-preview-container">
+                    <div className="upload-preview">
+                      <img
+                        src={uploadPreview}
+                        alt="Payment confirmation preview"
+                        className="preview-image"
+                      />
+                      <button
+                        type="button"
+                        className="remove-image-btn"
+                        onClick={removeImage}
+                        aria-label="Remove image"
+                        disabled={isUploading}
+                      >
+                        <X size={16} />
+                      </button>
 
-                    {/* Upload Status Overlay */}
-                    {isUploading && (
-                      <div className="upload-status-overlay">
-                        <div className="upload-spinner"></div>
-                        <p>Uploading to Firebase...</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div
-                  {...getRootProps()}
-                  className={`upload-dropzone ${isDragActive ? "active" : ""}`}
-                >
-                  <input {...getInputProps()} />
-                  <div className="upload-content">
-                    <div className="upload-icon">
-                      <ImageIcon size={32} />
+                      {/* Upload Status Overlay */}
+                      {isUploading && (
+                        <div className="upload-status-overlay">
+                          <div className="upload-spinner"></div>
+                          <p>Uploading to Firebase...</p>
+                        </div>
+                      )}
                     </div>
-                    <h6 className="upload-title">
-                      {isDragActive ? "Drop image here" : "Upload Screenshot"}
-                    </h6>
-                    <p className="upload-description">
-                      Drag & drop your payment confirmation or{" "}
-                      <span className="upload-link">browse files</span>
-                    </p>
-                    <p className="upload-formats">
-                      Supports: JPG, PNG, GIF, WebP (Max 10MB)
-                    </p>
                   </div>
-                </div>
-              )}
-              
-            </div>
+                ) : (
+                  <div
+                    {...getRootProps()}
+                    className={`upload-dropzone ${
+                      isDragActive ? "active" : ""
+                    }`}
+                  >
+                    <input {...getInputProps()} />
+                    <div className="upload-content">
+                      <div className="upload-icon">
+                        <ImageIcon size={32} />
+                      </div>
+                      <h6 className="upload-title">
+                        {isDragActive ? "Drop image here" : "Upload Screenshot"}
+                      </h6>
+                      <p className="upload-description">
+                        Drag & drop your payment confirmation or{" "}
+                        <span className="upload-link">browse files</span>
+                      </p>
+                      <p className="upload-formats">
+                        Supports: JPG, PNG, GIF, WebP (Max 10MB)
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
             <button
               className="action-button"

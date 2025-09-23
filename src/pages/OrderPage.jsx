@@ -233,6 +233,24 @@ export default function OrderPage() {
     return dayjs(dateString).format("MMM D ddd");
   };
 
+  const handleGoBack = () => {
+    const skipListing = localStorage.getItem("skipListing");
+
+    if (skipListing === "true") {
+      localStorage.removeItem("skipListing");
+      console.log("Skipping listing page, going back to home");
+      const detailPage = localStorage.getItem("detailPage");
+      if (detailPage) {
+        console.log("Going back to detailPage from localStorage:", detailPage);
+        window.location.href = detailPage;
+        return;
+      }
+      return;
+    }
+
+    navigate("/foods");
+  };
+
   const totalItemsCount = cartItems?.length || 0;
 
   return (
@@ -240,7 +258,7 @@ export default function OrderPage() {
       <div className="mobile-container">
         <div className="padding-20">
           <div className="back-link-title">
-            <Link className="back-link" to="/foods">
+            <Link className="back-link" onClick={handleGoBack}>
               <svg
                 width="9"
                 height="14"

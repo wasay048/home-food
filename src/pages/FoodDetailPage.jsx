@@ -467,84 +467,78 @@ export default function FoodDetailPage() {
   }, []);
 
   // Update handleAddToCart to use useGenericCart
-  // const handleAddToCart = useCallback(() => {
-  //   console.log(`[FoodDetailPage] Add to Cart button clicked!`);
-  //   console.log(`[FoodDetailPage] Availability status:`, availabilityStatus);
-  //   console.log(`[FoodDetailPage] Selected quantity:`, selectedQuantity);
-  //   console.log(`[FoodDetailPage] Cart quantity:`, cartQuantity);
-  //   console.log(`[FoodDetailPage] Special instructions:`, specialInstructions);
+  const handleAddToCart = useCallback(() => {
+    // Check availability
+    if (!availabilityStatus.isAvailable) {
+      // showToast.error("This item is currently unavailable");
+      console.log("This item is currently unavailable");
+      return;
+    }
 
-  //   // Check availability
-  //   if (!availabilityStatus.isAvailable) {
-  //     // showToast.error("This item is currently unavailable");
-  //     console.log("This item is currently unavailable");
-  //     return;
-  //   }
+    // ✅ IMPROVED: Check if item is already in cart
+    if (cartQuantity === 0) {
+      alert("Please use the quantity selector to add items to cart first.");
+      return;
+    }
 
-  //   // ✅ IMPROVED: Check if item is already in cart
-  //   if (cartQuantity === 0) {
-  //     alert("Please use the quantity selector to add items to cart first.");
-  //     return;
-  //   }
+    // ✅ NEW: Update special instructions if item is already in cart
+    if (cartQuantity > 0 && specialInstructions.trim()) {
+      console.log(
+        `[FoodDetailPage] Updating special instructions for existing cart item`
+      );
 
-  //   // ✅ NEW: Update special instructions if item is already in cart
-  //   if (cartQuantity > 0 && specialInstructions.trim()) {
-  //     console.log(
-  //       `[FoodDetailPage] Updating special instructions for existing cart item`
-  //     );
+      if (food && kitchen) {
+        handleCartQuantityChange({
+          food,
+          kitchen,
+          newQuantity: cartQuantity, // Keep same quantity
+          currentQuantity: cartQuantity,
+          selectedDate: pickupDate || selectedDate,
+          selectedTime: pickupTime,
+          specialInstructions: specialInstructions.trim(),
+          isPreOrder: orderType === "PRE_ORDER",
+        });
 
-  //     if (food && kitchen) {
-  //       handleCartQuantityChange({
-  //         food,
-  //         kitchen,
-  //         newQuantity: cartQuantity, // Keep same quantity
-  //         currentQuantity: cartQuantity,
-  //         selectedDate: pickupDate || selectedDate,
-  //         selectedTime: pickupTime,
-  //         specialInstructions: specialInstructions.trim(),
-  //         isPreOrder: orderType === "PRE_ORDER",
-  //       });
+        showToast.success("Special instructions updated!");
+      }
+    }
 
-  //       showToast.success("Special instructions updated!");
-  //     }
-  //   }
+    // ✅ SUCCESS: Navigate back to foods page
+    console.log(`[FoodDetailPage] Navigating back to foods page`);
 
-  //   // ✅ SUCCESS: Navigate back to foods page
-  //   console.log(`[FoodDetailPage] Navigating back to foods page`);
+    const currentPageParams = new URLSearchParams({
+      kitchenId: kitchenId || "",
+      foodId: foodId || "",
+      ...(selectedDate && { date: selectedDate }),
+    }).toString();
 
-  //   const currentPageParams = new URLSearchParams({
-  //     kitchenId: kitchenId || "",
-  //     foodId: foodId || "",
-  //     ...(selectedDate && { date: selectedDate }),
-  //   }).toString();
-
-  //   navigate("/foods", {
-  //     replace: true,
-  //     state: {
-  //       from: {
-  //         pathname: location.pathname,
-  //         search: location.search,
-  //         fullUrl: `/share?${currentPageParams}`,
-  //       },
-  //     },
-  //   });
-  // }, [
-  //   availabilityStatus,
-  //   cartQuantity,
-  //   selectedQuantity,
-  //   specialInstructions,
-  //   food,
-  //   kitchen,
-  //   pickupDate,
-  //   selectedDate,
-  //   pickupTime,
-  //   orderType,
-  //   handleCartQuantityChange,
-  //   kitchenId,
-  //   foodId,
-  //   navigate,
-  //   location,
-  // ]);
+    navigate("/foods", {
+      replace: true,
+      state: {
+        from: {
+          pathname: location.pathname,
+          search: location.search,
+          fullUrl: `/share?${currentPageParams}`,
+        },
+      },
+    });
+  }, [
+    availabilityStatus,
+    cartQuantity,
+    selectedQuantity,
+    specialInstructions,
+    food,
+    kitchen,
+    pickupDate,
+    selectedDate,
+    pickupTime,
+    orderType,
+    handleCartQuantityChange,
+    kitchenId,
+    foodId,
+    navigate,
+    location,
+  ]);
 
   // Sync selectedQuantity with cart quantity when cart changes
   useEffect(() => {
@@ -1220,23 +1214,40 @@ export default function FoodDetailPage() {
             />
             <div className="add-to-cart-action mt-2">
               <button
+                // className={`button text-bold font-size-18`}
+                className={`button text-bold font-size-18 ${
+                  !availabilityStatus.isAvailable ? "sold-out" : ""
+                }`}
+                onClick={(e) => {
+                  if (!availabilityStatus.isAvailable) {
+                    alert(
+                      "♡ this food to the chef that we want it! When it is added to Go&Grab or Pre-Order, you will be notified."
+                    );
+                  }
+                  localStorage.setItem("skipListing", "true");
+                  navigate("/order");
+                }}
+                disabled={!availabilityStatus.isAvailable}
+                style={{
+                  pointerEvents: "auto",
+                  fontSize: "18px",
+                  width: "200px",
+                }}
+              >
+                {(() => {
+                  if (
+                    !availabilityStatus.isAvailable ||
+                    getCurrentAvailability === 0
+                  ) {
+                    return "Sold Out!";
+                  }
+                  return "Add to Cart";
+                })()}
+              </button>
+              <button
                 className={`button text-bold font-size-18`}
                 onClick={(e) => {
                   console.log("e", e);
-                  // console.log("🔥 BUTTON CLICKED! Event:", e);
-                  // console.log(
-                  //   "🔥 handleAddToCart type:",
-                  //   typeof handleAddToCart
-                  // );
-                  // if (!availabilityStatus.isAvailable) {
-                  //   // alert(
-                  //   //   "♡ this food to the chef that we want it! When it is added to Go&Grab or Pre-Order, you will be notified."
-                  //   // );
-                  //   navigate("/foods", {
-                  //     replace: true,
-                  //   });
-                  // }
-                  // handleAddToCart(e);
                   const currentPageParams = new URLSearchParams({
                     kitchenId: kitchenId || "",
                     foodId: foodId || "",
@@ -1253,18 +1264,13 @@ export default function FoodDetailPage() {
                     },
                   });
                 }}
-                // disabled={!availabilityStatus.isAvailable}
-                style={{ pointerEvents: "auto", fontSize: "18px" }}
+                style={{
+                  pointerEvents: "auto",
+                  fontSize: "18px",
+                  width: "200px",
+                  background: "#fd9a00",
+                }}
               >
-                {/* {(() => {
-                  if (
-                    !availabilityStatus.isAvailable ||
-                    getCurrentAvailability === 0
-                  ) {
-                    return "What else is available?";
-                  }
-                  return "Add to Cart";
-                })()} */}
                 Show Me The Menu
               </button>
               {/* <div className="icon">
