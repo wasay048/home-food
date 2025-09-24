@@ -231,8 +231,11 @@ export default function FoodDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { getCartQuantity, handleQuantityChange: handleCartQuantityChange } =
-    useGenericCart();
+  const {
+    getCartQuantity,
+    handleQuantityChange: handleCartQuantityChange,
+    getCartItem,
+  } = useGenericCart();
 
   useEffect(() => {
     localStorage.setItem("detailPage", window.location.href);
@@ -268,6 +271,11 @@ export default function FoodDetailPage() {
 
   const { kitchenId, foodId, selectedDate, toggle } = getPageParams();
 
+  const existingCartItem = useMemo(() => {
+    if (!foodId) return null;
+    return getCartItem(foodId);
+  }, [foodId, getCartItem]);
+
   if (!kitchenId || !foodId) {
     return (
       <div className="mobile-container">
@@ -293,7 +301,18 @@ export default function FoodDetailPage() {
     useKitchenWithFoods(kitchenId);
   const [activeTab, setActiveTab] = useState("reviews");
   const [selectedQuantity, setSelectedQuantity] = useState(0);
-  const [specialInstructions, setSpecialInstructions] = useState("");
+  const [specialInstructions, setSpecialInstructions] = useState(() => {
+    // Priority 1: Existing cart item instructions
+    if (existingCartItem?.specialInstructions) {
+      console.log(
+        "📝 Initializing special instructions from cart:",
+        existingCartItem.specialInstructions
+      );
+      return existingCartItem.specialInstructions;
+    }
+    // Priority 2: Default
+    return "";
+  });
 
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const currentUser = useSelector((state) => state.auth.user);
@@ -301,10 +320,38 @@ export default function FoodDetailPage() {
   const handleWeChatDialog = (show) => setShowWeChatDialog(show);
 
   // Date and time picker states
-  const [pickupDate, setPickupDate] = useState(
-    selectedDate && dayjs(selectedDate, "M/D/YYYY").format("YYYY-MM-DD")
-  );
-  const [pickupTime, setPickupTime] = useState(null); // Let DateTimePicker set appropriate default
+  const [pickupDate, setPickupDate] = useState(() => {
+    // Priority 1: Existing cart item date
+    if (existingCartItem?.selectedDate) {
+      console.log(
+        "🗓️ Initializing pickup date from cart:",
+        existingCartItem.selectedDate
+      );
+      return existingCartItem.selectedDate;
+    }
+    // Priority 2: URL parameter
+    if (selectedDate) {
+      const formattedDate = dayjs(selectedDate, "M/D/YYYY").format(
+        "YYYY-MM-DD"
+      );
+      console.log("🗓️ Initializing pickup date from URL:", formattedDate);
+      return formattedDate;
+    }
+    // Priority 3: Default (null - let DateTimePicker handle)
+    return null;
+  });
+  const [pickupTime, setPickupTime] = useState(() => {
+    // Priority 1: Existing cart item time
+    if (existingCartItem?.selectedTime) {
+      console.log(
+        "⏰ Initializing pickup time from cart:",
+        existingCartItem.selectedTime
+      );
+      return existingCartItem.selectedTime;
+    }
+    // Priority 2: Default (null - let DateTimePicker handle)
+    return null;
+  });
 
   const [availabilityStatus, setAvailabilityStatus] = useState({
     isAvailable: true,
@@ -423,6 +470,31 @@ export default function FoodDetailPage() {
     return currentAvailability;
   }, [orderType, pickupDate, food, kitchen]);
   console.log("getCurrentAvailability", getCurrentAvailability);
+
+  useEffect(() => {
+    if (existingCartItem) {
+      console.log(
+        "🔄 Updating states from existing cart item:",
+        existingCartItem
+      );
+
+      // Update pickup date if not already set and cart has a date
+      if (!pickupDate && existingCartItem.selectedDate) {
+        setPickupDate(existingCartItem.selectedDate);
+      }
+
+      // Update pickup time if not already set and cart has a time
+      if (!pickupTime && existingCartItem.selectedTime) {
+        setPickupTime(existingCartItem.selectedTime);
+      }
+
+      // Update special instructions if cart has them
+      if (!specialInstructions && existingCartItem.specialInstructions) {
+        setSpecialInstructions(existingCartItem.specialInstructions);
+      }
+    }
+  }, [existingCartItem, pickupDate, pickupTime, specialInstructions]);
+
   // Date/Time picker handlers
   // const handleDateChange = useCallback((newDate) => {
   //   // eslint-disable-next-line no-debugger

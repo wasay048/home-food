@@ -8,6 +8,7 @@ import { QuantitySelector } from "../components/QuantitySelector/QuantitySelecto
 
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
 import { useGenericCart } from "../hooks/useGenericCart";
+import { CornerDownLeft } from "lucide-react";
 
 export default function OrderPage() {
   const navigate = useNavigate();
@@ -235,8 +236,8 @@ export default function OrderPage() {
 
   const handleGoBack = () => {
     const skipListing = localStorage.getItem("skipListing");
-
-    if (skipListing === "true") {
+    console.log("skipListing flag:", skipListing);
+    if (skipListing && skipListing === "true") {
       localStorage.removeItem("skipListing");
       console.log("Skipping listing page, going back to home");
       const detailPage = localStorage.getItem("detailPage");
@@ -246,9 +247,10 @@ export default function OrderPage() {
         return;
       }
       return;
+    } else {
+      console.log("Navigating back to /foods listing page");
+      navigate("/foods");
     }
-
-    navigate("/foods");
   };
 
   const totalItemsCount = cartItems?.length || 0;
@@ -258,7 +260,18 @@ export default function OrderPage() {
       <div className="mobile-container">
         <div className="padding-20">
           <div className="back-link-title">
-            <Link className="back-link" onClick={handleGoBack}>
+            <button
+              className="back-link"
+              onClick={handleGoBack}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "0",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
               <svg
                 width="9"
                 height="14"
@@ -271,7 +284,7 @@ export default function OrderPage() {
                   fill="#212226"
                 />
               </svg>
-            </Link>
+            </button>
             <div className="title">Order</div>
           </div>
           <div className="order-count">

@@ -22,11 +22,101 @@ export default function ListingPage() {
   } = useSelector((state) => state.listing);
 
   // Use the generic cart hook for all cart operations
-  const { cartItems, getCartQuantity } = useGenericCart();
+  const { cartItems, getCartQuantity, getCartItem } = useGenericCart();
 
   // State for managing pickup dates and times for each food item
   const [pickupDates, setPickupDates] = useState({});
   const [pickupTimes, setPickupTimes] = useState({});
+
+  // ✅ Get preorder items for a specific date (using Redux data)
+  const getPreOrderItemsForDate = useCallback(
+    (dateString) => {
+      if (!kitchen?.preorderSchedule?.dates?.[dateString]) return [];
+      if (!preOrderItems || preOrderItems.length === 0) return [];
+
+      const scheduleItems = kitchen.preorderSchedule.dates[dateString];
+      return scheduleItems
+        .map((scheduleItem) => {
+          const food = preOrderItems.find(
+            (f) => f.id === scheduleItem.foodItemId
+          );
+          return food ? { ...food, scheduleItem } : null;
+        })
+        .filter(Boolean);
+    },
+    [kitchen, preOrderItems]
+  );
+
+  const initializePickupDataFromCart = useCallback(() => {
+    const newPickupDates = {};
+    const newPickupTimes = {};
+
+    // Initialize Go&Grab items from cart
+    if (goGrabItems && goGrabItems.length > 0) {
+      goGrabItems.forEach((food) => {
+        const cartItem = getCartItem(food.id);
+        if (cartItem) {
+          if (cartItem.selectedDate) {
+            newPickupDates[food.id] = cartItem.selectedDate;
+          }
+          if (cartItem.selectedTime) {
+            newPickupTimes[food.id] = cartItem.selectedTime;
+          }
+        }
+      });
+    }
+
+    // Initialize Pre-Order items from cart
+    if (availablePreorderDates && availablePreorderDates.length > 0) {
+      availablePreorderDates.forEach((dateInfo) => {
+        const itemsForDate = getPreOrderItemsForDate(dateInfo.dateString);
+        itemsForDate.forEach((food) => {
+          // For pre-order, we need to check cart items with specific dates
+          const cartItem = cartItems.find(
+            (item) =>
+              item.foodId === food.id &&
+              item.selectedDate === dateInfo.dateString
+          );
+
+          if (cartItem) {
+            const key = `${food.id}_preorder`;
+            if (cartItem.selectedDate) {
+              newPickupDates[key] = cartItem.selectedDate;
+            }
+            if (cartItem.selectedTime) {
+              newPickupTimes[key] = cartItem.selectedTime;
+            }
+          }
+        });
+      });
+    }
+
+    console.log("🔄 [ListingPage] Initializing pickup data from cart:", {
+      newPickupDates,
+      newPickupTimes,
+    });
+
+    // Only update if we have new data
+    if (Object.keys(newPickupDates).length > 0) {
+      setPickupDates((prev) => ({ ...prev, ...newPickupDates }));
+    }
+    if (Object.keys(newPickupTimes).length > 0) {
+      setPickupTimes((prev) => ({ ...prev, ...newPickupTimes }));
+    }
+  }, [
+    goGrabItems,
+    availablePreorderDates,
+    cartItems,
+    getCartItem,
+    getPreOrderItemsForDate,
+  ]);
+
+  // ✅ NEW: Initialize pickup data when component mounts or cart changes
+  useEffect(() => {
+    if (goGrabItems.length > 0 || availablePreorderDates.length > 0) {
+      initializePickupDataFromCart();
+    }
+  }, [initializePickupDataFromCart]);
 
   // ✅ Log Redux data on mount and updates
   useEffect(() => {
@@ -103,6 +193,11 @@ export default function ListingPage() {
         [key]: newDate,
       }));
       console.log(`[ListingPage] Date changed for ${key}:`, newDate);
+      const timeKey = isPreOrder ? `${foodId}_preorder` : foodId;
+      setPickupTimes((prev) => ({
+        ...prev,
+        [timeKey]: null,
+      }));
     },
     []
   );
@@ -117,25 +212,6 @@ export default function ListingPage() {
       console.log(`[ListingPage] Time changed for ${key}:`, newTime);
     },
     []
-  );
-
-  // ✅ Get preorder items for a specific date (using Redux data)
-  const getPreOrderItemsForDate = useCallback(
-    (dateString) => {
-      if (!kitchen?.preorderSchedule?.dates?.[dateString]) return [];
-      if (!preOrderItems || preOrderItems.length === 0) return [];
-
-      const scheduleItems = kitchen.preorderSchedule.dates[dateString];
-      return scheduleItems
-        .map((scheduleItem) => {
-          const food = preOrderItems.find(
-            (f) => f.id === scheduleItem.foodItemId
-          );
-          return food ? { ...food, scheduleItem } : null;
-        })
-        .filter(Boolean);
-    },
-    [kitchen, preOrderItems]
   );
 
   // ✅ Memoize cart quantities to prevent infinite recalculations
@@ -189,6 +265,33 @@ export default function ListingPage() {
     "Rendering ListingPage with state:",
     cartItems.map((item) => item.foodId)
   );
+
+  const getPickupDate = useCallback(
+    (foodId, isPreOrder = false, fallbackDate = null) => {
+      const key = isPreOrder ? `${foodId}_preorder` : foodId;
+      return pickupDates[key] || fallbackDate;
+    },
+    [pickupDates]
+  );
+
+  // ✅ ENHANCED: Helper function to get pickup time
+  const getPickupTime = useCallback(
+    (foodId, isPreOrder = false) => {
+      const key = isPreOrder ? `${foodId}_preorder` : foodId;
+      return pickupTimes[key] || null;
+    },
+    [pickupTimes]
+  );
+
+  useEffect(() => {
+    console.log("🗓️ [ListingPage] Pickup dates updated:", pickupDates);
+    console.log("⏰ [ListingPage] Pickup times updated:", pickupTimes);
+  }, [pickupDates, pickupTimes]);
+
+  console.log(
+    "Rendering ListingPage with state:",
+    cartItems.map((item) => item.foodId)
+  );
   return (
     <div className="container">
       <div className="mobile-container">
@@ -227,6 +330,8 @@ export default function ListingPage() {
               <div className="menu-listing">
                 {goGrabItems.map((food) => {
                   const cartQty = getMemoizedCartQuantity(food.id);
+                  const currentPickupDate = getPickupDate(food.id, false);
+                  const currentPickupTime = getPickupTime(food.id, false);
                   return (
                     <div key={food.id} className="menu-list">
                       <div className="left">
@@ -269,8 +374,8 @@ export default function ListingPage() {
                             food={food}
                             kitchen={kitchen}
                             orderType="GO_GRAB"
-                            selectedDate={pickupDates[food.id]}
-                            selectedTime={pickupTimes[food.id]}
+                            selectedDate={currentPickupDate}
+                            selectedTime={currentPickupTime}
                             onDateChange={(newDate) => {
                               handleDateChange(food.id, newDate, false);
                             }}
@@ -310,6 +415,12 @@ export default function ListingPage() {
                       food.id,
                       dateInfo.dateString
                     );
+                    const currentPickupDate = getPickupDate(
+                      food.id,
+                      true,
+                      dateInfo.dateString
+                    );
+                    const currentPickupTime = getPickupTime(food.id, true);
                     // const availableTimes = food.scheduleItem
                     //   ?.availableTimes || ["6:22 PM"];
 
@@ -362,11 +473,8 @@ export default function ListingPage() {
                               food={food}
                               kitchen={kitchen}
                               orderType="PRE_ORDER"
-                              selectedDate={
-                                pickupDates[`${food.id}_preorder`] ||
-                                dateInfo.dateString
-                              }
-                              selectedTime={pickupTimes[`${food.id}_preorder`]}
+                              selectedDate={currentPickupDate}
+                              selectedTime={currentPickupTime}
                               onDateChange={(newDate) => {
                                 handleDateChange(food.id, newDate, true);
                               }}

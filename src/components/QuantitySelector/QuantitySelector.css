@@ -122,6 +122,7 @@
   border: 1px solid #e0e0e0;
   background: #f8f9fa;
   min-height: 20px;
+  width: 100px;
 }
 .quantity-selector--small .quantity-selector__controls {
   gap: 8px;

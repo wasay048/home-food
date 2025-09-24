@@ -236,15 +236,11 @@ export const useGenericCart = () => {
       specialInstructions = "",
       incomingOrderType,
     }) => {
-      // eslint-disable-next-line no-debugger
-      debugger;
       console.log("🔥 handleQuantityChange called with:", incomingOrderType);
       try {
         // ✅ NEW: Use calculateAvailability to determine proper order type
         console.log("selectedDate", selectedDate);
         console.log("selectedTime", selectedTime);
-        // eslint-disable-next-line no-debugger
-        debugger;
         const availability = calculateAvailability(
           food,
           kitchen,
@@ -420,11 +416,19 @@ export const useGenericCart = () => {
       message: "All selections are valid",
     };
   };
+
+  const getCartItem = useCallback(
+    (foodId) => {
+      return cartItems.find((item) => item.foodId === foodId) || null;
+    },
+    [cartItems]
+  );
   return {
     cartItems,
     getCartQuantity,
     handleQuantityChange,
     validateCartSelections: () => validateCartSelections(cartItems),
+    getCartItem,
     calculateAvailability,
   };
 };
