@@ -928,6 +928,7 @@ const DateTimePicker = ({
         <select
           className="picker-select time-select"
           value={internalTime || ""}
+          style={{ padding: "10px 12px" }}
           onChange={(e) => handleTimeChange(e.target.value)}
         >
           <option value="" disabled selected>
