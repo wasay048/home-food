@@ -11,6 +11,7 @@ import { parseClockTime } from "../../utils/timeParseUtils";
 import { useGenericCart } from "../../hooks/useGenericCart";
 import isBetween from "dayjs/plugin/isBetween";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isBetween);
 /**
@@ -1028,26 +1029,55 @@ const DateTimePicker = ({
 
       <div className="picker-field" {...timePickerProps}>
         <label className="picker-label">{timeLabel}</label>
-        <select
-          className="picker-select time-select"
-          value={internalTime || ""}
-          style={{ padding: "10px 12px" }}
-          onChange={(e) => handleTimeChange(e.target.value)}
-        >
-          <option value="" disabled selected>
-            Select time
-          </option>
-          {availableTimeSlots.map((timeOption) => (
-            <option
-              key={timeOption.value}
-              value={timeOption.value}
-              disabled={!timeOption.isAvailable}
-              data-recommended={timeOption.isRecommended || false}
-            >
-              {timeOption.display}
+
+        {/* ✅ UNIVERSAL: Custom styled select wrapper for ALL devices */}
+        <div className="time-select-wrapper">
+          <select
+            className="picker-select time-select"
+            value={internalTime || ""}
+            onChange={(e) => handleTimeChange(e.target.value)}
+            disabled={disabled || availableTimeSlots.length === 0}
+          >
+            <option value="" disabled>
+              Select time
             </option>
-          ))}
-        </select>
+            {availableTimeSlots.map((timeOption) => (
+              <option
+                key={timeOption.value}
+                value={timeOption.value}
+                disabled={!timeOption.isAvailable}
+                data-recommended={timeOption.isRecommended || false}
+              >
+                {timeOption.display}
+              </option>
+            ))}
+          </select>
+
+          {/* ✅ UNIVERSAL: Custom display layer for ALL devices */}
+          <div className="time-select-display">
+            <span className="time-select-text">
+              {internalTime
+                ? availableTimeSlots.find((slot) => slot.value === internalTime)
+                    ?.display || internalTime
+                : "Select time"}
+            </span>
+            <svg
+              className="picker-arrow"
+              width="12"
+              height="8"
+              viewBox="0 0 12 8"
+              fill="none"
+            >
+              <path
+                d="M1 1L6 6L11 1"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+        </div>
       </div>
 
       {/* Custom Mobile Date Picker */}

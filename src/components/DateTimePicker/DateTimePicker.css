@@ -151,7 +151,7 @@ ld {
 }
 
 .pickup-details .date-time-picker .picker-select {
-  padding: 8px 12px;
+  padding: 12px 12px;
   font-size: 14px;
   border-radius: 6px;
   width: 100%;
@@ -848,4 +848,183 @@ ld {
 /* Loading state during month transitions */
 .mobile-calendar-grid.loading {
   opacity: 0.7;
+}
+/* ✅ UNIVERSAL: Custom select styling for ALL devices */
+.time-select-wrapper {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.time-select-wrapper .picker-select.time-select {
+  /* Make the actual select invisible but still functional on ALL devices */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  z-index: 3;
+  cursor: pointer;
+
+  /* Remove native styling on ALL browsers */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 16px;
+
+  /* Ensure it's completely invisible */
+  color: transparent;
+  text-shadow: none;
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
+/* ✅ UNIVERSAL: Hide all native select styling across browsers */
+.time-select-wrapper .picker-select.time-select::-webkit-inner-spin-button,
+.time-select-wrapper .picker-select.time-select::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.time-select-wrapper .picker-select.time-select::-webkit-search-decoration,
+.time-select-wrapper .picker-select.time-select::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+/* Hide dropdown arrow on all browsers */
+.time-select-wrapper .picker-select.time-select::-ms-expand {
+  display: none;
+}
+
+/* Firefox specific */
+.time-select-wrapper .picker-select.time-select::-moz-focus-inner {
+  border: 0;
+}
+
+.time-select-wrapper .picker-select.time-select::-moz-appearance {
+  appearance: none;
+}
+
+.time-select-display {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  z-index: 1;
+  pointer-events: none; /* Don't intercept clicks */
+
+  transition: border-color 0.2s ease;
+}
+
+.time-select-display:hover {
+  border-color: #999;
+}
+
+.time-select-display .time-select-text {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.time-select-display .picker-arrow {
+  flex-shrink: 0;
+  margin-left: 8px;
+  color: #666;
+  pointer-events: none;
+}
+
+/* ✅ UNIVERSAL: Touch and interaction improvements for ALL devices */
+.time-select-wrapper .picker-select.time-select {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.time-select-display {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Focus states */
+.time-select-wrapper .picker-select.time-select:focus {
+  outline: none;
+}
+
+.time-select-wrapper .picker-select.time-select:focus + .time-select-display {
+  border-color: #007aff;
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+}
+
+/* Disabled state */
+.time-select-wrapper
+  .picker-select.time-select:disabled
+  + .time-select-display {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.time-select-wrapper
+  .picker-select.time-select:disabled
+  + .time-select-display
+  .picker-arrow {
+  color: #ccc;
+}
+
+/* ✅ UNIVERSAL: Responsive for ALL devices */
+@media (max-width: 768px) {
+  .time-select-display {
+    min-height: 48px; /* Larger touch target on mobile */
+    font-size: 16px; /* Prevents zoom on mobile browsers */
+  }
+
+  .time-select-wrapper .picker-select.time-select {
+    font-size: 16px !important;
+  }
+}
+
+/* ✅ UNIVERSAL: High DPI displays */
+@media screen and (-webkit-min-device-pixel-ratio: 2),
+  screen and (min-resolution: 192dpi) {
+  .time-select-wrapper .picker-select.time-select {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+  }
+}
+
+/* ✅ UNIVERSAL: Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .time-select-display {
+    background: #1c1c1e;
+    border-color: #38383a;
+    color: #ffffff;
+  }
+
+  .time-select-display .picker-arrow {
+    color: #8e8e93;
+  }
+
+  .time-select-wrapper .picker-select.time-select:focus + .time-select-display {
+    border-color: #0a84ff;
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.2);
+  }
 }
