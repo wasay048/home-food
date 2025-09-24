@@ -1,6 +1,6 @@
 .date-time-picker {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   gap: 8px;
   width: 100%;
 }
@@ -34,7 +34,7 @@ ld {
 }
 
 .picker-select {
-  width: 100%;
+  width: 130px;
   padding: 12px;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
@@ -137,6 +137,11 @@ ld {
 
 .pickup-details .date-time-picker .picker-field {
   margin-bottom: 0;
+  max-width: 48%;
+  width: 100%;
+}
+.pickup-details .date-input-wrapper {
+  width: 100%;
 }
 
 .pickup-details .date-time-picker .picker-label {
@@ -149,6 +154,7 @@ ld {
   padding: 8px 12px;
   font-size: 14px;
   border-radius: 6px;
+  width: 100%;
   border: 1px solid #ddd;
 }
 
@@ -291,7 +297,7 @@ ld {
 /* Date input styling - Hide input, show formatted text */
 .date-input-wrapper {
   position: relative;
-  width: 100%;
+  /* width: 130px; */
 }
 
 .picker-select.date-input {

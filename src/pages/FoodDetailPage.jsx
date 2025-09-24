@@ -1262,17 +1262,19 @@ export default function FoodDetailPage() {
           </div>
 
           <div className="padding-20">
-            <h3 className="small-title mb-8">Special Request</h3>
+            <h3 className="small-title mb-8">
+              Flavor preferences or things to avoid:
+            </h3>
             {/* <p className="body-text mb-16">
               Please let us know if you are allergic to anything or if we need
               to avoid anything.
             </p> */}
             <textarea
               className="special-instructions-input"
-              placeholder="Share you preference or things to avoid (e.g. peanuts, cilantro)."
+              placeholder="E.g. Medium spicy, No cilantro"
               value={specialInstructions}
               onChange={(e) => setSpecialInstructions(e.target.value)}
-              rows={2}
+              rows={1}
               style={{
                 width: "100%",
                 padding: "12px",
