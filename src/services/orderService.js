@@ -214,7 +214,7 @@ export const placeOrder = async (orderData) => {
                 // Create updated food item object preserving all attributes
                 const updatedFoodItem = {
                   ...currentFoodItem,
-                  numOfAvailableItems: !currentFoodItem?.isLimitedOrder
+                  numOfAvailableItems: currentFoodItem?.isLimitedOrder
                     ? currentAvailable
                     : newAvailable,
                 };
@@ -317,7 +317,7 @@ export const createOrderObject = ({
   currentUser,
   paymentCalculation,
   groupedCartItems,
-  paymentType
+  paymentType,
 }) => {
   const now = new Date();
   const orderID = generateOrderID();
@@ -380,7 +380,8 @@ export const createOrderObject = ({
   const orderObject = {
     datePickedUp: datePickedUp,
     datePlaced: now,
-    kitchenId: kitchenInfo?.id || kitchenInfo?.kitchenId || cartItems[0]?.kitchenId,
+    kitchenId:
+      kitchenInfo?.id || kitchenInfo?.kitchenId || cartItems[0]?.kitchenId,
     kitchenName: kitchenInfo?.name,
     orderID: orderID,
     orderIDKey: "", // Will be set after document creation
@@ -399,7 +400,6 @@ export const createOrderObject = ({
     salesTax: parseFloat(paymentCalculation.salesTax),
     taxRate: 0.0725,
     paymentType: paymentType || "online",
-
   };
 
   return orderObject;
