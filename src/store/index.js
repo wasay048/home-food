@@ -13,8 +13,8 @@ import listingSlice from "./slices/listingSlice";
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["auth", "cart"], // Only persist auth and cart data
-  blacklist: ["food", "kitchen", "reviews"], // Don't persist temporary data
+  whitelist: ["auth", "cart", "food", "kitchen", "listing"], // Only persist auth and cart data
+  blacklist: ["reviews"], // Don't persist temporary data
 };
 
 // Auth-specific persist config
@@ -32,14 +32,42 @@ const cartPersistConfig = {
   whitelist: ["items", "totalItems", "totalAmount"], // Persist cart data
   blacklist: ["loading", "error"], // Don't persist loading states
 };
+const foodPersistConfig = {
+  key: "food",
+  storage,
+  whitelist: ["foodData", "lastUpdated"], // Persist food data and timestamp
+  blacklist: ["loading", "error"], // Don't persist loading states
+};
+
+// ✅ NEW: Kitchen-specific persist config
+const kitchenPersistConfig = {
+  key: "kitchen",
+  storage,
+  whitelist: ["kitchenData", "currentKitchen", "lastUpdated"], // Persist kitchen data
+  blacklist: ["loading", "error"], // Don't persist loading states
+};
+
+// ✅ NEW: Listing-specific persist config
+const listingPersistConfig = {
+  key: "listing",
+  storage,
+  whitelist: [
+    "goGrabItems",
+    "preOrderItems",
+    "availablePreorderDates",
+    "kitchen",
+    "lastUpdated",
+  ], // Persist listing data
+  blacklist: ["isLoading", "error"], // Don't persist loading states
+};
 
 const rootReducer = combineReducers({
   auth: persistReducer(authPersistConfig, authReducer),
-  food: foodReducer,
+  food: persistReducer(foodPersistConfig, foodReducer),
   cart: persistReducer(cartPersistConfig, cartReducer),
-  kitchen: kitchenReducer,
+  kitchen: persistReducer(kitchenPersistConfig, kitchenReducer),
   reviews: reviewsReducer,
-  listing: listingSlice,
+  listing: persistReducer(listingPersistConfig, listingSlice),
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -49,7 +77,13 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        ignoredActions: ["persist/PERSIST", "persist/REHYDRATE"],
+        ignoredActions: [
+          "persist/PERSIST",
+          "persist/REHYDRATE",
+          "persist/PAUSE",
+          "persist/PURGE",
+          "persist/REGISTER",
+        ],
       },
     }),
 });
