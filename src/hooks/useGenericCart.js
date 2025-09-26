@@ -238,6 +238,7 @@ export const useGenericCart = () => {
     }) => {
       console.log("🔥 handleQuantityChange called with:", incomingOrderType);
       try {
+        debugger;
         // ✅ NEW: Use calculateAvailability to determine proper order type
         console.log("selectedDate", selectedDate);
         console.log("selectedTime", selectedTime);

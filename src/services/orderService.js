@@ -378,6 +378,7 @@ export const createOrderObject = ({
 
   // Create the order object
   const orderObject = {
+    appOrderStatus: "Web App Order",
     datePickedUp: datePickedUp,
     datePlaced: now,
     kitchenId:

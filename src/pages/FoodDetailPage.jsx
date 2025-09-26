@@ -539,78 +539,78 @@ export default function FoodDetailPage() {
   }, []);
 
   // Update handleAddToCart to use useGenericCart
-  const handleAddToCart = useCallback(() => {
-    // Check availability
-    if (!availabilityStatus.isAvailable) {
-      // showToast.error("This item is currently unavailable");
-      console.log("This item is currently unavailable");
-      return;
-    }
+  // const handleAddToCart = useCallback(() => {
+  //   // Check availability
+  //   if (!availabilityStatus.isAvailable) {
+  //     // showToast.error("This item is currently unavailable");
+  //     console.log("This item is currently unavailable");
+  //     return;
+  //   }
 
-    // ✅ IMPROVED: Check if item is already in cart
-    if (cartQuantity === 0) {
-      alert("Please use the quantity selector to add items to cart first.");
-      return;
-    }
+  //   // ✅ IMPROVED: Check if item is already in cart
+  //   if (cartQuantity === 0) {
+  //     alert("Please use the quantity selector to add items to cart first.");
+  //     return;
+  //   }
 
-    // ✅ NEW: Update special instructions if item is already in cart
-    if (cartQuantity > 0 && specialInstructions.trim()) {
-      console.log(
-        `[FoodDetailPage] Updating special instructions for existing cart item`
-      );
+  //   // ✅ NEW: Update special instructions if item is already in cart
+  //   if (cartQuantity > 0 && specialInstructions.trim()) {
+  //     console.log(
+  //       `[FoodDetailPage] Updating special instructions for existing cart item`
+  //     );
 
-      if (food && kitchen) {
-        handleCartQuantityChange({
-          food,
-          kitchen,
-          newQuantity: cartQuantity, // Keep same quantity
-          currentQuantity: cartQuantity,
-          selectedDate: pickupDate || selectedDate,
-          selectedTime: pickupTime,
-          specialInstructions: specialInstructions.trim(),
-          isPreOrder: orderType === "PRE_ORDER",
-        });
+  //     if (food && kitchen) {
+  //       handleCartQuantityChange({
+  //         food,
+  //         kitchen,
+  //         newQuantity: cartQuantity, // Keep same quantity
+  //         // currentQuantity: cartQuantity,
+  //         selectedDate: pickupDate || selectedDate,
+  //         selectedTime: pickupTime,
+  //         specialInstructions: specialInstructions.trim(),
+  //         isPreOrder: orderType === "PRE_ORDER",
+  //       });
 
-        showToast.success("Special instructions updated!");
-      }
-    }
+  //       showToast.success("Special instructions updated!");
+  //     }
+  //   }
 
-    // ✅ SUCCESS: Navigate back to foods page
-    console.log(`[FoodDetailPage] Navigating back to foods page`);
+  //   // ✅ SUCCESS: Navigate back to foods page
+  //   console.log(`[FoodDetailPage] Navigating back to foods page`);
 
-    const currentPageParams = new URLSearchParams({
-      kitchenId: kitchenId || "",
-      foodId: foodId || "",
-      ...(selectedDate && { date: selectedDate }),
-    }).toString();
+  //   const currentPageParams = new URLSearchParams({
+  //     kitchenId: kitchenId || "",
+  //     foodId: foodId || "",
+  //     ...(selectedDate && { date: selectedDate }),
+  //   }).toString();
 
-    navigate("/foods", {
-      replace: true,
-      state: {
-        from: {
-          pathname: location.pathname,
-          search: location.search,
-          fullUrl: `/share?${currentPageParams}`,
-        },
-      },
-    });
-  }, [
-    availabilityStatus,
-    cartQuantity,
-    selectedQuantity,
-    specialInstructions,
-    food,
-    kitchen,
-    pickupDate,
-    selectedDate,
-    pickupTime,
-    orderType,
-    handleCartQuantityChange,
-    kitchenId,
-    foodId,
-    navigate,
-    location,
-  ]);
+  //   navigate("/foods", {
+  //     replace: true,
+  //     state: {
+  //       from: {
+  //         pathname: location.pathname,
+  //         search: location.search,
+  //         fullUrl: `/share?${currentPageParams}`,
+  //       },
+  //     },
+  //   });
+  // }, [
+  //   availabilityStatus,
+  //   cartQuantity,
+  //   selectedQuantity,
+  //   specialInstructions,
+  //   food,
+  //   kitchen,
+  //   pickupDate,
+  //   selectedDate,
+  //   pickupTime,
+  //   orderType,
+  //   handleCartQuantityChange,
+  //   kitchenId,
+  //   foodId,
+  //   navigate,
+  //   location,
+  // ]);
 
   // Sync selectedQuantity with cart quantity when cart changes
   useEffect(() => {
@@ -772,7 +772,7 @@ export default function FoodDetailPage() {
             food,
             kitchen,
             newQuantity: getCurrentAvailability === 0 ? 0 : 1, // Default quantity
-            currentQuantity: 0,
+            // currentQuantity: 0,
             selectedDate: pickupDate || dayjs().format("YYYY-MM-DD"),
             selectedTime: null,
             specialInstructions: "",
@@ -1235,7 +1235,7 @@ export default function FoodDetailPage() {
                     food,
                     kitchen,
                     newQuantity: selectedQuantity,
-                    currentQuantity: cartQuantity,
+                    // currentQuantity: cartQuantity,
                     selectedDate: newDate,
                     selectedTime: pickupTime,
                     specialInstructions,
@@ -1248,7 +1248,7 @@ export default function FoodDetailPage() {
                     food,
                     kitchen,
                     newQuantity: selectedQuantity,
-                    currentQuantity: cartQuantity,
+                    // currentQuantity: cartQuantity,
                     selectedDate: pickupDate,
                     selectedTime: newTime,
                     specialInstructions,

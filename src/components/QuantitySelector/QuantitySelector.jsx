@@ -15,7 +15,7 @@ export const QuantitySelector = ({
   className = "",
   disabled = false,
   orderType,
-  selectedTime
+  selectedTime,
 }) => {
   console.log("selectedDate in QuantitySelector:", selectedDate);
   // ✅ USE: Get functions from useGenericCart hook
@@ -90,7 +90,7 @@ export const QuantitySelector = ({
         food,
         kitchen,
         newQuantity,
-        currentQuantity: cartQuantity,
+        // currentQuantity: cartQuantity,
         selectedDate,
         selectedTime,
         specialInstructions: "",

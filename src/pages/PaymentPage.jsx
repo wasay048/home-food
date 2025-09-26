@@ -127,7 +127,7 @@ export default function PaymentPage() {
           food: editingItem.food,
           kitchen: kitchenInfo,
           newQuantity: editingItem.quantity,
-          currentQuantity: editingItem.quantity,
+          // currentQuantity: editingItem.quantity,
           selectedDate: modalSelectedDate,
           selectedTime: modalSelectedTime,
           specialInstructions: editingItem.specialInstructions || "",

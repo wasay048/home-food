@@ -476,11 +476,11 @@ const DateTimePicker = ({
 
       // Notify parent
       onDateChange(dateValue);
+      debugger;
       handleCartQuantityChange({
         food,
         kitchen,
         newQuantity: cartQuantity,
-        currentQuantity: cartQuantity,
         selectedDate: internalDate,
         selectedTime: selectedTime,
         specialInstructions: "",
@@ -502,7 +502,6 @@ const DateTimePicker = ({
         food,
         kitchen,
         newQuantity: cartQuantity,
-        currentQuantity: cartQuantity,
         selectedDate: internalDate,
         selectedTime: timeValue,
         specialInstructions: "",
