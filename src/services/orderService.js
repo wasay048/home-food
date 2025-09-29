@@ -372,6 +372,7 @@ export const createOrderObject = ({
     },
     price: parseFloat(item.food?.cost || item.food?.price || 0),
     pickupDate: new Date(item.selectedDate),
+    pickupDateString: dayjs(item.selectedDate).format("MM,DD,YYYY"),
     pickupTime: item.selectedTime || "4:30 PM",
     paymentType: paymentType || "online",
   }));
