@@ -376,7 +376,10 @@ export const createOrderObject = ({
     pickupTime: item.selectedTime || "4:30 PM",
     paymentType: paymentType || "online",
   }));
-
+  let paymentVia = { other: {} };
+  if (paymentType === "cash") {
+    paymentVia = { cash: {} };
+  }
   // Create the order object
   const orderObject = {
     appOrderStatus: "Web App Order",
@@ -392,9 +395,7 @@ export const createOrderObject = ({
     orderTotalCoast: parseFloat(paymentCalculation.totalPayment),
     orderType: orderType,
     orderedFoodItems: orderedFoodItems,
-    paymentVia: {
-      other: {},
-    },
+    paymentVia: paymentVia,
     pickUpAddress: kitchenInfo?.address,
     userId: currentUser?.id,
     // Additional metadata
