@@ -538,13 +538,36 @@ export default function OrderPage() {
               </div>
 
               {/* Action Buttons */}
-              <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                  marginTop: "16px",
+                }}
+              >
                 <button
                   className="action-button"
                   onClick={() => navigate("/checkout")}
-                  style={{ flex: "2" }}
+                  // style={{ flex: "2" }}
                 >
                   Check Out
+                </button>
+                <button
+                  className="action-button"
+                  onClick={(e) => {
+                    console.log("e", e);
+                    navigate("/foods", {
+                      replace: true,
+                    });
+                  }}
+                  style={{
+                    pointerEvents: "auto",
+                    fontSize: "18px",
+                    background: "#fd9a00",
+                  }}
+                >
+                  What Else is Available?
                 </button>
               </div>
             </>

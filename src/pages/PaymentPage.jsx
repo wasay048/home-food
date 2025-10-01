@@ -413,7 +413,7 @@ export default function PaymentPage() {
       showToast.success(`${email} copied to clipboard!`);
     } catch (error) {
       console.error("Failed to copy email:", error);
-      showToast.error("Failed to copy email");
+      // showToast.error("Failed to copy email");
     }
   };
   return (
