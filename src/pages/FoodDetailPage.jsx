@@ -1305,7 +1305,7 @@ export default function FoodDetailPage() {
                 style={{
                   pointerEvents: "auto",
                   fontSize: "18px",
-                  width: "200px",
+                  width: "240px",
                 }}
               >
                 {(() => {
@@ -1327,6 +1327,25 @@ export default function FoodDetailPage() {
                     foodId: foodId || "",
                     ...(selectedDate && { date: selectedDate }),
                   }).toString();
+                  if (cartQuantity > 0) {
+                    console.log("🗑️ Removing current item from cart:", {
+                      foodId,
+                      currentQuantity: cartQuantity,
+                    });
+
+                    handleCartQuantityChange({
+                      food,
+                      kitchen,
+                      newQuantity: 0,
+                      selectedDate: pickupDate,
+                      selectedTime: pickupTime,
+                      specialInstructions,
+                      incomingOrderType: orderType,
+                    });
+
+                    console.log("✅ Item removed from cart");
+                  }
+
                   navigate("/foods", {
                     replace: true,
                     state: {
@@ -1341,11 +1360,11 @@ export default function FoodDetailPage() {
                 style={{
                   pointerEvents: "auto",
                   fontSize: "18px",
-                  width: "200px",
+                  width: "240px",
                   background: "#fd9a00",
                 }}
               >
-                Show Me The Menu
+                What Else is Available?
               </button>
               {/* <div className="icon">
                 <svg
