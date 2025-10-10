@@ -773,9 +773,10 @@ export default function FoodDetailPage() {
             newQuantity: getCurrentAvailability === 0 ? 0 : 1, // Default quantity
             // currentQuantity: 0,
             selectedDate: pickupDate || dayjs().format("YYYY-MM-DD"),
-            selectedTime: null,
+            selectedTime: pickupTime,
             specialInstructions: "",
             incomingOrderType: orderType,
+            calledFrom: "direct-landing-useEffect",
           });
         }, 100); // Small delay to break the update cycle
 
@@ -1185,6 +1186,7 @@ export default function FoodDetailPage() {
                   (selectedDate &&
                     dayjs(selectedDate, "M/D/YYYY").format("YYYY-MM-DD"))
                 } // Use picker date first, then fallback to URL date
+                selectedTime={pickupTime}
                 minQuantity={0}
                 onAvailabilityChange={handleAvailabilityChange}
                 size="large"
@@ -1239,6 +1241,7 @@ export default function FoodDetailPage() {
                     selectedTime: pickupTime,
                     specialInstructions,
                     incomingOrderType: orderType,
+                    calledFrom: "FoodDetailPage date picker",
                   });
                 }}
                 onTimeChange={(newTime) => {
@@ -1252,6 +1255,7 @@ export default function FoodDetailPage() {
                     selectedTime: newTime,
                     specialInstructions,
                     incomingOrderType: orderType,
+                    calledFrom: "FoodDetailPage time picker",
                   });
                 }}
                 disabled={!food || !kitchen}

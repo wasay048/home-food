@@ -95,6 +95,7 @@ export const QuantitySelector = ({
         selectedTime,
         specialInstructions: "",
         incomingOrderType: orderType,
+        calledFrom: "QuantitySelector",
         // isPreOrder: availabilityStatus.orderType === "PRE_ORDER",
       });
 
