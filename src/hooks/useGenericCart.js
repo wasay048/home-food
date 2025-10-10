@@ -20,8 +20,6 @@ export const useGenericCart = () => {
       maxQuantity = 99,
       incomingOrderType = null
     ) => {
-      // eslint-disable-next-line no-debugger
-      debugger;
       if (!incomingOrderType) {
         return;
       }
@@ -238,7 +236,6 @@ export const useGenericCart = () => {
     }) => {
       console.log("🔥 handleQuantityChange called with:", incomingOrderType);
       try {
-        debugger;
         // ✅ NEW: Use calculateAvailability to determine proper order type
         console.log("selectedDate", selectedDate);
         console.log("selectedTime", selectedTime);

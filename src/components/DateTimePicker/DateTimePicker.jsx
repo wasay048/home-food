@@ -214,7 +214,7 @@ const DateTimePicker = ({
       console.log("✅ Go&Grab time slots:", timeSlots.length);
       return timeSlots;
     } else if (orderType === "PRE_ORDER") {
-      // ✅ ENHANCED: PRE_ORDER logic to show slots between min and max times
+      // ✅ ENHANCED: PRE_ORDER logic to generate time slots between start and end times
       console.log("🍽️ Processing PRE_ORDER time slots");
 
       if (!kitchen?.preorderSchedule?.dates || !food?.id) {
@@ -256,7 +256,7 @@ const DateTimePicker = ({
           targetFoodId: food.id,
           matches: matches,
           availableTimes: item.availableTimes,
-          pickupTimeDuration: item.pickupTimeDuration,
+          nameOfFood: item.nameOfFood,
         });
         return matches;
       });
@@ -270,12 +270,13 @@ const DateTimePicker = ({
         return [];
       }
 
-      // ✅ NEW: Collect all available times and find min/max
+      // ✅ FIXED: Collect time slots for THIS SPECIFIC food item only
       const allAvailableTimes = [];
 
       foodScheduleItems.forEach((scheduleItem, index) => {
         console.log(`📋 Processing schedule item ${index}:`, {
           foodItemId: scheduleItem.foodItemId,
+          nameOfFood: scheduleItem.nameOfFood,
           availableTimes: scheduleItem.availableTimes,
           pickupTimeDuration: scheduleItem.pickupTimeDuration,
           numOfAvailableItems: scheduleItem.numOfAvailableItems,
@@ -292,130 +293,194 @@ const DateTimePicker = ({
           return;
         }
 
-        if (scheduleItem.availableTimes.length === 0) {
+        if (scheduleItem.availableTimes.length < 2) {
           console.warn(
-            "⚠️ Empty availableTimes array in schedule item:",
-            scheduleItem
+            "⚠️ availableTimes must have at least 2 elements (start and end time):",
+            scheduleItem.availableTimes
           );
           return;
         }
 
-        // Process each available time to get dayjs objects
-        scheduleItem.availableTimes.forEach((time) => {
-          try {
-            const parsed = parseClockTime(time);
-            if (!parsed) {
-              console.warn("⚠️ Invalid time format:", time);
-              return;
-            }
+        // ✅ Extract start time (first element) and end time (last element)
+        const startTimeStr = scheduleItem.availableTimes[0];
+        const endTimeStr =
+          scheduleItem.availableTimes[scheduleItem.availableTimes.length - 1];
 
-            const base = dayjs("2000-01-01", "YYYY-MM-DD", true);
-            const scheduledTime = base
-              .hour(parsed.h)
-              .minute(parsed.min)
-              .second(0);
-
-            const hour = scheduledTime.hour();
-
-            // Validate time is within reasonable hours
-            if (hour >= 8 && hour <= 22) {
-              allAvailableTimes.push({
-                time: scheduledTime,
-                originalTime: time,
-                scheduleItem: scheduleItem,
-              });
-            }
-          } catch (err) {
-            console.error("❌ Error processing time:", time, err);
-          }
+        console.log(`⏰ Time range for ${scheduleItem.nameOfFood}:`, {
+          startTime: startTimeStr,
+          endTime: endTimeStr,
+          totalTimesInArray: scheduleItem.availableTimes.length,
+          foodItemId: scheduleItem.foodItemId,
         });
+
+        try {
+          // Parse start and end times
+          const parsedStart = parseClockTime(startTimeStr);
+          const parsedEnd = parseClockTime(endTimeStr);
+
+          if (!parsedStart || !parsedEnd) {
+            console.warn("⚠️ Invalid time format:", {
+              startTime: startTimeStr,
+              endTime: endTimeStr,
+            });
+            return;
+          }
+
+          const base = dayjs("2000-01-01", "YYYY-MM-DD", true);
+          const startTime = base
+            .hour(parsedStart.h)
+            .minute(parsedStart.min)
+            .second(0);
+          const endTime = base
+            .hour(parsedEnd.h)
+            .minute(parsedEnd.min)
+            .second(0);
+
+          // ✅ Validate that end time is after start time
+          if (!endTime.isAfter(startTime)) {
+            console.warn("⚠️ End time must be after start time:", {
+              startTime: startTimeStr,
+              endTime: endTimeStr,
+              foodName: scheduleItem.nameOfFood,
+            });
+            return;
+          }
+
+          // ✅ Generate 15-minute interval slots between start and end
+          let currentSlot = startTime;
+          let slotCount = 0;
+
+          console.log(
+            `🔄 Generating slots from ${startTimeStr} to ${endTimeStr} for ${scheduleItem.nameOfFood}...`
+          );
+
+          // ✅ FIXED: NO duplicate checking - each food item gets its own slots
+          while (currentSlot.isBefore(endTime) || currentSlot.isSame(endTime)) {
+            const timeValue = currentSlot.format("h:mm A");
+            const hour = currentSlot.hour();
+
+            // Validate time is within reasonable hours (optional)
+            if (hour >= 0 && hour <= 23) {
+              // ✅ Allow all hours (changed from 8-22)
+              allAvailableTimes.push({
+                time: currentSlot.clone(), // Clone to avoid reference issues
+                originalRange: `${startTimeStr} - ${endTimeStr}`,
+                scheduleItem: scheduleItem,
+                foodItemId: scheduleItem.foodItemId,
+                foodName: scheduleItem.nameOfFood,
+              });
+
+              slotCount++;
+              console.log(
+                `  ✅ Slot ${slotCount}: ${timeValue} (${scheduleItem.nameOfFood}) [${scheduleItem.foodItemId}]`
+              );
+            }
+
+            // Move to next 15-minute slot
+            currentSlot = currentSlot.add(15, "minutes");
+          }
+
+          console.log(
+            `✅ Generated ${slotCount} time slots for ${scheduleItem.nameOfFood} (${scheduleItem.foodItemId})`
+          );
+        } catch (err) {
+          console.error("❌ Error processing time range:", {
+            startTime: startTimeStr,
+            endTime: endTimeStr,
+            foodName: scheduleItem.nameOfFood,
+            error: err,
+          });
+        }
       });
 
       if (allAvailableTimes.length === 0) {
-        console.log("❌ No valid times found");
+        console.log("❌ No valid time slots generated");
         return [];
       }
 
-      // ✅ NEW: Sort times and find min/max
+      // ✅ Sort all times chronologically
       allAvailableTimes.sort((a, b) => a.time.diff(b.time));
 
-      const minTime = allAvailableTimes[0].time;
-      const maxTime = allAvailableTimes[allAvailableTimes.length - 1].time;
+      console.log("✅ All generated time slots:", allAvailableTimes.length);
+      console.log("🎯 Time slots for food:", food.id, food.name);
 
-      console.log("📅 Time range:", {
-        minTime: minTime.format("h:mm A"),
-        maxTime: maxTime.format("h:mm A"),
-        availableTimesCount: allAvailableTimes.length,
+      // ✅ Humanized logs for debugging
+      console.log("🕐 First time slot (index 0):", {
+        time: allAvailableTimes[0]?.time.format("h:mm A"),
+        originalRange: allAvailableTimes[0]?.originalRange,
+        hour: allAvailableTimes[0]?.time.hour(),
+        minute: allAvailableTimes[0]?.time.minute(),
+        foodName: allAvailableTimes[0]?.scheduleItem?.nameOfFood,
+        foodItemId: allAvailableTimes[0]?.foodItemId,
       });
 
-      // ✅ NEW: Generate 15-minute slots between min and max time
-      const timeSlots = [];
-      const exactTimes = new Set(
-        allAvailableTimes.map((t) => t.time.format("h:mm A"))
-      );
-
-      let currentSlot = minTime.startOf("hour"); // Start from the hour of minTime
-
-      // Ensure we start from a reasonable time (not before minTime)
-      while (currentSlot.isBefore(minTime)) {
-        currentSlot = currentSlot.add(15, "minutes");
+      if (allAvailableTimes.length > 1) {
+        console.log("🕐 Second time slot (index 1):", {
+          time: allAvailableTimes[1]?.time.format("h:mm A"),
+          originalRange: allAvailableTimes[1]?.originalRange,
+          hour: allAvailableTimes[1]?.time.hour(),
+          minute: allAvailableTimes[1]?.time.minute(),
+          foodName: allAvailableTimes[1]?.scheduleItem?.nameOfFood,
+          foodItemId: allAvailableTimes[1]?.foodItemId,
+        });
       }
 
-      // Generate slots until maxTime (and a bit beyond for flexibility)
-      const endSlot = maxTime.add(1, "hour"); // Add 1 hour buffer after maxTime
+      console.log("🕐 Last time slot (last index):", {
+        time: allAvailableTimes[allAvailableTimes.length - 1]?.time.format(
+          "h:mm A"
+        ),
+        originalRange:
+          allAvailableTimes[allAvailableTimes.length - 1]?.originalRange,
+        hour: allAvailableTimes[allAvailableTimes.length - 1]?.time.hour(),
+        minute: allAvailableTimes[allAvailableTimes.length - 1]?.time.minute(),
+        foodName:
+          allAvailableTimes[allAvailableTimes.length - 1]?.scheduleItem
+            ?.nameOfFood,
+        foodItemId: allAvailableTimes[allAvailableTimes.length - 1]?.foodItemId,
+      });
 
-      while (currentSlot.isBefore(endSlot) || currentSlot.isSame(endSlot)) {
-        const timeValue = currentSlot.format("h:mm A");
-        const hour = currentSlot.hour();
-
-        // Validate time is within reasonable hours
-        if (hour >= 8 && hour <= 22) {
-          const isExactTime = exactTimes.has(timeValue);
-          const isWithinRange = currentSlot.isBetween(
-            minTime,
-            maxTime,
-            null,
-            "[]"
-          ); // inclusive
-
-          // Show slot if it's an exact time OR within the range
-          if (isExactTime || isWithinRange) {
-            let display = timeValue;
-            let isAvailable = true;
-
-            // Mark exact times as "Available"
-            if (isExactTime) {
-              display = `${timeValue}`;
-            }
-
-            const newTimeSlot = {
-              value: timeValue,
-              display: display,
-              isAvailable: isAvailable,
-              scheduleItem: isExactTime
-                ? allAvailableTimes.find(
-                    (t) => t.time.format("h:mm A") === timeValue
-                  )?.scheduleItem
-                : null,
-              isExactTime: isExactTime,
-              isWithinRange: isWithinRange,
-            };
-
-            timeSlots.push(newTimeSlot);
-            console.log(
-              `✅ Added time slot: ${timeValue} (exact: ${isExactTime}, inRange: ${isWithinRange})`
-            );
-          }
-        }
-
-        currentSlot = currentSlot.add(15, "minutes");
-      }
-
-      console.log(
-        "✅ Final PRE_ORDER time slots (with range):",
-        timeSlots.length,
-        timeSlots.map((slot) => `${slot.value}${slot.isExactTime ? "*" : ""}`)
+      // ✅ Summary table log
+      console.table(
+        allAvailableTimes.map((item, index) => ({
+          index: index,
+          displayTime: item.time.format("h:mm A"),
+          timeRange: item.originalRange,
+          hour24: item.time.hour(),
+          minute: item.time.minute(),
+          foodName: item.scheduleItem?.nameOfFood || "N/A",
+          foodItemId: item.foodItemId || "N/A",
+          numAvailable: item.scheduleItem?.numOfAvailableItems || 0,
+        }))
       );
+
+      // ✅ Convert to time slots format
+      const timeSlots = allAvailableTimes.map((item) => {
+        const timeValue = item.time.format("h:mm A");
+
+        return {
+          value: timeValue,
+          display: timeValue,
+          isAvailable: true,
+          scheduleItem: item.scheduleItem,
+          isGeneratedSlot: true, // Generated from time range
+          originalRange: item.originalRange,
+          dayjs: item.time,
+          foodItemId: item.foodItemId,
+          foodName: item.foodName,
+        };
+      });
+
+      console.log("✅ Final PRE_ORDER time slots:", {
+        count: timeSlots.length,
+        targetFoodId: food.id,
+        targetFoodName: food.name,
+        times: timeSlots.map((slot) => slot.value),
+        firstTime: timeSlots[0]?.value,
+        lastTime: timeSlots[timeSlots.length - 1]?.value,
+        timeRange: `${timeSlots[0]?.value} - ${
+          timeSlots[timeSlots.length - 1]?.value
+        }`,
+      });
 
       return timeSlots;
     }
@@ -476,7 +541,6 @@ const DateTimePicker = ({
 
       // Notify parent
       onDateChange(dateValue);
-      debugger;
       handleCartQuantityChange({
         food,
         kitchen,
@@ -497,7 +561,6 @@ const DateTimePicker = ({
       setInternalTime(timeValue);
       onTimeChange(timeValue);
       // eslint-disable-next-line no-debugger
-      debugger;
       handleCartQuantityChange({
         food,
         kitchen,

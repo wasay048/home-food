@@ -198,10 +198,15 @@ export default function SuccessPage() {
                           </div>
                         </div>
                         <div className="quantity-warpper">
-                          <div className="right">
+                          <div className="right flex-column">
                             <div className="quantity-text">
                               Qty: {item.quantity || 1}
                             </div>
+                            {item.pickupTime && (
+                              <div className="pickup-time-display">
+                                {item.pickupTime}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>

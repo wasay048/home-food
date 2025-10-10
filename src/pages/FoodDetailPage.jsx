@@ -438,7 +438,6 @@ export default function FoodDetailPage() {
   const getCurrentAvailability = useMemo(() => {
     let currentAvailability = 0;
     // eslint-disable-next-line no-debugger
-    debugger;
     if (orderType === "GO_GRAB") {
       // For Go&Grab: Check direct food availability
       currentAvailability =
