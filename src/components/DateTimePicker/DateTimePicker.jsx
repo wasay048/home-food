@@ -174,33 +174,61 @@ const DateTimePicker = ({
     }
     console.log("order type: " + orderType);
     if (orderType === "GO_GRAB") {
-      // Go&Grab logic remains the same
+      // ✅ ENHANCED: Go&Grab logic with weekday/weekend time ranges
       const today = dayjs();
       const selectedDateObj = dayjs(internalDate);
 
-      const kitchenOpenHour = 9;
-      const endHour = 21;
-      const timeSlots = [];
+      // Determine if selected date is weekend (Saturday = 6, Sunday = 0)
+      const dayOfWeek = selectedDateObj.day();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-      let startSlot;
-      if (selectedDateObj.isSame(today, "day")) {
-        startSlot = today.add(30, "minutes");
-        const minutes = startSlot.minute();
-        const roundedMinutes = Math.ceil(minutes / 15) * 15;
-        startSlot = startSlot.minute(roundedMinutes).second(0);
+      // ✅ Different time ranges based on day type
+      let startHour, startMinute, endHour, endMinute;
 
-        if (startSlot.minute() === 60) {
-          startSlot = startSlot.add(1, "hour").minute(0);
-        }
+      if (isWeekend) {
+        // Weekend (Saturday-Sunday): 11:00 AM - 7:30 PM
+        startHour = 11;
+        startMinute = 0;
+        endHour = 19; // 7 PM in 24-hour format
+        endMinute = 30;
       } else {
-        startSlot = selectedDateObj.hour(kitchenOpenHour).minute(0).second(0);
+        // Weekday (Monday-Friday): 5:30 PM - 7:30 PM
+        startHour = 17; // 5 PM in 24-hour format
+        startMinute = 30;
+        endHour = 19; // 7 PM in 24-hour format
+        endMinute = 30;
       }
 
+      console.log(
+        `📅 Go&Grab schedule for ${selectedDateObj.format("dddd, MMM D")}:`,
+        {
+          isWeekend,
+          dayOfWeek,
+          timeRange: isWeekend
+            ? "Weekend (11:00 AM - 7:30 PM)"
+            : "Weekday (5:30 PM - 7:30 PM)",
+        }
+      );
+
+      const timeSlots = [];
+
+      // ✅ UPDATED: Always start from the allowed start time, regardless of current time
+      const startSlot = selectedDateObj
+        .hour(startHour)
+        .minute(startMinute)
+        .second(0);
+
+      // ✅ Create end time based on day type
+      const endSlot = selectedDateObj.hour(endHour).minute(endMinute).second(0);
+
+      console.log(`⏰ Time slot range:`, {
+        start: startSlot.format("h:mm A"),
+        end: endSlot.format("h:mm A"),
+      });
+
+      // ✅ Generate 15-minute interval slots within the allowed time range
       let currentSlot = startSlot;
-      while (
-        currentSlot.hour() < endHour ||
-        (currentSlot.hour() === endHour && currentSlot.minute() === 0)
-      ) {
+      while (currentSlot.isBefore(endSlot) || currentSlot.isSame(endSlot)) {
         timeSlots.push({
           value: currentSlot.format("h:mm A"),
           display: currentSlot.format("h:mm A"),
@@ -211,7 +239,13 @@ const DateTimePicker = ({
         currentSlot = currentSlot.add(15, "minutes");
       }
 
-      console.log("✅ Go&Grab time slots:", timeSlots.length);
+      console.log("✅ Go&Grab time slots:", {
+        count: timeSlots.length,
+        dayType: isWeekend ? "Weekend" : "Weekday",
+        firstSlot: timeSlots[0]?.value,
+        lastSlot: timeSlots[timeSlots.length - 1]?.value,
+      });
+
       return timeSlots;
     } else if (orderType === "PRE_ORDER") {
       // ✅ ENHANCED: PRE_ORDER logic to generate time slots between start and end times
