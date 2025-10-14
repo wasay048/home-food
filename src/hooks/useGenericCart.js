@@ -271,30 +271,39 @@ export const useGenericCart = () => {
       return null;
     }
 
-    // ✅ GO_GRAB Logic
+    // ✅ GO_GRAB Logic with weekday/weekend time ranges
     if (orderType === "GO_GRAB") {
-      const today = dayjs();
       const selectedDateObj = dayjs(selectedDate);
-      const kitchenOpenHour = 9;
 
-      let startSlot;
-      if (selectedDateObj.isSame(today, "day")) {
-        // For today: Start 30 minutes from now, rounded to next 15-min interval
-        startSlot = today.add(30, "minutes");
-        const minutes = startSlot.minute();
-        const roundedMinutes = Math.ceil(minutes / 15) * 15;
-        startSlot = startSlot.minute(roundedMinutes).second(0);
+      // Determine if selected date is weekend (Saturday = 6, Sunday = 0)
+      const dayOfWeek = selectedDateObj.day();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-        if (startSlot.minute() === 60) {
-          startSlot = startSlot.add(1, "hour").minute(0);
-        }
+      // Different time ranges based on day type
+      let startHour, startMinute;
+
+      if (isWeekend) {
+        // Weekend (Saturday-Sunday): 11:00 AM - 7:30 PM
+        startHour = 11;
+        startMinute = 0;
       } else {
-        // For future dates: Start at kitchen opening hour
-        startSlot = selectedDateObj.hour(kitchenOpenHour).minute(0).second(0);
+        // Weekday (Monday-Friday): 5:30 PM - 7:30 PM
+        startHour = 17; // 5 PM in 24-hour format
+        startMinute = 30;
       }
 
+      // ✅ Always start from the allowed start time, regardless of current time
+      const startSlot = selectedDateObj
+        .hour(startHour)
+        .minute(startMinute)
+        .second(0);
+
       const firstTimeSlot = startSlot.format("h:mm A");
-      console.log("✅ GO_GRAB first time slot:", firstTimeSlot);
+      console.log("✅ GO_GRAB first time slot:", {
+        time: firstTimeSlot,
+        dayType: isWeekend ? "Weekend" : "Weekday",
+        date: selectedDateObj.format("MMM D, YYYY"),
+      });
       return firstTimeSlot;
     }
 
