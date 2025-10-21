@@ -12,6 +12,7 @@ import { placeOrder, createOrderObject } from "../services/orderService";
 import { clearCart } from "../store/slices/cartSlice";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import { useGenericCart } from "../hooks/useGenericCart";
+import "./PaymentPage.css";
 
 export default function PaymentPage() {
   const [uploadPreview, setUploadPreview] = useState(null);
@@ -24,6 +25,9 @@ export default function PaymentPage() {
   const [editingItem, setEditingItem] = useState(null);
   const [modalSelectedDate, setModalSelectedDate] = useState(null);
   const [modalSelectedTime, setModalSelectedTime] = useState(null);
+  const [showDateValidationDialog, setShowDateValidationDialog] =
+    useState(false);
+  const [invalidDateItems, setInvalidDateItems] = useState([]);
 
   const [showWeChatDialog, setShowWeChatDialog] = useState(false);
   const [paymentType, setPaymentType] = useState("online"); // "online" or "cash"
@@ -35,8 +39,9 @@ export default function PaymentPage() {
   const cartItems = useSelector((state) => state.cart.items);
   const currentKitchen = useSelector((state) => state.food.currentKitchen);
   const currentUser = useSelector((state) => state.auth.user);
-
+  // const currentUser = { id: "xWb16hmhx8gJiIF5wPgGkqd7xLo2" };
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  // const isAuthenticated = true;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -133,6 +138,8 @@ export default function PaymentPage() {
           selectedTime: modalSelectedTime,
           specialInstructions: editingItem.specialInstructions || "",
           incomingOrderType: isPreOrder ? "PRE_ORDER" : "GO_GRAB",
+          calledFrom: "default",
+          updateFlag: "date",
         });
 
         showToast.success(
@@ -294,6 +301,32 @@ export default function PaymentPage() {
     setUploadError(null);
   };
 
+  // Add this validation function before handlePlaceOrder
+  const validatePickupDates = () => {
+    const today = dayjs().startOf("day");
+    const invalidItems = [];
+
+    cartItems.forEach((item) => {
+      const pickupDate = item.pickupDetails?.date || item.selectedDate;
+
+      if (pickupDate) {
+        const itemPickupDate = dayjs(pickupDate).startOf("day");
+
+        // Check if pickup date is before today
+        if (itemPickupDate.isBefore(today)) {
+          invalidItems.push({
+            name: item.food?.name || "Unknown Item",
+            currentPickupDate: itemPickupDate.format("MMMM D, YYYY"),
+            pickupTime: item.pickupDetails?.time || item.selectedTime,
+            itemData: item,
+          });
+        }
+      }
+    });
+
+    return invalidItems;
+  };
+
   // Handle order placement
   const handlePlaceOrder = async () => {
     try {
@@ -311,6 +344,15 @@ export default function PaymentPage() {
       if (!isAuthenticated || !currentUser) {
         console.log("🔒 Authentication required for placing order");
         setShowWeChatDialog(true);
+        return;
+      }
+
+      // ✅ NEW: Validate pickup dates
+      const invalidItems = validatePickupDates();
+      if (invalidItems.length > 0) {
+        console.log("❌ Invalid pickup dates found:", invalidItems);
+        setInvalidDateItems(invalidItems);
+        setShowDateValidationDialog(true);
         return;
       }
 
@@ -366,8 +408,8 @@ export default function PaymentPage() {
             kitchenName: kitchenInfo?.name,
             pickupAddress: kitchenInfo?.address,
             orderedItems: cartItems.map((item) => {
-              const pickupDate = item.pickupDetails?.date || item.selectedDate;
-              const orderType = item.pickupDetails?.orderType;
+              const pickupDate = item.selectedDate;
+              const orderType = item?.orderType;
               const isPreOrderItem =
                 orderType === "PRE_ORDER" ||
                 item.isPreOrder ||
@@ -391,8 +433,8 @@ export default function PaymentPage() {
                 imageUrl: item?.food?.imageUrl || item?.food?.image,
                 price: item?.food?.cost || item?.food?.price || "0.00",
                 quantity: item?.quantity || 1,
-                pickupDate: pickupDate,
-                pickupTime: item?.pickupDetails?.time,
+                pickupDate: item?.selectedDate,
+                pickupTime: item?.selectedTime,
                 isPreOrder: isPreOrderItem,
                 orderType: orderType,
                 isFromPreorder: item?.isFromPreorder || isPreOrderItem,
@@ -408,6 +450,7 @@ export default function PaymentPage() {
       setIsPlacingOrder(false);
     }
   };
+
   const handleCopyEmail = async (email) => {
     try {
       await navigator.clipboard.writeText(email);
@@ -417,6 +460,13 @@ export default function PaymentPage() {
       // showToast.error("Failed to copy email");
     }
   };
+
+  const handleFixInvalidDate = (item) => {
+    console.log("item pickup time select from here", item);
+    setShowDateValidationDialog(false);
+    handleEditPickupTime(item);
+  };
+
   return (
     <>
       <div className="container">
@@ -785,6 +835,66 @@ export default function PaymentPage() {
           firebaseImageUrl={firebaseImageUrl}
           onClose={handleWeChatDialogClose}
         />
+      )}
+      {showDateValidationDialog && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowDateValidationDialog(false)}
+        >
+          <div
+            className="modal-container validation-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3 className="modal-title">⚠️ Invalid Pickup Dates</h3>
+              <button
+                className="modal-close-btn"
+                onClick={() => setShowDateValidationDialog(false)}
+                aria-label="Close modal"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="modal-content">
+              <p className="validation-message">
+                The following items have pickup dates in the past. Please update
+                them to continue:
+              </p>
+
+              <div className="invalid-items-list">
+                {invalidDateItems.map((item, index) => (
+                  <div key={index} className="invalid-item-card">
+                    <div className="invalid-item-info">
+                      <div className="food-image-small">
+                        <img
+                          src={
+                            item.itemData.food?.imageUrl ||
+                            item.itemData.food?.image
+                          }
+                          alt={item.name}
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                          }}
+                        />
+                      </div>
+                      <div className="invalid-item-details">
+                        <h5 className="food-name-bold">{item.name}</h5>
+                        <div className="invalid-date-info">
+                          <span className="date-label">
+                            Current pickup date:
+                          </span>
+                          <span className="error-text">
+                            {item.currentPickupDate} at {item.pickupTime}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

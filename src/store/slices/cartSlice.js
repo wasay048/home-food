@@ -17,7 +17,7 @@ const cartSlice = createSlice({
       console.log("🛒 Adding to cart:", action.payload);
 
       const newItem = action.payload;
-      const { selectedDate, selectedTime } = action.payload;
+      const { selectedDate, selectedTime, updateFlag } = action.payload;
       console.log("newItem redux item:", newItem);
       console.log("state item length redux items:", state?.items?.length);
 
@@ -31,7 +31,9 @@ const cartSlice = createSlice({
       if (existingItemIndex !== -1) {
         // Update existing item quantity
         const oldQuantity = state.items[existingItemIndex].quantity;
-        state.items[existingItemIndex].quantity += newItem.quantity || 1;
+        if (updateFlag !== "date") {
+          state.items[existingItemIndex].quantity += newItem.quantity || 1;
+        }
         state.items[existingItemIndex].updatedAt = new Date().toISOString();
         state.items[existingItemIndex].selectedDate = selectedDate;
         state.items[existingItemIndex].selectedTime = selectedTime;

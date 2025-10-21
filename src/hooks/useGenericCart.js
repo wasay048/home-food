@@ -432,6 +432,7 @@ export const useGenericCart = () => {
       specialInstructions = "",
       incomingOrderType,
       calledFrom = "default",
+      updateFlag = "combo",
     }) => {
       try {
         // ✅ NEW: Use calculateAvailability to determine proper order type
@@ -555,6 +556,7 @@ export const useGenericCart = () => {
             specialInstructions,
             isPreOrder: orderType === "PRE_ORDER",
             orderType,
+            updateFlag: updateFlag,
           };
           console.log("Adding new cart item:", cartItem);
           console.log("orderType", orderType);

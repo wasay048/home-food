@@ -1242,6 +1242,7 @@ export default function FoodDetailPage() {
                     specialInstructions,
                     incomingOrderType: orderType,
                     calledFrom: "FoodDetailPage date picker",
+                    updateFlag: "date",
                   });
                 }}
                 onTimeChange={(newTime) => {
@@ -1256,6 +1257,7 @@ export default function FoodDetailPage() {
                     specialInstructions,
                     incomingOrderType: orderType,
                     calledFrom: "FoodDetailPage time picker",
+                    updateFlag: "date",
                   });
                 }}
                 disabled={!food || !kitchen}

@@ -583,6 +583,8 @@ const DateTimePicker = ({
         selectedTime: selectedTime,
         specialInstructions: "",
         incomingOrderType: orderType,
+        calledFrom: "default",
+        updateFlag: "date",
       });
       onTimeChange(null);
     },
@@ -603,6 +605,8 @@ const DateTimePicker = ({
         selectedTime: timeValue,
         specialInstructions: "",
         incomingOrderType: orderType,
+        calledFrom: "default",
+        updateFlag: "date",
       });
     },
     [onTimeChange]
