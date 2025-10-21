@@ -307,7 +307,7 @@ export default function PaymentPage() {
     const invalidItems = [];
 
     cartItems.forEach((item) => {
-      const pickupDate = item.pickupDetails?.date || item.selectedDate;
+      const pickupDate = item?.selectedDate;
 
       if (pickupDate) {
         const itemPickupDate = dayjs(pickupDate).startOf("day");
