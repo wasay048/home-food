@@ -321,7 +321,6 @@ export const createOrderObject = ({
 }) => {
   const now = new Date();
   const orderID = generateOrderID();
-
   // Determine order type based on cart items
   const hasPreOrder = Object.keys(groupedCartItems.preOrders).length > 0;
   const hasGrabAndGo = groupedCartItems.grabAndGo.length > 0;
@@ -388,6 +387,7 @@ export const createOrderObject = ({
     kitchenId:
       kitchenInfo?.id || kitchenInfo?.kitchenId || cartItems[0]?.kitchenId,
     kitchenName: kitchenInfo?.name,
+    kitchenImageURL: kitchenInfo?.kitchenImageURL || "",
     orderID: orderID,
     orderIDKey: "", // Will be set after document creation
     orderPaymentImage: firebaseImageUrl || "",

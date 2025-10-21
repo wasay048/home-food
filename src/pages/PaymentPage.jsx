@@ -67,6 +67,7 @@ export default function PaymentPage() {
           paypal: kitchen?.paypal || "",
           venmo: kitchen?.venmo || "",
           zelle: kitchen?.zelle || "",
+          kitchenImageURL: kitchen?.kitchenCoverPhoto || "",
         };
       }
     }
