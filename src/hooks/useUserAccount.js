@@ -230,18 +230,19 @@ export const useUserAccount = () => {
           );
         }
 
-        // Step 2: Create Firestore account document
+        // ✅ Step 2: Use firebaseUid as the document ID
+        const firebaseUid = firebaseAuth.firebaseUid;
         const accountsRef = collection(db, "accounts");
-        const newAccountRef = doc(accountsRef); // Auto-generate ID
+        const newAccountRef = doc(accountsRef, firebaseUid); // Use firebaseUid as docId
 
+        // ✅ Create account data with only specified fields
         const newAccountData = {
+          // ✅ Use firebaseUid as userId (for app compatibility)
+
           // Required fields
           email: email,
           name: nickname || "WeChat User",
-
-          // ✅ ADD: Firebase Auth integration
-          firebaseUid: firebaseAuth.firebaseUid,
-          firebaseEmail: firebaseAuth.firebaseUser.email,
+          profilePictureUrl: headimgurl || "",
 
           // Authentication flags
           isAdmin: false,
@@ -249,46 +250,35 @@ export const useUserAccount = () => {
           isLogInWithWechat: true,
           wantsToBeChef: false,
 
-          // WeChat specific data
-          wechatOpenId: openid,
-          wechatUnionId: unionid || "",
-          wechatNickname: nickname || "",
-          wechatAvatar: headimgurl || "",
-          wechatSex: sex || 0,
-          wechatCountry: country || "",
-          wechatProvince: province || "",
-          wechatCity: city || "",
+          // ✅ WeChat IDs for app compatibility
+          unionid: unionid || "",
+          openid: openid || "",
 
           // Optional fields
           favoriteCuisines: [],
           howHeardAboutUs: "WeChat",
+          registeredFrom: "web",
           fcmToken: "",
 
           // Timestamps
           accountCreationDate: serverTimestamp(),
-          lastLoginAt: serverTimestamp(),
-
-          // Metadata
-          authMethod: "wechat",
-          profileComplete: false,
         };
 
-        console.log("[useUserAccount] Saving to Firestore...");
+        console.log(
+          "[useUserAccount] Saving to Firestore with firebaseUid as docId..."
+        );
+        console.log("[useUserAccount] Document ID (firebaseUid):", firebaseUid);
         await setDoc(newAccountRef, newAccountData);
 
-        console.log("[useUserAccount] Account created:", newAccountRef.id);
-        // alert(
-        //   `✅ New account created!\nFirestore ID: ${newAccountRef.id}\nFirebase UID: ${firebaseAuth.firebaseUid}\nEmail: ${email}`
-        // );
+        console.log("[useUserAccount] Account created with ID:", firebaseUid);
 
         return {
           success: true,
           account: {
-            id: newAccountRef.id,
+            id: firebaseUid, // Return firebaseUid as account id
             ...newAccountData,
             accountCreationDate: new Date().toISOString(),
-            lastLoginAt: new Date().toISOString(),
-            firebaseUid: firebaseAuth.firebaseUid,
+            firebaseUid: firebaseUid,
           },
           firebaseUser: firebaseAuth.firebaseUser,
         };

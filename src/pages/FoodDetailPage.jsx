@@ -25,6 +25,8 @@ import {
 import dayjs from "dayjs";
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
 import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
+import { setWeChatUser } from "../store/slices/authSlice";
+import { db, collection, query, where, getDocs } from "../services/firebase";
 
 // Custom Slider Component
 // Enhanced Custom Slider Component with better styling
@@ -231,11 +233,142 @@ export default function FoodDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const currentUser = useSelector((state) => state.auth.user);
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+
   const {
     getCartQuantity,
     handleQuantityChange: handleCartQuantityChange,
     getCartItem,
   } = useGenericCart();
+
+  useEffect(() => {
+    const migrateUserId = async () => {
+      // Only run if user is authenticated and has an email
+      if (!isAuthenticated || !currentUser?.email) {
+        console.log(
+          "[FoodDetailPage] Skipping user ID migration - no authenticated user"
+        );
+        return;
+      }
+
+      // Check if we've already migrated this session
+      const migrationKey = `userId_migrated_${currentUser.email}`;
+      const alreadyMigrated = sessionStorage.getItem(migrationKey);
+
+      if (alreadyMigrated) {
+        console.log(
+          "[FoodDetailPage] User ID already migrated in this session"
+        );
+        return;
+      }
+
+      try {
+        console.log(
+          "[FoodDetailPage] 🔄 Starting user ID migration for:",
+          currentUser.email
+        );
+
+        // Query Firestore for web-registered user with this email
+        const accountsRef = collection(db, "accounts");
+        const q = query(
+          accountsRef,
+          where("email", "==", currentUser.email),
+          where("registeredFrom", "==", "web")
+        );
+
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          console.log(
+            "[FoodDetailPage] ℹ️ No web-registered user found for email:",
+            currentUser.email
+          );
+          // Mark as migrated to prevent repeated queries
+          sessionStorage.setItem(migrationKey, "checked");
+          return;
+        }
+
+        // Get the first matching document (should only be one)
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+        const newUserId = userDoc.id; // This is the firebaseUid used as docId
+
+        console.log("[FoodDetailPage] ✅ Found web user document:", {
+          oldUserId: currentUser.id,
+          newUserId: newUserId,
+          email: userData.email,
+          name: userData.name,
+        });
+
+        // Check if user ID needs updating
+        if (currentUser.id !== newUserId) {
+          console.log("[FoodDetailPage] 🔄 Updating user ID in Redux store");
+
+          // Update Redux store with new user data
+          const updatedUser = {
+            ...currentUser,
+            id: newUserId, // Update to use firebaseUid as docId
+            documentId: newUserId,
+            // Preserve other important fields
+            email: userData.email,
+            name: userData.name || currentUser.name,
+            profilePictureUrl:
+              userData.profilePictureUrl || currentUser.profilePictureUrl,
+            isAdmin: userData.isAdmin || false,
+            isChef: userData.isChef || false,
+            unionid: userData.unionid || currentUser.unionid,
+            openid: userData.openid || currentUser.openid,
+          };
+
+          // Dispatch to Redux
+          dispatch(setWeChatUser(updatedUser));
+
+          // Update localStorage for persistence
+          const wechatSession = localStorage.getItem("wechat_user");
+          if (wechatSession) {
+            try {
+              const sessionData = JSON.parse(wechatSession);
+              sessionData.id = newUserId;
+              sessionData.documentId = newUserId;
+              localStorage.setItem("wechat_user", JSON.stringify(sessionData));
+              console.log(
+                "[FoodDetailPage] ✅ Updated localStorage with new user ID"
+              );
+            } catch (error) {
+              console.warn(
+                "[FoodDetailPage] Failed to update localStorage:",
+                error
+              );
+            }
+          }
+
+          // Mark as migrated
+          sessionStorage.setItem(migrationKey, "migrated");
+
+          console.log(
+            "[FoodDetailPage] ✅ User ID migration completed successfully"
+          );
+        } else {
+          console.log(
+            "[FoodDetailPage] ℹ️ User ID already correct, no migration needed"
+          );
+          sessionStorage.setItem(migrationKey, "already_correct");
+        }
+      } catch (error) {
+        console.error(
+          "[FoodDetailPage] ❌ Error during user ID migration:",
+          error
+        );
+        // Don't throw - fail silently to prevent app crash
+        // Mark as checked to prevent repeated attempts
+        sessionStorage.setItem(migrationKey, "error");
+      }
+    };
+
+    // Run migration when user lands on the page
+    migrateUserId();
+  }, [isAuthenticated, currentUser, dispatch]);
 
   useEffect(() => {
     localStorage.setItem("detailPage", window.location.href);
@@ -314,8 +447,8 @@ export default function FoodDetailPage() {
     return "";
   });
 
-  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-  const currentUser = useSelector((state) => state.auth.user);
+  // const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  // const currentUser = useSelector((state) => state.auth.user);
   const [showWeChatDialog, setShowWeChatDialog] = useState(false);
   const handleWeChatDialog = (show) => setShowWeChatDialog(show);
 
