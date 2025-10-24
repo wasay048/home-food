@@ -26,7 +26,8 @@ import dayjs from "dayjs";
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
 import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import { setWeChatUser } from "../store/slices/authSlice";
-import { db, collection, query, where, getDocs } from "../services/firebase";
+import { db } from "../services/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
 // Custom Slider Component
 // Enhanced Custom Slider Component with better styling
