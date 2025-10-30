@@ -135,10 +135,25 @@ export const placeOrder = async (orderData) => {
           const kitchenRef = doc(db, "kitchens", orderData.kitchenId);
 
           // Get the pickup date for this item
-          const pickupDate =
-            item.pickupDate instanceof Date
-              ? dayjs(item.pickupDate).format("YYYY-MM-DD")
-              : dayjs(item.pickupDate).format("YYYY-MM-DD");
+          let pickupDate;
+          if (item.pickupDateString) {
+            // Parse pickupDateString (format: "MM,DD,YYYY") and convert to "YYYY-MM-DD"
+            pickupDate = dayjs(item.pickupDateString, "MM,DD,YYYY").format(
+              "YYYY-MM-DD"
+            );
+          } else if (item.pickupDate) {
+            // Fallback to pickupDate if pickupDateString is not available
+            pickupDate =
+              item.pickupDate instanceof Date
+                ? dayjs(item.pickupDate).format("YYYY-MM-DD")
+                : dayjs(item.pickupDate).format("YYYY-MM-DD");
+          } else {
+            console.error(
+              "❌ [ORDER SERVICE] No pickup date found for item:",
+              item
+            );
+            throw new Error(`No pickup date found for item ${item.foodItemId}`);
+          }
 
           console.log("📅 [ORDER SERVICE] PreOrder details:", {
             kitchenId: orderData.kitchenId,
