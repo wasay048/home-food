@@ -465,10 +465,16 @@ export default function FoodDetailPage() {
     }
     // Priority 2: URL parameter
     if (selectedDate) {
-      const formattedDate = dayjs(selectedDate, "M/D/YYYY").format(
-        "YYYY-MM-DD"
-      );
-      console.log("🗓️ Initializing pickup date from URL:", formattedDate);
+      const [month, day, year] = selectedDate.split("/");
+      const formattedDate = `${year}-${month.padStart(2, "0")}-${day.padStart(
+        2,
+        "0"
+      )}`;
+
+      console.log("🗓️ Initializing pickup date from URL:", {
+        urlParam: selectedDate,
+        parsed: formattedDate,
+      });
       return formattedDate;
     }
     // Priority 3: Default (null - let DateTimePicker handle)
