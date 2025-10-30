@@ -8,7 +8,11 @@ import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import { Copy, X, Image as ImageIcon } from "lucide-react";
 import { uploadImageToStorage } from "../services/storageService";
 import { showToast } from "../utils/toast";
-import { placeOrder, createOrderObject } from "../services/orderService";
+import {
+  placeOrder,
+  createOrderObject,
+  validateItemAvailability,
+} from "../services/orderService";
 import { clearCart } from "../store/slices/cartSlice";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import { useGenericCart } from "../hooks/useGenericCart";
@@ -303,25 +307,35 @@ export default function PaymentPage() {
 
   // Add this validation function before handlePlaceOrder
   const validatePickupDates = () => {
-    const today = dayjs().startOf("day");
+    // Get today's date as plain string (YYYY-MM-DD format)
+    const todayString = dayjs().format("YYYY-MM-DD");
     const invalidItems = [];
 
     cartItems.forEach((item) => {
-      const pickupDate = item?.selectedDate;
+      const pickupDate = item?.selectedDate; // Already in YYYY-MM-DD format
 
       if (pickupDate) {
-        const itemPickupDate = dayjs(pickupDate).startOf("day");
-
-        // Check if pickup date is before today
-        if (itemPickupDate.isBefore(today)) {
+        // ✅ Compare dates as strings to avoid timezone issues
+        // pickupDate format: "YYYY-MM-DD" (e.g., "2025-10-30")
+        // todayString format: "YYYY-MM-DD" (e.g., "2025-10-30")
+        if (pickupDate < todayString) {
           invalidItems.push({
             name: item.food?.name || "Unknown Item",
-            currentPickupDate: itemPickupDate.format("MMMM D, YYYY"),
+            currentPickupDate: dayjs(pickupDate).format("MMMM D, YYYY"),
             pickupTime: item.pickupDetails?.time || item.selectedTime,
             itemData: item,
           });
         }
       }
+    });
+
+    console.log("📅 [Validation] Date check:", {
+      today: todayString,
+      invalidItemsCount: invalidItems.length,
+      invalidItems: invalidItems.map((i) => ({
+        name: i.name,
+        pickupDate: i.itemData.selectedDate,
+      })),
     });
 
     return invalidItems;
@@ -355,6 +369,22 @@ export default function PaymentPage() {
         setShowDateValidationDialog(true);
         return;
       }
+
+      // ✅ NEW: Validate item availability using imported function
+      console.log("📦 Starting availability validation...");
+      const unavailableItems = await validateItemAvailability(
+        cartItems,
+        kitchenInfo?.id || kitchenInfo?.kitchenId || cartItems[0]?.kitchenId
+      );
+
+      if (unavailableItems.length > 0) {
+        console.log("❌ Unavailable items found:", unavailableItems);
+        setInvalidDateItems(unavailableItems); // Reuse the same state
+        setShowDateValidationDialog(true);
+        return;
+      }
+
+      console.log("✅ All items available, proceeding with order...");
 
       if (paymentType === "online" && !firebaseImageUrl) {
         showToast.error(
@@ -846,7 +876,13 @@ export default function PaymentPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
-              <h3 className="modal-title">⚠️ Invalid Pickup Dates</h3>
+              <h3 className="modal-title">
+                {invalidDateItems[0]?.reason?.includes("available") ||
+                invalidDateItems[0]?.reason?.includes("stock") ||
+                invalidDateItems[0]?.availableQuantity !== undefined
+                  ? "⚠️ Items Unavailable"
+                  : "⚠️ Invalid Pickup Dates"}
+              </h3>
               <button
                 className="modal-close-btn"
                 onClick={() => setShowDateValidationDialog(false)}
@@ -857,8 +893,11 @@ export default function PaymentPage() {
             </div>
             <div className="modal-content">
               <p className="validation-message">
-                The following items have pickup dates in the past. Please update
-                them to continue:
+                {invalidDateItems[0]?.reason?.includes("available") ||
+                invalidDateItems[0]?.reason?.includes("stock") ||
+                invalidDateItems[0]?.availableQuantity !== undefined
+                  ? "The following items are no longer available in the requested quantity:"
+                  : "The following items have pickup dates in the past. Please update them to continue:"}
               </p>
 
               <div className="invalid-items-list">
@@ -868,8 +907,8 @@ export default function PaymentPage() {
                       <div className="food-image-small">
                         <img
                           src={
-                            item.itemData.food?.imageUrl ||
-                            item.itemData.food?.image
+                            item.itemData?.food?.imageUrl ||
+                            item.itemData?.food?.image
                           }
                           alt={item.name}
                           onError={(e) => {
@@ -880,18 +919,47 @@ export default function PaymentPage() {
                       <div className="invalid-item-details">
                         <h5 className="food-name-bold">{item.name}</h5>
                         <div className="invalid-date-info">
-                          <span className="date-label">
-                            Current pickup date:
-                          </span>
-                          <span className="error-text">
-                            {item.currentPickupDate} at {item.pickupTime}
-                          </span>
+                          {item.reason ? (
+                            // Availability error
+                            <>
+                              <span className="error-text">{item.reason}</span>
+                              {item.requestedQuantity && (
+                                <span className="date-label">
+                                  Requested: {item.requestedQuantity}
+                                  {item.availableQuantity !== undefined &&
+                                    ` | Available: ${item.availableQuantity}`}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            // Date error
+                            <>
+                              <span className="date-label">
+                                Current pickup date:
+                              </span>
+                              <span className="error-text">
+                                {item.currentPickupDate} at {item.pickupTime}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn-secondary full-width"
+                onClick={() => {
+                  setShowDateValidationDialog(false);
+                  // Navigate back to cart to adjust quantities
+                  navigate("/order");
+                }}
+              >
+                Go to Cart
+              </button>
             </div>
           </div>
         </div>

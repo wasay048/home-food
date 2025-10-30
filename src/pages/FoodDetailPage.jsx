@@ -33,26 +33,16 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 // Enhanced Custom Slider Component with better styling
 // Enhanced Custom Slider Component with better styling and error handling
 const CustomSlider = ({ food, isLiked }) => {
-  console.log("🚀 ~ CustomSlider ~ isLiked:", isLiked);
   // Generate slider images based on food data
   const generateSliderImages = () => {
-    // Check if imagesUrl array exists and has images
-    console.log("🖼️ [CustomSlider] Checking imagesUrl array:", food);
-
     if (
       food?.imageUrls &&
       Array.isArray(food.imageUrls) &&
       food.imageUrls.length > 0
     ) {
-      console.log(
-        "🖼️ [CustomSlider] Using imageUrls array with",
-        food.imageUrls.length,
-        "images"
-      );
-      // Use actual food images from imageUrls array
       return food.imageUrls;
     }
-    // // Fallback to single imageUrl if imagesUrl doesn't exist
+    // Fallback to single imageUrl if imagesUrl doesn't exist
     if (food?.imageUrl && !food?.imageUrls) {
       return [food.imageUrl];
     }
@@ -228,6 +218,32 @@ const CustomSlider = ({ food, isLiked }) => {
   );
 };
 
+const parseUrlDateToString = (dateStr) => {
+  if (!dateStr) return null;
+
+  // Split "M/D/YYYY" format
+  const parts = dateStr.split("/");
+  if (parts.length !== 3) {
+    console.error("[FoodDetailPage] Invalid date format:", dateStr);
+    return null;
+  }
+
+  const [month, day, year] = parts;
+
+  // Return as "YYYY-MM-DD" string without any Date object or dayjs parsing
+  const formattedDate = `${year}-${month.padStart(2, "0")}-${day.padStart(
+    2,
+    "0"
+  )}`;
+
+  console.log("📅 [FoodDetailPage] Parsing URL date:", {
+    input: dateStr,
+    output: formattedDate,
+  });
+
+  return formattedDate;
+};
+
 export default function FoodDetailPage() {
   const [searchParams] = useSearchParams();
   const dispatch = useDispatch();
@@ -247,9 +263,6 @@ export default function FoodDetailPage() {
     const migrateUserId = async () => {
       // Only run if user is authenticated and has an email
       if (!isAuthenticated || !currentUser?.email) {
-        console.log(
-          "[FoodDetailPage] Skipping user ID migration - no authenticated user"
-        );
         return;
       }
 
@@ -258,15 +271,12 @@ export default function FoodDetailPage() {
       const alreadyMigrated = sessionStorage.getItem(migrationKey);
 
       if (alreadyMigrated) {
-        console.log(
-          "[FoodDetailPage] User ID already migrated in this session"
-        );
         return;
       }
 
       try {
         console.log(
-          "[FoodDetailPage] 🔄 Starting user ID migration for:",
+          "🔄 [Migration] Starting user ID migration for:",
           currentUser.email
         );
 
@@ -281,11 +291,6 @@ export default function FoodDetailPage() {
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-          console.log(
-            "[FoodDetailPage] ℹ️ No web-registered user found for email:",
-            currentUser.email
-          );
-          // Mark as migrated to prevent repeated queries
           sessionStorage.setItem(migrationKey, "checked");
           return;
         }
@@ -295,16 +300,14 @@ export default function FoodDetailPage() {
         const userData = userDoc.data();
         const newUserId = userDoc.id; // This is the firebaseUid used as docId
 
-        console.log("[FoodDetailPage] ✅ Found web user document:", {
+        console.log("✅ [Migration] Found user document:", {
           oldUserId: currentUser.id,
           newUserId: newUserId,
-          email: userData.email,
-          name: userData.name,
         });
 
         // Check if user ID needs updating
         if (currentUser.id !== newUserId) {
-          console.log("[FoodDetailPage] 🔄 Updating user ID in Redux store");
+          console.log("🔄 [Migration] Updating user ID in Redux store");
 
           // Update Redux store with new user data
           const updatedUser = {
@@ -333,12 +336,9 @@ export default function FoodDetailPage() {
               sessionData.id = newUserId;
               sessionData.documentId = newUserId;
               localStorage.setItem("wechat_user", JSON.stringify(sessionData));
-              console.log(
-                "[FoodDetailPage] ✅ Updated localStorage with new user ID"
-              );
             } catch (error) {
               console.warn(
-                "[FoodDetailPage] Failed to update localStorage:",
+                "⚠️ [Migration] Failed to update localStorage:",
                 error
               );
             }
@@ -347,20 +347,12 @@ export default function FoodDetailPage() {
           // Mark as migrated
           sessionStorage.setItem(migrationKey, "migrated");
 
-          console.log(
-            "[FoodDetailPage] ✅ User ID migration completed successfully"
-          );
+          console.log("✅ [Migration] User ID migration completed");
         } else {
-          console.log(
-            "[FoodDetailPage] ℹ️ User ID already correct, no migration needed"
-          );
           sessionStorage.setItem(migrationKey, "already_correct");
         }
       } catch (error) {
-        console.error(
-          "[FoodDetailPage] ❌ Error during user ID migration:",
-          error
-        );
+        console.error("❌ [Migration] Error:", error);
         // Don't throw - fail silently to prevent app crash
         // Mark as checked to prevent repeated attempts
         sessionStorage.setItem(migrationKey, "error");
@@ -376,9 +368,6 @@ export default function FoodDetailPage() {
   }, []);
 
   const getPageParams = () => {
-    console.log("🔍 [FoodDetailPage] Current pathname:", location.pathname);
-    console.log("🔍 [FoodDetailPage] Search params:", searchParams.toString());
-
     // Handle both "/share" and "/share/" paths
     if (location.pathname === "/share" || location.pathname === "/share/") {
       const params = {
@@ -387,14 +376,11 @@ export default function FoodDetailPage() {
         selectedDate: searchParams.get("date"),
         toggle: searchParams.get("toggle"),
       };
-      console.log("🔍 [FoodDetailPage] Extracted params:", params);
+      console.log("� [Params] Extracted from URL:", params);
       return params;
     }
 
     // Fallback return to prevent undefined destructuring
-    console.log(
-      "🔍 [FoodDetailPage] Using fallback params (pathname not /share)"
-    );
     return {
       kitchenId: null,
       foodId: null,
@@ -438,10 +424,6 @@ export default function FoodDetailPage() {
   const [specialInstructions, setSpecialInstructions] = useState(() => {
     // Priority 1: Existing cart item instructions
     if (existingCartItem?.specialInstructions) {
-      console.log(
-        "📝 Initializing special instructions from cart:",
-        existingCartItem.specialInstructions
-      );
       return existingCartItem.specialInstructions;
     }
     // Priority 2: Default
@@ -458,24 +440,21 @@ export default function FoodDetailPage() {
     // Priority 1: Existing cart item date
     if (existingCartItem?.selectedDate) {
       console.log(
-        "🗓️ Initializing pickup date from cart:",
+        "� [Init] Pickup date from cart:",
         existingCartItem.selectedDate
       );
       return existingCartItem.selectedDate;
     }
     // Priority 2: URL parameter
     if (selectedDate) {
-      const [month, day, year] = selectedDate.split("/");
-      const formattedDate = `${year}-${month.padStart(2, "0")}-${day.padStart(
-        2,
-        "0"
-      )}`;
-
-      console.log("🗓️ Initializing pickup date from URL:", {
-        urlParam: selectedDate,
-        parsed: formattedDate,
-      });
-      return formattedDate;
+      const formattedDate = parseUrlDateToString(selectedDate);
+      if (formattedDate) {
+        console.log("� [Init] Pickup date from URL:", {
+          urlParam: selectedDate,
+          formatted: formattedDate,
+        });
+        return formattedDate;
+      }
     }
     // Priority 3: Default (null - let DateTimePicker handle)
     return null;
@@ -483,10 +462,6 @@ export default function FoodDetailPage() {
   const [pickupTime, setPickupTime] = useState(() => {
     // Priority 1: Existing cart item time
     if (existingCartItem?.selectedTime) {
-      console.log(
-        "⏰ Initializing pickup time from cart:",
-        existingCartItem.selectedTime
-      );
       return existingCartItem.selectedTime;
     }
     // Priority 2: Default (null - let DateTimePicker handle)
@@ -519,34 +494,13 @@ export default function FoodDetailPage() {
 
     // PRIORITY: If food has availability > 0, it's Go&Grab regardless of date
     if (currentAvailability > 0 && !selectedDate) {
-      console.log(
-        "DEBUG - Setting orderType to GO_GRAB due to availability:",
-        currentAvailability
-      );
       return "GO_GRAB";
     }
 
     // Only if no availability, check for Pre-Order
     if (selectedDate) {
-      console.log(
-        "DEBUG - No availability, checking Pre-Order for date:",
-        selectedDate
-      );
       return "PRE_ORDER";
     }
-
-    // Check if food is in preorder schedule (fallback)
-    // if (kitchen?.preorderSchedule?.dates) {
-    //   const preorderDates = Object.values(
-    //     kitchen.preorderSchedule.dates
-    //   ).flat();
-    //   const hasPreorder = preorderDates.some(
-    //     (item) => item.foodItemId === food?.id
-    //   );
-    //   if (hasPreorder) {
-    //     return "PRE_ORDER";
-    //   }
-    // }
 
     return "GO_GRAB"; // Default fallback
   }, [selectedDate, food, kitchen]);
@@ -556,28 +510,9 @@ export default function FoodDetailPage() {
     pickupDate || selectedDate,
     orderType
   );
-  // Update handleQuantityChange to use useGenericCart
-
-  console.log("FoodDetailPage data:", {
-    food,
-    kitchen,
-    likes,
-    reviews,
-    reviewStats,
-    loading,
-    error,
-    selectedDate,
-    orderType,
-    pickupDate,
-    pickupTime,
-    urlPattern: location.pathname,
-    extractedParams: { kitchenId, foodId, selectedDate },
-    kitchenPreorderSchedule: kitchen?.preorderSchedule,
-  });
 
   const getCurrentAvailability = useMemo(() => {
     let currentAvailability = 0;
-    // eslint-disable-next-line no-debugger
     if (orderType === "GO_GRAB") {
       // For Go&Grab: Check direct food availability
       currentAvailability =
@@ -598,25 +533,17 @@ export default function FoodDetailPage() {
       }
     }
 
-    console.log("🔢 [FoodDetailPage] getCurrentAvailability:", {
+    console.log("🔢 [Availability]", {
       orderType,
       pickupDate,
-      foodId: food?.id,
       currentAvailability,
-      scheduleExists: !!kitchen?.preorderSchedule?.dates?.[pickupDate],
     });
 
     return currentAvailability;
   }, [orderType, pickupDate, food, kitchen]);
-  console.log("getCurrentAvailability", getCurrentAvailability);
 
   useEffect(() => {
     if (existingCartItem) {
-      console.log(
-        "🔄 Updating states from existing cart item:",
-        existingCartItem
-      );
-
       // Update pickup date if not already set and cart has a date
       if (!pickupDate && existingCartItem.selectedDate) {
         setPickupDate(existingCartItem.selectedDate);
@@ -761,37 +688,14 @@ export default function FoodDetailPage() {
   // Initialize pickup date from URL parameter
   useEffect(() => {
     if (selectedDate && !pickupDate) {
-      setPickupDate(selectedDate);
+      const parsedDate = parseUrlDateToString(selectedDate);
+      console.log("📅 [URL Date] Setting pickup date:", {
+        urlDate: selectedDate,
+        parsedDate,
+      });
+      setPickupDate(parsedDate);
     }
   }, [selectedDate, pickupDate]);
-
-  useEffect(() => {
-    const runDebugTests = async () => {
-      console.log("=== DEBUGGING REVIEWS ===");
-      console.log(
-        "URL params - foodId:",
-        foodId,
-        "kitchenId:",
-        kitchenId,
-        "selectedDate:",
-        selectedDate
-      );
-
-      // Test Firestore connection
-      const connectionTest = await testFirestoreConnection();
-      console.log("Connection test:", connectionTest);
-
-      // Debug reviews query
-      if (foodId) {
-        const debugResult = await debugReviewsQuery(foodId);
-        console.log("Debug reviews result:", debugResult);
-      }
-    };
-
-    runDebugTests();
-  }, [foodId, kitchenId, selectedDate]);
-
-  console.log("🚀 ~ FoodDetailPage ~ reviewStats:", reviewStats);
   // Use dynamic review stats or fallback to static data
   const displayRating = reviewStats?.averageRating || 0;
   const totalReviewCount = reviewStats?.totalReviews || 0;
@@ -843,7 +747,6 @@ export default function FoodDetailPage() {
 
   const handleLikeToggle = useCallback(() => {
     if (!isAuthenticated && !currentUser) {
-      console.log("🔒 Authentication required for placing order");
       localStorage.setItem(
         "page",
         JSON.stringify({
@@ -855,8 +758,7 @@ export default function FoodDetailPage() {
       return;
     }
     toggleLike();
-    console.log(`[FoodDetailPage] Food ${isLiked ? "unliked" : "liked"}`);
-  }, [toggleLike, isLiked]);
+  }, [toggleLike, isLiked, isAuthenticated, currentUser]);
 
   useEffect(() => {
     if (toggle === "like") {
@@ -870,7 +772,7 @@ export default function FoodDetailPage() {
       !document.referrer || !document.referrer.includes(window.location.origin);
 
     if (isDirectLanding) {
-      console.log("🛒 Clearing cart on direct landing to FoodDetailPage");
+      console.log("🛒 [Direct Landing] Clearing cart");
       dispatch(clearCart());
     }
   }, [dispatch]);
@@ -887,15 +789,7 @@ export default function FoodDetailPage() {
       !document.referrer || !document.referrer.includes(window.location.origin);
 
     if (isDirectLanding && cartQuantity === 0) {
-      console.log(
-        "🔄 Direct landing detected - adding default quantity to cart",
-        {
-          foodId: food.id,
-          kitchenId: kitchen.id,
-          orderType,
-          currentCartQuantity: cartQuantity,
-        }
-      );
+      console.log("🔄 [Direct Landing] Adding default quantity to cart");
 
       // Add a flag to prevent multiple executions
       const hasProcessed = sessionStorage.getItem(
@@ -904,7 +798,6 @@ export default function FoodDetailPage() {
 
       if (!hasProcessed) {
         sessionStorage.setItem(`direct-landing-processed-${food.id}`, "true");
-        console.log("getCurrentAvailability", getCurrentAvailability);
         // Use setTimeout to ensure this runs after all other state updates
         const timer = setTimeout(() => {
           handleCartQuantityChange({
@@ -940,11 +833,9 @@ export default function FoodDetailPage() {
   // Add this useEffect after the existing useEffects to process and store listing data
   useEffect(() => {
     if (!fullKitchen || !allFoods || allFoods.length === 0 || !kitchenId) {
-      console.log("[FoodDetailPage] Missing data for listing processing");
       return;
     }
 
-    console.log("[FoodDetailPage] Processing and storing listing data");
     dispatch(setListingLoading(true));
 
     try {
@@ -1013,14 +904,6 @@ export default function FoodDetailPage() {
         const todayStr = today.format("YYYY-MM-DD");
         const tomorrowStr = tomorrow.format("YYYY-MM-DD");
 
-        console.log(
-          "📅 [FoodDetailPage] Checking preorder for today and tomorrow:",
-          {
-            today: todayStr,
-            tomorrow: tomorrowStr,
-          }
-        );
-
         // Check schedules for both days
         const todaySchedule = fullKitchen.preorderSchedule.dates[todayStr];
         const tomorrowSchedule =
@@ -1042,24 +925,10 @@ export default function FoodDetailPage() {
             scheduleItems: todaySchedule,
           });
 
-          console.log("📅 [FoodDetailPage] Today's preorder schedule found:", {
-            date: todayStr,
-            itemsCount: todaySchedule.length,
-            items: todaySchedule.map((item) => ({
-              foodItemId: item.foodItemId,
-              nameOfFood: item.nameOfFood,
-              numOfAvailableItems: item.numOfAvailableItems,
-            })),
-          });
-
           // Add today's food IDs
           todaySchedule.forEach((item) => {
             preorderFoodIds.add(item.foodItemId);
           });
-        } else {
-          console.log(
-            "📅 [FoodDetailPage] No preorder schedule found for today"
-          );
         }
 
         // Add tomorrow's schedule if available
@@ -1074,27 +943,10 @@ export default function FoodDetailPage() {
             scheduleItems: tomorrowSchedule,
           });
 
-          console.log(
-            "📅 [FoodDetailPage] Tomorrow's preorder schedule found:",
-            {
-              date: tomorrowStr,
-              itemsCount: tomorrowSchedule.length,
-              items: tomorrowSchedule.map((item) => ({
-                foodItemId: item.foodItemId,
-                nameOfFood: item.nameOfFood,
-                numOfAvailableItems: item.numOfAvailableItems,
-              })),
-            }
-          );
-
           // Add tomorrow's food IDs
           tomorrowSchedule.forEach((item) => {
             preorderFoodIds.add(item.foodItemId);
           });
-        } else {
-          console.log(
-            "📅 [FoodDetailPage] No preorder schedule found for tomorrow"
-          );
         }
 
         // Filter foods that are in either today's or tomorrow's preorder schedule
@@ -1102,29 +954,10 @@ export default function FoodDetailPage() {
           preOrderItems = allFoods.filter((food) => {
             return preorderFoodIds.has(food.id) && food.kitchenId === kitchenId;
           });
-
-          console.log(
-            "📅 [FoodDetailPage] Foods available for preorder (today + tomorrow):",
-            {
-              totalFoodsFound: preOrderItems.length,
-              totalDatesAvailable: availablePreorderDates.length,
-              foodIds: preOrderItems.map((food) => food.id),
-              foodNames: preOrderItems.map((food) => food.name),
-              availableDates: availablePreorderDates.map(
-                (date) => date.displayDate
-              ),
-            }
-          );
         } else {
-          console.log(
-            "📅 [FoodDetailPage] No preorder items found for today or tomorrow"
-          );
           preOrderItems = [];
         }
       } else {
-        console.log(
-          "📅 [FoodDetailPage] No preorder schedule found in kitchen data"
-        );
         availablePreorderDates = [];
         preOrderItems = [];
       }
@@ -1135,30 +968,12 @@ export default function FoodDetailPage() {
         kitchen: fullKitchen,
       };
 
-      console.log("[FoodDetailPage] Dispatching listing data:", {
-        goGrabCount: goGrabItems.length,
-        preOrderCount: preOrderItems.length,
-        datesCount: availablePreorderDates.length,
-      });
-
       dispatch(setListingData(listingData));
-
-      // Alert for iOS devices
-      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-        console.log(
-          "[FoodDetailPage] iOS device detected - listing data stored in Redux"
-        );
-      }
     } catch (error) {
-      console.error("[FoodDetailPage] Error processing listing data:", error);
+      console.error("❌ [Listing] Error processing data:", error);
       dispatch(setListingLoading(false));
     }
   }, [fullKitchen, allFoods, kitchenId, dispatch]);
-
-  useEffect(() => {
-    console.log("pickupDate", pickupDate);
-    console.log("pickupTime", pickupTime);
-  }, [pickupDate, pickupTime]);
 
   if (loading) {
     return (
@@ -1473,11 +1288,6 @@ export default function FoodDetailPage() {
                     ...(selectedDate && { date: selectedDate }),
                   }).toString();
                   if (cartQuantity > 0) {
-                    console.log("🗑️ Removing current item from cart:", {
-                      foodId,
-                      currentQuantity: cartQuantity,
-                    });
-
                     handleCartQuantityChange({
                       food,
                       kitchen,
@@ -1487,8 +1297,6 @@ export default function FoodDetailPage() {
                       specialInstructions,
                       incomingOrderType: orderType,
                     });
-
-                    console.log("✅ Item removed from cart");
                   }
 
                   navigate("/foods", {

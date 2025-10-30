@@ -9,6 +9,317 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 /**
+ * Validate Go&Grab item availability
+ * Uses the same pattern as orderService.js
+ */
+const validateGrabAndGoAvailability = async (item, kitchenId) => {
+  try {
+    const foodItemId = item.foodId || item.id;
+    const requestedQuantity = item.quantity || 1;
+
+    console.log("🏃 [Validation] Checking Go&Grab item:", {
+      foodItemId,
+      kitchenId,
+      requestedQuantity,
+    });
+
+    // Try to find the food document using the same pattern as orderService.js
+    let foodRef = null;
+    let currentDoc = null;
+
+    // First, try to find it in the kitchen's subcollection
+    if (kitchenId) {
+      foodRef = doc(db, "kitchens", kitchenId, "foodItems", foodItemId);
+
+      try {
+        currentDoc = await getDoc(foodRef);
+      } catch (error) {
+        console.log("⚠️ [Validation] Not found in kitchen subcollection");
+        currentDoc = null;
+      }
+    }
+
+    // If not found in kitchen subcollection, try top-level foodItems collection
+    if (!currentDoc || !currentDoc.exists()) {
+      foodRef = doc(db, "foodItems", foodItemId);
+
+      try {
+        currentDoc = await getDoc(foodRef);
+      } catch (error) {
+        console.error("❌ [Validation] Error fetching from foodItems:", error);
+      }
+    }
+
+    // Check if document exists and validate availability
+    if (currentDoc && currentDoc.exists()) {
+      const currentData = currentDoc.data();
+      const availableQuantity = currentData.numAvailable || 0;
+
+      console.log("📊 [Validation] Go&Grab availability:", {
+        name: item.food?.name,
+        path: foodRef.path,
+        requested: requestedQuantity,
+        available: availableQuantity,
+        numOfSoldItem: currentData.numOfSoldItem,
+      });
+
+      if (availableQuantity < requestedQuantity) {
+        return {
+          isAvailable: false,
+          name: item.food?.name || "Unknown Item",
+          reason:
+            availableQuantity === 0
+              ? "Out of stock"
+              : `Only ${availableQuantity} available`,
+          requestedQuantity,
+          availableQuantity,
+          itemData: item,
+          orderType: "GO_GRAB",
+        };
+      }
+
+      return { isAvailable: true };
+    } else {
+      console.error("❌ [Validation] Food item not found:", {
+        foodItemId,
+        triedPaths: [
+          `kitchens/${kitchenId}/foodItems/${foodItemId}`,
+          `foodItems/${foodItemId}`,
+        ],
+      });
+
+      return {
+        isAvailable: false,
+        name: item.food?.name || "Unknown Item",
+        reason: "Item no longer available",
+        requestedQuantity,
+        availableQuantity: 0,
+        itemData: item,
+        orderType: "GO_GRAB",
+      };
+    }
+  } catch (error) {
+    console.error("❌ [Validation] Error validating Go&Grab item:", error);
+    return {
+      isAvailable: false,
+      name: item.food?.name || "Unknown Item",
+      reason: "Error checking availability",
+      requestedQuantity: item.quantity || 1,
+      availableQuantity: 0,
+      itemData: item,
+      orderType: "GO_GRAB",
+    };
+  }
+};
+
+/**
+ * Validate PreOrder item availability
+ * Considers isLimitedOrder flag - if true (unlimited), skip quantity check
+ */
+const validatePreOrderAvailability = async (item, kitchenId) => {
+  try {
+    const foodItemId = item.foodId || item.id;
+    const requestedQuantity = item.quantity || 1;
+    const pickupDate = item.selectedDate;
+
+    console.log("📅 [Validation] Checking PreOrder item:", {
+      foodItemId,
+      kitchenId,
+      pickupDate,
+      requestedQuantity,
+    });
+
+    if (!pickupDate) {
+      console.error("❌ [Validation] No pickup date for preorder item");
+      return {
+        isAvailable: false,
+        name: item.food?.name || "Unknown Item",
+        reason: "Missing pickup date",
+        requestedQuantity,
+        availableQuantity: 0,
+        itemData: item,
+        orderType: "PRE_ORDER",
+      };
+    }
+
+    // Get kitchen document
+    const kitchenRef = doc(db, "kitchens", kitchenId);
+    const kitchenDoc = await getDoc(kitchenRef);
+
+    if (!kitchenDoc.exists()) {
+      console.error("❌ [Validation] Kitchen not found:", kitchenId);
+      return {
+        isAvailable: false,
+        name: item.food?.name || "Unknown Item",
+        reason: "Kitchen not found",
+        requestedQuantity,
+        availableQuantity: 0,
+        itemData: item,
+        orderType: "PRE_ORDER",
+      };
+    }
+
+    const kitchenData = kitchenDoc.data();
+
+    console.log("🏪 [Validation] Kitchen preorder structure:", {
+      hasPreorderSchedule: !!kitchenData.preorderSchedule,
+      hasDates: !!kitchenData.preorderSchedule?.dates,
+      availableDates: kitchenData.preorderSchedule?.dates
+        ? Object.keys(kitchenData.preorderSchedule.dates)
+        : [],
+    });
+
+    const dateSchedule = kitchenData.preorderSchedule?.dates?.[pickupDate];
+
+    if (!dateSchedule || !Array.isArray(dateSchedule)) {
+      console.warn("⚠️ [Validation] No schedule for date:", pickupDate);
+      return {
+        isAvailable: false,
+        name: item.food?.name || "Unknown Item",
+        reason: `Not available on ${dayjs(pickupDate).format("MMM D")}`,
+        requestedQuantity,
+        availableQuantity: 0,
+        itemData: item,
+        orderType: "PRE_ORDER",
+        pickupDate,
+      };
+    }
+
+    // Find the food item in the schedule
+    const foodIndex = dateSchedule.findIndex(
+      (scheduleItem) => scheduleItem.foodItemId === foodItemId
+    );
+
+    console.log("🔍 [Validation] Food item search:", {
+      searchingForFoodId: foodItemId,
+      foundAtIndex: foodIndex,
+      totalItemsInSchedule: dateSchedule.length,
+    });
+
+    if (foodIndex === -1) {
+      console.warn("⚠️ [Validation] Food item not in schedule for date");
+      return {
+        isAvailable: false,
+        name: item.food?.name || "Unknown Item",
+        reason: `Not available on ${dayjs(pickupDate).format("MMM D")}`,
+        requestedQuantity,
+        availableQuantity: 0,
+        itemData: item,
+        orderType: "PRE_ORDER",
+        pickupDate,
+      };
+    }
+
+    const scheduleItem = dateSchedule[foodIndex];
+    const isLimitedOrder = scheduleItem.isLimitedOrder || false;
+    const availableQuantity = scheduleItem.numOfAvailableItems || 0;
+
+    console.log("📊 [Validation] PreOrder availability:", {
+      name: item.food?.name,
+      date: pickupDate,
+      requested: requestedQuantity,
+      available: availableQuantity,
+      isLimitedOrder: isLimitedOrder,
+      checkQuantity: !isLimitedOrder, // Only check quantity if NOT unlimited
+    });
+
+    // ✅ If isLimitedOrder is true, item is unlimited - skip quantity check
+    if (isLimitedOrder) {
+      console.log(
+        "✅ [Validation] Item is unlimited (isLimitedOrder=true), skipping quantity check"
+      );
+      return { isAvailable: true };
+    }
+
+    // ✅ If isLimitedOrder is false, check available quantity
+    if (availableQuantity < requestedQuantity) {
+      return {
+        isAvailable: false,
+        name: item.food?.name || "Unknown Item",
+        reason:
+          availableQuantity === 0
+            ? `Sold out for ${dayjs(pickupDate).format("MMM D")}`
+            : `Only ${availableQuantity} available on ${dayjs(
+                pickupDate
+              ).format("MMM D")}`,
+        requestedQuantity,
+        availableQuantity,
+        itemData: item,
+        orderType: "PRE_ORDER",
+        pickupDate,
+      };
+    }
+
+    return { isAvailable: true };
+  } catch (error) {
+    console.error("❌ [Validation] Error validating PreOrder item:", error);
+    return {
+      isAvailable: false,
+      name: item.food?.name || "Unknown Item",
+      reason: "Error checking availability",
+      requestedQuantity: item.quantity || 1,
+      availableQuantity: 0,
+      itemData: item,
+      orderType: "PRE_ORDER",
+    };
+  }
+};
+
+/**
+ * Main validation function that checks all cart items
+ * Reusable across different components
+ */
+export const validateItemAvailability = async (cartItems, kitchenId) => {
+  const unavailableItems = [];
+  console.log(
+    "🚦 [Availability Check] Starting validation process...",
+    kitchenId
+  );
+  console.log(
+    "📦 [Availability Check] Starting validation for",
+    cartItems.length,
+    "items"
+  );
+
+  for (const item of cartItems) {
+    const orderType =
+      item.orderType || (item.isPreOrder ? "PRE_ORDER" : "GO_GRAB");
+
+    console.log("🔍 [Availability Check] Processing:", {
+      name: item.food?.name,
+      orderType,
+      foodId: item.foodId || item.id,
+    });
+
+    let result;
+
+    if (orderType === "GO_GRAB") {
+      result = await validateGrabAndGoAvailability(item, kitchenId);
+    } else if (orderType === "PRE_ORDER") {
+      result = await validatePreOrderAvailability(item, kitchenId);
+    } else {
+      console.warn("⚠️ [Validation] Unknown order type:", orderType);
+      continue;
+    }
+
+    if (!result.isAvailable) {
+      unavailableItems.push(result);
+    }
+  }
+
+  console.log("📦 [Availability Check] Validation complete:", {
+    totalItems: cartItems.length,
+    unavailableCount: unavailableItems.length,
+    unavailableItems: unavailableItems.map((i) => ({
+      name: i.name,
+      reason: i.reason,
+    })),
+  });
+
+  return unavailableItems;
+};
+
+/**
  * Create and place an order in Firestore
  * @param {Object} orderData - The order data object
  * @returns {Promise<string>} - The order document ID
