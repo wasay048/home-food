@@ -774,6 +774,8 @@ export default function FoodDetailPage() {
     if (isDirectLanding) {
       console.log("🛒 [Direct Landing] Clearing cart");
       dispatch(clearCart());
+      setPickupDate(null);
+      setPickupTime(null);
     }
   }, [dispatch]);
 
