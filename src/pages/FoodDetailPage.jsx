@@ -236,10 +236,26 @@ const parseUrlDateToString = (dateStr) => {
     "0"
   )}`;
 
-  console.log("📅 [FoodDetailPage] Parsing URL date:", {
+  const today = new Date();
+  const todayString = `${today.getFullYear()}-${String(
+    today.getMonth() + 1
+  ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  console.log("📅 [FoodDetailPage] Date validation:", {
     input: dateStr,
-    output: formattedDate,
+    parsed: formattedDate,
+    today: todayString,
+    isPast: formattedDate < todayString,
   });
+
+  // ✅ If parsed date is in the past, return today's date instead
+  if (formattedDate < todayString) {
+    console.log(
+      "⚠️ [FoodDetailPage] Date is in the past, using today's date",
+      todayString
+    );
+    return todayString;
+  }
 
   return formattedDate;
 };
