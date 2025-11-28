@@ -153,6 +153,32 @@ export default function SuccessPage() {
     };
   }, [orderedItems, isDelivery, deliveryCharges, uniqueDatesCount]);
 
+  const uniqueOrderDates = useMemo(() => {
+    if (!orderedItems?.length) return [];
+
+    const dates = new Set(
+      orderedItems
+        .map((item) => item.pickupDate || item.selectedDate)
+        .filter(Boolean)
+    );
+
+    // Sort dates chronologically and format as MM/DD
+    return Array.from(dates)
+      .sort((a, b) => dayjs(a).diff(dayjs(b)))
+      .map((date) => dayjs(date).format("M/D"));
+  }, [orderedItems]);
+
+  const formattedOrderDates = useMemo(() => {
+    if (uniqueOrderDates.length === 0) return "";
+    if (uniqueOrderDates.length === 1) return uniqueOrderDates[0];
+    if (uniqueOrderDates.length === 2) {
+      return `${uniqueOrderDates[0]} and ${uniqueOrderDates[1]}`;
+    }
+    // For 3+ dates: "11/26, 11/27, and 11/28"
+    const lastDate = uniqueOrderDates.pop();
+    return `${uniqueOrderDates.join(", ")}, and ${lastDate}`;
+  }, [uniqueOrderDates]);
+
   const totalItemsCount =
     orderedItems?.reduce(
       (sum, item) => sum + parseInt(item.quantity || 1),
@@ -185,6 +211,33 @@ export default function SuccessPage() {
             <img src={Success} alt="Success" />
             <h2 className="title">Your order has been successfully placed</h2>
           </div>
+          {isDelivery && formattedOrderDates && (
+            <div
+              style={{
+                backgroundColor: "#e8f5e9", // ✅ Light green background
+                padding: "16px",
+                borderRadius: "8px",
+                marginTop: "16px",
+                marginBottom: "16px",
+                border: "1px solid #a5d6a7", // ✅ Green border
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "14px",
+                  color: "#2e7d32", // ✅ Dark green text
+                  fontWeight: "500",
+                  lineHeight: "1.5",
+                }}
+              >
+                🚚 Your order{uniqueOrderDates.length > 1 ? "s" : ""} will be
+                delivered between <strong>3pm and 7pm</strong> on the order date
+                {uniqueOrderDates.length > 1 ? "s" : ""}{" "}
+                <strong>{formattedOrderDates}</strong>
+              </div>
+            </div>
+          )}
 
           {/* Ordered Items Sections - Similar to OrderPage structure */}
           {orderedItems && orderedItems.length > 0 ? (
