@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import dayjs from "dayjs";
 import Edit from "../assets/images/edit.svg";
@@ -35,9 +35,20 @@ export default function PaymentPage() {
 
   const [showWeChatDialog, setShowWeChatDialog] = useState(false);
   const [paymentType, setPaymentType] = useState("online"); // "online" or "cash"
+
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryTime, setDeliveryTime] = useState(null);
+  const [showAddressValidationDialog, setShowAddressValidationDialog] =
+    useState(false);
+
   const { handleQuantityChange } = useGenericCart();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const location = useLocation();
+
+  console.log("location.state?.orderMethod", location.state?.orderMethod);
+  const orderMethod = location.state?.orderMethod || "pickup";
+  const isDelivery = orderMethod === "delivery";
 
   // Get cart items from Redux
   const cartItems = useSelector((state) => state.cart.items);
@@ -116,7 +127,6 @@ export default function PaymentPage() {
   // Handle pickup details update from modal
   const handleModalPickupUpdate = async () => {
     if (editingItem && modalSelectedDate && modalSelectedTime) {
-      // eslint-disable-next-line no-debugger
       const isPreOrder = editingItem.orderType === "PRE_ORDER";
 
       const pickupDetails = {
@@ -130,31 +140,63 @@ export default function PaymentPage() {
 
       console.log("🔄 Updating pickup details for item:", editingItem);
       console.log("🔄 New pickup details:", pickupDetails);
+      console.log("🔄 isDelivery mode:", isDelivery);
 
       try {
-        // Update the cart item with new pickup details
-        await handleQuantityChange({
-          food: editingItem.food,
-          kitchen: kitchenInfo,
-          newQuantity: editingItem.quantity,
-          // currentQuantity: editingItem.quantity,
-          selectedDate: modalSelectedDate,
-          selectedTime: modalSelectedTime,
-          specialInstructions: editingItem.specialInstructions || "",
-          incomingOrderType: isPreOrder ? "PRE_ORDER" : "GO_GRAB",
-          calledFrom: "default",
-          updateFlag: "date",
-        });
+        // ✅ DELIVERY MODE: Update time for ALL cart items (keep their original dates)
+        if (isDelivery) {
+          console.log(
+            "🚚 [Delivery] Updating time for ALL cart items:",
+            modalSelectedTime
+          );
 
-        showToast.success(
-          `Pickup time updated to ${pickupDetails.display} at ${pickupDetails.time}`
-        );
+          for (const item of cartItems) {
+            await handleQuantityChange({
+              food: item.food,
+              kitchen: kitchenInfo,
+              newQuantity: item.quantity,
+              selectedDate: item.selectedDate, // ✅ Keep original date
+              selectedTime: modalSelectedTime, // ✅ Update only time
+              specialInstructions: item.specialInstructions || "",
+              incomingOrderType:
+                item.orderType || item.pickupDetails?.orderType || "GO_GRAB",
+              calledFrom: "delivery-time-update",
+              updateFlag: "time", // ✅ Flag for time-only update
+            });
+          }
+
+          setDeliveryTime(modalSelectedTime);
+          showToast.success(
+            `Delivery time updated to ${modalSelectedTime} for all items`
+          );
+        } else {
+          // ✅ PICKUP MODE: Update only the single item (existing behavior)
+          await handleQuantityChange({
+            food: editingItem.food,
+            kitchen: kitchenInfo,
+            newQuantity: editingItem.quantity,
+            selectedDate: modalSelectedDate,
+            selectedTime: modalSelectedTime,
+            specialInstructions: editingItem.specialInstructions || "",
+            incomingOrderType: isPreOrder ? "PRE_ORDER" : "GO_GRAB",
+            calledFrom: "default",
+            updateFlag: "date",
+          });
+
+          showToast.success(
+            `Pickup time updated to ${pickupDetails.display} at ${pickupDetails.time}`
+          );
+        }
 
         // Close the modal
         handleDateTimePickerClose();
       } catch (error) {
         console.error("Error updating pickup details:", error);
-        showToast.error("Failed to update pickup time");
+        showToast.error(
+          isDelivery
+            ? "Failed to update delivery time"
+            : "Failed to update pickup time"
+        );
       }
     } else {
       showToast.error("Please select both date and time");
@@ -233,14 +275,33 @@ export default function PaymentPage() {
 
     const salesTaxRate = 0; // 0%
     const salesTax = subtotal * salesTaxRate;
-    const totalPayment = subtotal + salesTax;
+
+    // ✅ Calculate delivery charges based on unique dates
+    let deliveryCharges = 0;
+    let uniqueDatesCount = 0;
+
+    if (isDelivery && cartItems.length > 0) {
+      // Get unique dates from cart items
+      const uniqueDates = new Set(
+        cartItems.map((item) => item.selectedDate).filter(Boolean)
+      );
+      uniqueDatesCount = uniqueDates.size || 1; // At least 1 if there are items
+      deliveryCharges = uniqueDatesCount * 10; // $10 per unique date
+
+      console.log("🚚 [Delivery] Unique dates:", Array.from(uniqueDates));
+      console.log("🚚 [Delivery] Delivery charges:", deliveryCharges);
+    }
+
+    const totalPayment = subtotal + salesTax + deliveryCharges;
 
     return {
       subtotal: subtotal.toFixed(2),
       salesTax: salesTax.toFixed(2),
+      deliveryCharges: deliveryCharges.toFixed(2),
+      uniqueDatesCount: uniqueDatesCount,
       totalPayment: totalPayment.toFixed(2),
     };
-  }, [cartItems]);
+  }, [cartItems, isDelivery]);
 
   // Handle file upload with react-dropzone
   const onDrop = async (acceptedFiles) => {
@@ -305,6 +366,40 @@ export default function PaymentPage() {
     setUploadError(null);
   };
 
+  const handleDeliveryTimeChange = useCallback(
+    async (newTime) => {
+      if (!isDelivery) return;
+
+      setDeliveryTime(newTime);
+      console.log("🚚 [Delivery] Updating time for all cart items:", newTime);
+
+      // Update each cart item's time only
+      for (const item of cartItems) {
+        try {
+          await handleQuantityChange({
+            food: item.food,
+            kitchen: kitchenInfo,
+            newQuantity: item.quantity,
+            selectedDate: item.selectedDate, // Keep the existing date
+            selectedTime: newTime, // Update only the time
+            specialInstructions: item.specialInstructions || "",
+            incomingOrderType:
+              item.orderType || item.pickupDetails?.orderType || "GO_GRAB",
+            calledFrom: "delivery-time-update",
+            updateFlag: "time", // Flag to indicate time-only update
+          });
+        } catch (error) {
+          console.error(
+            `Error updating time for item ${item.food?.name}:`,
+            error
+          );
+        }
+      }
+
+      showToast.success(`Delivery time updated to ${newTime} for all items`);
+    },
+    [isDelivery, cartItems, handleQuantityChange, kitchenInfo]
+  );
   // Add this validation function before handlePlaceOrder
   const validatePickupDates = () => {
     // Get today's date as plain string (YYYY-MM-DD format)
@@ -361,6 +456,12 @@ export default function PaymentPage() {
         return;
       }
 
+      if (isDelivery && !deliveryAddress.trim()) {
+        console.log("❌ Delivery address is required");
+        setShowAddressValidationDialog(true);
+        return;
+      }
+
       // ✅ NEW: Validate pickup dates
       const invalidItems = validatePickupDates();
       if (invalidItems.length > 0) {
@@ -399,7 +500,11 @@ export default function PaymentPage() {
         return;
       }
       setIsPlacingOrder(true);
-
+      console.log("placeOrder --orderMethod", orderMethod);
+      console.log(
+        "placeOrder --isDelivery",
+        isDelivery ? deliveryAddress.trim() : null
+      );
       // Create order object
       const orderData = createOrderObject({
         cartItems,
@@ -409,6 +514,8 @@ export default function PaymentPage() {
         paymentCalculation,
         groupedCartItems,
         paymentType,
+        deliveryAddress,
+        isDelivery,
       });
 
       console.log("Order data to be placed:", orderData);
@@ -437,6 +544,10 @@ export default function PaymentPage() {
             totalAmount: paymentCalculation?.totalPayment,
             kitchenName: kitchenInfo?.name,
             pickupAddress: kitchenInfo?.address,
+            isDelivery: isDelivery,
+            deliveryAddress: isDelivery ? deliveryAddress : null,
+            deliveryCharges: paymentCalculation?.deliveryCharges,
+            uniqueDatesCount: paymentCalculation?.uniqueDatesCount,
             orderedItems: cartItems.map((item) => {
               const pickupDate = item.selectedDate;
               const orderType = item?.orderType;
@@ -502,10 +613,39 @@ export default function PaymentPage() {
       <div className="container">
         <div className="mobile-container">
           <div className="padding-20 order-page">
-            <h4 className="medium-title mb-12">Pickup Address</h4>
-            <p className="body-text-med mb-20">{kitchenInfo?.address}</p>
+            {isDelivery && (
+              <div className="delivery-address-section mb-20">
+                <h4 className="medium-title mb-12">Delivery Address</h4>
+                <textarea
+                  className="delivery-address-input"
+                  placeholder="Enter your delivery address"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  rows={3}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    fontSize: "16px",
+                    border: "1px solid #ddd",
+                    borderRadius: "8px",
+                    outline: "none",
+                    boxSizing: "border-box",
+                    resize: "vertical",
+                    fontFamily: "inherit",
+                    minHeight: "80px",
+                  }}
+                />
+                {/* <div className="hr mt-18 mb-18"></div> */}
+              </div>
+            )}
 
-            <div className="hr mb-18"></div>
+            {!isDelivery && (
+              <>
+                <h4 className="medium-title mb-12">Pickup Address</h4>
+                <p className="body-text-med mb-20">{kitchenInfo?.address}</p>
+                <div className="hr mb-18"></div>
+              </>
+            )}
 
             {/* <div className="payment-method mb-20"> ... */}
             <div className="other-payments-wrapper mb-20">
@@ -574,6 +714,20 @@ export default function PaymentPage() {
                 <span>Sales Tax (0%)</span>
                 <span>${paymentCalculation.salesTax}</span>
               </div>
+              {isDelivery && (
+                <div className="item-flex">
+                  <span>
+                    Delivery Charges
+                    {paymentCalculation.uniqueDatesCount > 1 && (
+                      <span className="delivery-multiplier">
+                        {" "}
+                        ({paymentCalculation.uniqueDatesCount}x)
+                      </span>
+                    )}
+                  </span>
+                  <span>${paymentCalculation.deliveryCharges}</span>
+                </div>
+              )}
               <div className="hr mb-12"></div>
               <div className="item-flex bold">
                 <span>Total Payment</span>
@@ -583,7 +737,11 @@ export default function PaymentPage() {
 
             {/* Order Items with Pickup Times */}
             <div className="order-items-section mb-20">
-              <h3 className="order-items-title">Select Pickup Date & Time</h3>
+              <h3 className="order-items-title">
+                {isDelivery
+                  ? "Select Delivery Date & Time"
+                  : "Select Pickup Date & Time"}
+              </h3>
 
               {/* Check if cart has items */}
               {cartItems.length === 0 ? (
@@ -803,7 +961,7 @@ export default function PaymentPage() {
         <div className="modal-overlay" onClick={handleDateTimePickerClose}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Edit Pickup Time</h3>
+              <h3 className="modal-title">Pickup / Delivery Time</h3>
               <button
                 className="modal-close-btn"
                 onClick={handleDateTimePickerClose}
@@ -837,8 +995,10 @@ export default function PaymentPage() {
                   onTimeChange={handleModalTimeChange}
                   disabled={false}
                   className="payment-modal-picker"
-                  dateLabel="Select Pickup Date:"
-                  timeLabel="Select Pickup Time:"
+                  dateLabel="Pickup / Delivery Date"
+                  timeLabel="Pickup / Delivery Time"
+                  disableDateSelection={isDelivery}
+                  isDeliveryMode={isDelivery}
                 />
               </div>
             </div>
@@ -959,6 +1119,81 @@ export default function PaymentPage() {
                 }}
               >
                 Go to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showAddressValidationDialog && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowAddressValidationDialog(false)}
+        >
+          <div
+            className="modal-container validation-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3 className="modal-title">⚠️ Delivery Address Required</h3>
+              <button
+                className="modal-close-btn"
+                onClick={() => setShowAddressValidationDialog(false)}
+                aria-label="Close modal"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="modal-content">
+              <p className="validation-message">
+                Please enter your delivery address to continue with your order.
+              </p>
+              <div
+                className="address-input-container"
+                style={{ marginTop: "16px" }}
+              >
+                <textarea
+                  className="delivery-address-input"
+                  placeholder="Enter your delivery address"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  rows={3}
+                  autoFocus
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    fontSize: "16px",
+                    border: "1px solid #ddd",
+                    borderRadius: "8px",
+                    outline: "none",
+                    boxSizing: "border-box",
+                    resize: "vertical",
+                    fontFamily: "inherit",
+                    minHeight: "80px",
+                  }}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn-secondary"
+                onClick={() => setShowAddressValidationDialog(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  if (deliveryAddress.trim()) {
+                    setShowAddressValidationDialog(false);
+                    // Optionally trigger order placement again
+                    handlePlaceOrder();
+                  } else {
+                    showToast.error("Please enter a valid delivery address");
+                  }
+                }}
+                disabled={!deliveryAddress.trim()}
+              >
+                Continue
               </button>
             </div>
           </div>

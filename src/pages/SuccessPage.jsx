@@ -8,8 +8,17 @@ export default function SuccessPage() {
   const location = useLocation();
   const orderDetails = location.state || {};
 
-  const { orderID, totalAmount, kitchenName, pickupAddress, orderedItems } =
-    orderDetails;
+  const {
+    orderID,
+    totalAmount,
+    kitchenName,
+    pickupAddress,
+    orderedItems,
+    isDelivery, // ✅ ADD: Receive delivery flag
+    deliveryAddress, // ✅ ADD: Receive delivery address
+    deliveryCharges, // ✅ ADD: Receive delivery charges
+    uniqueDatesCount, // ✅ ADD: Receive unique dates count
+  } = orderDetails;
 
   // Debug logging
   console.log("🔍 [SuccessPage] Order details received:", {
@@ -19,8 +28,11 @@ export default function SuccessPage() {
     pickupAddress,
     orderedItemsCount: orderedItems?.length || 0,
     orderedItems: orderedItems,
+    isDelivery,
+    deliveryAddress,
+    deliveryCharges,
+    uniqueDatesCount,
   });
-
   const closeWeChatWindow = () => {
     if (window.WeixinJSBridge) {
       // If WeChat bridge is available, close the window
@@ -107,7 +119,13 @@ export default function SuccessPage() {
   // Calculate totals (similar to OrderPage)
   const totals = useMemo(() => {
     if (!orderedItems?.length)
-      return { subtotal: "0.00", tax: "0.00", total: "0.00" };
+      return {
+        subtotal: "0.00",
+        tax: "0.00",
+        deliveryCharges: "0.00",
+        uniqueDatesCount: 0,
+        total: "0.00",
+      };
 
     const subtotal = orderedItems.reduce((sum, item) => {
       const price = parseFloat(item.price || item.cost || 0);
@@ -116,14 +134,24 @@ export default function SuccessPage() {
     }, 0);
 
     const tax = subtotal * 0; // 0% tax
-    const total = subtotal + tax;
+
+    // ✅ Use delivery charges from state or calculate from unique dates
+    const deliveryChargesAmount = isDelivery
+      ? deliveryCharges
+        ? parseFloat(deliveryCharges)
+        : (uniqueDatesCount || 1) * 10
+      : 0;
+
+    const total = subtotal + tax + deliveryChargesAmount;
 
     return {
       subtotal: subtotal.toFixed(2),
       tax: tax.toFixed(2),
+      deliveryCharges: deliveryChargesAmount.toFixed(2),
+      uniqueDatesCount: uniqueDatesCount || 1,
       total: total.toFixed(2),
     };
-  }, [orderedItems]);
+  }, [orderedItems, isDelivery, deliveryCharges, uniqueDatesCount]);
 
   const totalItemsCount =
     orderedItems?.reduce(
@@ -276,6 +304,30 @@ export default function SuccessPage() {
                 )
               )}
 
+              {isDelivery && deliveryAddress && (
+                <div
+                  style={{
+                    backgroundColor: "#e8f5e9",
+                    padding: "16px",
+                    borderRadius: "8px",
+                    marginTop: "16px",
+                    marginBottom: "16px",
+                    border: "1px solid #a5d6a7",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: "600",
+                      marginBottom: "8px",
+                      color: "#2e7d32",
+                    }}
+                  >
+                    🚚 Delivery Address
+                  </div>
+                  <div style={{ color: "#333" }}>{deliveryAddress}</div>
+                </div>
+              )}
+
               {/* Order Summary - Similar to OrderPage */}
               <div
                 className="order-summary"
@@ -312,6 +364,27 @@ export default function SuccessPage() {
                   <span>Tax (0%):</span>
                   <span>${totals.tax}</span>
                 </div>
+                {isDelivery && (
+                  <div
+                    className="summary-row"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    <span>
+                      Delivery Charges
+                      {totals.uniqueDatesCount > 1 && (
+                        <span style={{ fontSize: "12px", color: "#666" }}>
+                          {" "}
+                          ({totals.uniqueDatesCount}x)
+                        </span>
+                      )}
+                    </span>
+                    <span>${totals.deliveryCharges}</span>
+                  </div>
+                )}
                 <div
                   className="summary-row"
                   style={{
