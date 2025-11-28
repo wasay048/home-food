@@ -29,9 +29,11 @@ const DateTimePicker = ({
   disabled = false,
   showTimeFirst = false,
   className = "",
-  dateLabel = "Pick up date:",
-  timeLabel = "Pick up time:",
+  dateLabel = "Pickup / Delivery Date",
+  timeLabel = "Pickup / Delivery Time",
   style = {},
+  disableDateSelection = false,
+  isDeliveryMode = false,
 }) => {
   const [internalDate, setInternalDate] = useState(selectedDate);
   const [internalTime, setInternalTime] = useState(selectedTime);
@@ -166,11 +168,62 @@ const DateTimePicker = ({
       foodId: food?.id,
       kitchenId: kitchen?.id,
       hasPreorderSchedule: !!kitchen?.preorderSchedule?.dates,
+      isDeliveryMode,
     });
 
     if (!internalDate) {
       console.log("❌ No internal date");
       return [];
+    }
+    if (isDeliveryMode) {
+      console.log(
+        "🚚 Generating DELIVERY time slots (3 PM - 7 PM) - overriding orderType:",
+        orderType
+      );
+
+      const selectedDateObj = dayjs(internalDate);
+      const timeSlots = [];
+
+      // Delivery: 3:00 PM - 7:00 PM (15:00 - 19:00)
+      const startHour = 15; // 3 PM
+      const startMinute = 0;
+      const endHour = 19; // 7 PM
+      const endMinute = 0;
+
+      const startSlot = selectedDateObj
+        .hour(startHour)
+        .minute(startMinute)
+        .second(0);
+
+      const endSlot = selectedDateObj.hour(endHour).minute(endMinute).second(0);
+
+      console.log(`🚚 Delivery time slot range:`, {
+        start: startSlot.format("h:mm A"),
+        end: endSlot.format("h:mm A"),
+        orderType: orderType, // Log the original orderType for debugging
+      });
+
+      // Generate 15-minute interval slots
+      let currentSlot = startSlot;
+      while (currentSlot.isBefore(endSlot) || currentSlot.isSame(endSlot)) {
+        timeSlots.push({
+          value: currentSlot.format("h:mm A"),
+          display: currentSlot.format("h:mm A"),
+          dayjs: currentSlot,
+          isAvailable: true,
+        });
+
+        currentSlot = currentSlot.add(15, "minutes");
+      }
+
+      console.log("✅ Delivery time slots:", {
+        count: timeSlots.length,
+        firstSlot: timeSlots[0]?.value,
+        lastSlot: timeSlots[timeSlots.length - 1]?.value,
+        originalOrderType: orderType,
+      });
+
+      return timeSlots;
     }
     console.log("order type: " + orderType);
     if (orderType === "GO_GRAB") {
@@ -644,7 +697,7 @@ const DateTimePicker = ({
             >
               Cancel
             </button>
-            <h3>Select Pickup Date</h3>
+            <h3>Pickup / Delivery Date</h3>
             <button
               className="mobile-picker-btn done"
               onClick={() => setShowCustomDatePicker(false)}
@@ -1036,7 +1089,39 @@ const DateTimePicker = ({
         <label className="picker-label">{dateLabel}</label>
         <div className="date-input-wrapper">
           {/* For mobile  */}
-          {isMobile ? (
+          {disableDateSelection ? (
+            <div
+              className="picker-select date-select date-disabled"
+              style={{
+                backgroundColor: "#f5f5f5",
+                cursor: "not-allowed",
+                opacity: 0.8,
+              }}
+            >
+              <span>
+                {internalDate
+                  ? availableDates.find((d) => d.date === internalDate)
+                      ?.display || dayjs(internalDate).format("MMM D, YYYY")
+                  : "Select date"}
+              </span>
+              <svg
+                className="picker-arrow"
+                width="12"
+                height="8"
+                viewBox="0 0 12 8"
+                fill="none"
+                style={{ opacity: 0.5 }}
+              >
+                <path
+                  d="M1 1L6 6L11 1"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          ) : isMobile ? (
             <div
               className="picker-select date-select mobile-date-trigger"
               onClick={() => setShowCustomDatePicker(true)}
@@ -1181,7 +1266,7 @@ const DateTimePicker = ({
       </div>
 
       {/* Custom Mobile Date Picker */}
-      <CustomMobileDatePicker />
+      {!disableDateSelection && <CustomMobileDatePicker />}
     </div>
   );
 };
