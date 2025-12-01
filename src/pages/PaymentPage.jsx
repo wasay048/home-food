@@ -16,7 +16,36 @@ import {
 import { clearCart } from "../store/slices/cartSlice";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import { useGenericCart } from "../hooks/useGenericCart";
+import { useUserAccount } from "../hooks/useUserAccount";
 import "./PaymentPage.css";
+
+// Phone number formatting function - formats as (XXX) XXX-XXXX
+const formatPhoneNumber = (value) => {
+  // Remove all non-digit characters
+  const phoneNumber = value.replace(/\D/g, "");
+
+  // Limit to 10 digits
+  const limitedNumber = phoneNumber.slice(0, 10);
+
+  // Format based on length
+  if (limitedNumber.length === 0) {
+    return "";
+  } else if (limitedNumber.length <= 3) {
+    return `(${limitedNumber}`;
+  } else if (limitedNumber.length <= 6) {
+    return `(${limitedNumber.slice(0, 3)}) ${limitedNumber.slice(3)}`;
+  } else {
+    return `(${limitedNumber.slice(0, 3)}) ${limitedNumber.slice(
+      3,
+      6
+    )}-${limitedNumber.slice(6)}`;
+  }
+};
+
+// Get raw phone number (digits only) for validation
+const getRawPhoneNumber = (formattedNumber) => {
+  return (formattedNumber || "").replace(/\D/g, "");
+};
 
 export default function PaymentPage() {
   const [uploadPreview, setUploadPreview] = useState(null);
@@ -37,14 +66,22 @@ export default function PaymentPage() {
   const [paymentType, setPaymentType] = useState("online"); // "online" or "cash"
 
   const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryPhone, setDeliveryPhone] = useState("");
   const [deliveryTime, setDeliveryTime] = useState(null);
   const [showAddressValidationDialog, setShowAddressValidationDialog] =
     useState(false);
 
+  const { checkUserExistsById } = useUserAccount();
   const { handleQuantityChange } = useGenericCart();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
+
+  // Handle phone number input with auto-formatting
+  const handlePhoneChange = (e) => {
+    const formattedNumber = formatPhoneNumber(e.target.value);
+    setDeliveryPhone(formattedNumber);
+  };
 
   console.log("location.state?.orderMethod", location.state?.orderMethod);
   const orderMethod = location.state?.orderMethod || "pickup";
@@ -54,7 +91,7 @@ export default function PaymentPage() {
   const cartItems = useSelector((state) => state.cart.items);
   const currentKitchen = useSelector((state) => state.food.currentKitchen);
   const currentUser = useSelector((state) => state.auth.user);
-  // const currentUser = { id: "xWb16hmhx8gJiIF5wPgGkqd7xLo2" };
+  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   // const isAuthenticated = true;
 
@@ -456,9 +493,36 @@ export default function PaymentPage() {
         return;
       }
 
+      const userId = currentUser?.id || currentUser?.uid;
+      const userCheck = await checkUserExistsById(userId);
+
+      if (!userCheck.exists) {
+        console.log(
+          "🔒 User not found in accounts collection, showing login dialog"
+        );
+        showToast.error(
+          "Your session has expired. Please login again to place your order."
+        );
+        setShowWeChatDialog(true);
+        return;
+      }
+
       if (isDelivery && !deliveryAddress.trim()) {
         console.log("❌ Delivery address is required");
         setShowAddressValidationDialog(true);
+        return;
+      }
+
+      if (isDelivery && !deliveryPhone.trim()) {
+        console.log("❌ Phone number is required for delivery");
+        setShowAddressValidationDialog(true);
+        return;
+      }
+
+      // Validate phone number has 10 digits
+      if (isDelivery && getRawPhoneNumber(deliveryPhone).length < 10) {
+        console.log("❌ Phone number must be 10 digits");
+        showToast.error("Please enter a valid 10-digit phone number");
         return;
       }
 
@@ -516,6 +580,7 @@ export default function PaymentPage() {
         paymentType,
         deliveryAddress,
         isDelivery,
+        deliveryPhone,
       });
 
       console.log("Order data to be placed:", orderData);
@@ -546,6 +611,7 @@ export default function PaymentPage() {
             pickupAddress: kitchenInfo?.address,
             isDelivery: isDelivery,
             deliveryAddress: isDelivery ? deliveryAddress : null,
+            deliveryPhone: isDelivery ? deliveryPhone : null,
             deliveryCharges: paymentCalculation?.deliveryCharges,
             uniqueDatesCount: paymentCalculation?.uniqueDatesCount,
             orderedItems: cartItems.map((item) => {
@@ -635,6 +701,27 @@ export default function PaymentPage() {
                     minHeight: "80px",
                   }}
                 />
+                <div style={{ marginTop: "12px" }}>
+                  <h4 className="medium-title mb-12">Phone Number</h4>
+                  <input
+                    type="tel"
+                    className="delivery-phone-input"
+                    placeholder="(XXX) XXX-XXXX"
+                    value={deliveryPhone}
+                    onChange={handlePhoneChange}
+                    maxLength={14}
+                    style={{
+                      width: "100%",
+                      padding: "12px 16px",
+                      fontSize: "16px",
+                      border: "1px solid #ddd",
+                      borderRadius: "8px",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </div>
                 {/* <div className="hr mt-18 mb-18"></div> */}
               </div>
             )}
@@ -1134,7 +1221,7 @@ export default function PaymentPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
-              <h3 className="modal-title">⚠️ Delivery Address Required</h3>
+              <h3 className="modal-title">⚠️ Delivery Info Required</h3>
               <button
                 className="modal-close-btn"
                 onClick={() => setShowAddressValidationDialog(false)}
@@ -1145,12 +1232,21 @@ export default function PaymentPage() {
             </div>
             <div className="modal-content">
               <p className="validation-message">
-                Please enter your delivery address to continue with your order.
+                Please enter your delivery info to continue with your order.
               </p>
               <div
                 className="address-input-container"
-                style={{ marginTop: "16px" }}
+                style={{ marginTop: "8px" }}
               >
+                <label
+                  style={{
+                    fontWeight: "500",
+                    marginBottom: "8px",
+                    display: "block",
+                  }}
+                >
+                  Address
+                </label>
                 <textarea
                   className="delivery-address-input"
                   placeholder="Enter your delivery address"
@@ -1172,6 +1268,38 @@ export default function PaymentPage() {
                   }}
                 />
               </div>
+              <div
+                className="phone-input-container"
+                style={{ marginTop: "16px" }}
+              >
+                <label
+                  style={{
+                    fontWeight: "500",
+                    marginBottom: "8px",
+                    display: "block",
+                  }}
+                >
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  className="delivery-phone-input"
+                  placeholder="(XXX) XXX-XXXX"
+                  value={deliveryPhone}
+                  onChange={handlePhoneChange}
+                  maxLength={14}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    fontSize: "16px",
+                    border: "1px solid #ddd",
+                    borderRadius: "8px",
+                    outline: "none",
+                    boxSizing: "border-box",
+                    fontFamily: "inherit",
+                  }}
+                />
+              </div>
             </div>
             <div className="modal-footer">
               <button
@@ -1183,15 +1311,25 @@ export default function PaymentPage() {
               <button
                 className="btn-primary"
                 onClick={() => {
-                  if (deliveryAddress.trim()) {
+                  if (
+                    deliveryAddress.trim() &&
+                    getRawPhoneNumber(deliveryPhone).length === 10
+                  ) {
                     setShowAddressValidationDialog(false);
                     // Optionally trigger order placement again
                     handlePlaceOrder();
-                  } else {
+                  } else if (!deliveryAddress.trim()) {
                     showToast.error("Please enter a valid delivery address");
+                  } else {
+                    showToast.error(
+                      "Please enter a valid 10-digit phone number"
+                    );
                   }
                 }}
-                disabled={!deliveryAddress.trim()}
+                disabled={
+                  !deliveryAddress.trim() ||
+                  getRawPhoneNumber(deliveryPhone).length < 10
+                }
               >
                 Continue
               </button>

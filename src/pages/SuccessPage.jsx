@@ -18,6 +18,7 @@ export default function SuccessPage() {
     deliveryAddress, // ✅ ADD: Receive delivery address
     deliveryCharges, // ✅ ADD: Receive delivery charges
     uniqueDatesCount, // ✅ ADD: Receive unique dates count
+    deliveryPhone,
   } = orderDetails;
 
   // Debug logging
@@ -231,8 +232,7 @@ export default function SuccessPage() {
                   lineHeight: "1.5",
                 }}
               >
-                🚚 Your order{uniqueOrderDates.length > 1 ? "s" : ""} will be
-                delivered between <strong>3pm and 7pm</strong> on the order date
+                🚚 Your order will be delivered before 6pm on the order dates
                 {uniqueOrderDates.length > 1 ? "s" : ""}{" "}
                 <strong>{formattedOrderDates}</strong>
               </div>
@@ -378,6 +378,26 @@ export default function SuccessPage() {
                     🚚 Delivery Address
                   </div>
                   <div style={{ color: "#333" }}>{deliveryAddress}</div>
+                  {deliveryPhone && (
+                    <div
+                      style={{
+                        marginTop: "12px",
+                        paddingTop: "12px",
+                        borderTop: "1px solid #a5d6a7",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight: "600",
+                          marginBottom: "4px",
+                          color: "#2e7d32",
+                        }}
+                      >
+                        📞 Phone Number
+                      </div>
+                      <div style={{ color: "#333" }}>{deliveryPhone}</div>
+                    </div>
+                  )}
                 </div>
               )}
 

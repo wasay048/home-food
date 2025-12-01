@@ -506,6 +506,43 @@ export const useUserAccount = () => {
   }, []);
 
   /**
+   * Check if user exists in accounts collection by userId
+   * @param {string} userId - The user ID (Firebase UID or account document ID)
+   * @returns {Promise<{exists: boolean, data: object|null, error?: string}>}
+   */
+  const checkUserExistsById = useCallback(async (userId) => {
+    console.log("[useUserAccount] Checking if user exists by ID:", userId);
+
+    if (!userId) {
+      console.log("[useUserAccount] No user ID provided");
+      return { exists: false, data: null, error: "No user ID provided" };
+    }
+
+    try {
+      const accountRef = doc(db, "accounts", userId);
+      const accountSnap = await getDoc(accountRef);
+
+      if (accountSnap.exists()) {
+        const data = { id: accountSnap.id, ...accountSnap.data() };
+        console.log(
+          "[useUserAccount] ✅ User exists in accounts collection:",
+          userId
+        );
+        return { exists: true, data };
+      }
+
+      console.log(
+        "[useUserAccount] ❌ User does NOT exist in accounts collection:",
+        userId
+      );
+      return { exists: false, data: null };
+    } catch (error) {
+      console.error("[useUserAccount] Error checking user existence:", error);
+      return { exists: false, data: null, error: error.message };
+    }
+  }, []);
+
+  /**
    * Update user profile
    */
   const updateUserProfile = useCallback(async (accountId, updates) => {
@@ -540,6 +577,7 @@ export const useUserAccount = () => {
 
     // Functions
     processWeChatAccount,
+    checkUserExistsById,
     getAccountById,
     updateUserProfile,
     generateEmailFromWeChatUser,

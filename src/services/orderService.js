@@ -646,6 +646,7 @@ export const createOrderObject = ({
   paymentType,
   deliveryAddress,
   isDelivery,
+  deliveryPhone,
 }) => {
   const now = new Date();
   const orderID = generateOrderID();
@@ -712,6 +713,7 @@ export const createOrderObject = ({
     appOrderStatus: "Web App Order",
     datePickedUp: datePickedUp,
     deliveryAddress: isDelivery ? deliveryAddress : "",
+    deliveryPhone: isDelivery ? deliveryPhone : "",
     isDeliverydSelected: isDelivery || false,
     datePlaced: now,
     kitchenId:
