@@ -915,59 +915,43 @@ export default function FoodDetailPage() {
       // Dispatch to Redux store
 
       if (fullKitchen?.preorderSchedule?.dates) {
-        // Get today and tomorrow dates
+        // Get dates for the next 7 days (including today)
         const today = dayjs();
-        const tomorrow = today.add(1, "day");
-
-        const todayStr = today.format("YYYY-MM-DD");
-        const tomorrowStr = tomorrow.format("YYYY-MM-DD");
-
-        // Check schedules for both days
-        const todaySchedule = fullKitchen.preorderSchedule.dates[todayStr];
-        const tomorrowSchedule =
-          fullKitchen.preorderSchedule.dates[tomorrowStr];
-
-        // Collect available dates
-        availablePreorderDates = [];
         const preorderFoodIds = new Set();
+        availablePreorderDates = [];
 
-        // Add today's schedule if available
-        if (
-          todaySchedule &&
-          Array.isArray(todaySchedule) &&
-          todaySchedule.length > 0
-        ) {
-          availablePreorderDates.push({
-            dateString: todayStr,
-            displayDate: `Today, ${today.format("MMM D")}`,
-            scheduleItems: todaySchedule,
-          });
+        // Loop through the next 7 days
+        for (let i = 0; i < 7; i++) {
+          const currentDate = today.add(i, "day");
+          const dateStr = currentDate.format("YYYY-MM-DD");
+          const schedule = fullKitchen.preorderSchedule.dates[dateStr];
 
-          // Add today's food IDs
-          todaySchedule.forEach((item) => {
-            preorderFoodIds.add(item.foodItemId);
-          });
+          // Check if schedule exists for this date
+          if (schedule && Array.isArray(schedule) && schedule.length > 0) {
+            // Format display date
+            let displayDate;
+            if (i === 0) {
+              displayDate = `Today, ${currentDate.format("MMM D")}`;
+            } else if (i === 1) {
+              displayDate = `Tomorrow, ${currentDate.format("MMM D")}`;
+            } else {
+              displayDate = currentDate.format("ddd, MMM D"); // e.g., "Wed, Dec 4"
+            }
+
+            availablePreorderDates.push({
+              dateString: dateStr,
+              displayDate: displayDate,
+              scheduleItems: schedule,
+            });
+
+            // Add food IDs from this date's schedule
+            schedule.forEach((item) => {
+              preorderFoodIds.add(item.foodItemId);
+            });
+          }
         }
 
-        // Add tomorrow's schedule if available
-        if (
-          tomorrowSchedule &&
-          Array.isArray(tomorrowSchedule) &&
-          tomorrowSchedule.length > 0
-        ) {
-          availablePreorderDates.push({
-            dateString: tomorrowStr,
-            displayDate: `Tomorrow, ${tomorrow.format("MMM D")}`,
-            scheduleItems: tomorrowSchedule,
-          });
-
-          // Add tomorrow's food IDs
-          tomorrowSchedule.forEach((item) => {
-            preorderFoodIds.add(item.foodItemId);
-          });
-        }
-
-        // Filter foods that are in either today's or tomorrow's preorder schedule
+        // Filter foods that are in any of the week's preorder schedules
         if (preorderFoodIds.size > 0) {
           preOrderItems = allFoods.filter((food) => {
             return preorderFoodIds.has(food.id) && food.kitchenId === kitchenId;
@@ -975,6 +959,11 @@ export default function FoodDetailPage() {
         } else {
           preOrderItems = [];
         }
+
+        console.log(
+          "📅 [Listing] Week's preorder dates:",
+          availablePreorderDates.map((d) => d.displayDate)
+        );
       } else {
         availablePreorderDates = [];
         preOrderItems = [];

@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
 import Success from "../assets/images/success.svg";
 import qrCode from "../assets/images/home-food-qr.svg";
+import scooterRider from "../assets/scooter-rider.png";
 
 export default function SuccessPage() {
   const location = useLocation();
@@ -232,7 +233,12 @@ export default function SuccessPage() {
                   lineHeight: "1.5",
                 }}
               >
-                🚚 Your order will be delivered before 6pm on the order dates
+                <img
+                  src={scooterRider}
+                  alt="Delivery"
+                  style={{ width: "17px", height: "15px", marginTop: "-6px" }}
+                />{" "}
+                Your order will be delivered before 6pm on the order dates
                 {uniqueOrderDates.length > 1 ? "s" : ""}{" "}
                 <strong>{formattedOrderDates}</strong>
               </div>
@@ -375,7 +381,16 @@ export default function SuccessPage() {
                       color: "#2e7d32",
                     }}
                   >
-                    🚚 Delivery Address
+                    <img
+                      src={scooterRider}
+                      alt="Delivery"
+                      style={{
+                        width: "17px",
+                        height: "15px",
+                        marginTop: "-6px",
+                      }}
+                    />{" "}
+                    Delivery Address
                   </div>
                   <div style={{ color: "#333" }}>{deliveryAddress}</div>
                   {deliveryPhone && (
