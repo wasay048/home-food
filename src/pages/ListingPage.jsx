@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import dayjs from "dayjs";
 import qrCode from "../assets/images/home-food-qr.svg";
 import { useGenericCart } from "../hooks/useGenericCart";
 // import Edit from "../assets/images/edit.svg";
@@ -334,7 +335,16 @@ export default function ListingPage() {
                   const currentPickupTime = getPickupTime(food.id, false);
                   return (
                     <div key={food.id} className="menu-list">
-                      <div className="left">
+                      <div
+                        className="left"
+                        onClick={() =>
+                          window.open(
+                            `/share?kitchenId=${kitchen?.id}&foodId=${food.id}`,
+                            "_blank"
+                          )
+                        }
+                        style={{ cursor: "pointer" }}
+                      >
                         <div className="image">
                           <img
                             src={
@@ -429,7 +439,20 @@ export default function ListingPage() {
                         key={`${food.id}-${dateInfo.dateString}`}
                         className="menu-list"
                       >
-                        <div className="left">
+                        <div
+                          className="left"
+                          onClick={() =>
+                            window.open(
+                              `/share?kitchenId=${kitchen?.id}&foodId=${
+                                food.id
+                              }&date=${dayjs(dateInfo.dateString).format(
+                                "M/D/YYYY"
+                              )}`,
+                              "_blank"
+                            )
+                          }
+                          style={{ cursor: "pointer" }}
+                        >
                           <div className="image">
                             <img
                               src={
