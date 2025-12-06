@@ -137,12 +137,9 @@ export default function SuccessPage() {
 
     const tax = subtotal * 0; // 0% tax
 
-    // ✅ Use delivery charges from state or calculate from unique dates
-    const deliveryChargesAmount = isDelivery
-      ? deliveryCharges
-        ? parseFloat(deliveryCharges)
-        : (uniqueDatesCount || 1) * 10
-      : 0;
+    // ✅ Use delivery charges passed from PaymentPage (no fallback - must come from Remote Config)
+    const deliveryChargesAmount =
+      isDelivery && deliveryCharges ? parseFloat(deliveryCharges) : 0;
 
     const total = subtotal + tax + deliveryChargesAmount;
 

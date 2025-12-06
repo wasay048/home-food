@@ -17,6 +17,7 @@ import { clearCart } from "../store/slices/cartSlice";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import { useGenericCart } from "../hooks/useGenericCart";
 import { useUserAccount } from "../hooks/useUserAccount";
+import useDeliveryFee from "../hooks/useDeliveryFee";
 import "./PaymentPage.css";
 
 // Phone number formatting function - formats as (XXX) XXX-XXXX
@@ -73,6 +74,7 @@ export default function PaymentPage() {
 
   const { checkUserExistsById } = useUserAccount();
   const { handleQuantityChange } = useGenericCart();
+  const { deliveryFee, loading: deliveryFeeLoading } = useDeliveryFee();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
@@ -369,12 +371,13 @@ export default function PaymentPage() {
       const uniqueDates = new Set(deliveryItemDates);
       uniqueDatesCount =
         uniqueDates.size || (deliveryItemDates.length > 0 ? 1 : 0);
-      deliveryCharges = uniqueDatesCount * 10; // $10 per unique date
+      deliveryCharges = uniqueDatesCount * deliveryFee; // Use dynamic delivery fee from Remote Config
 
       console.log(
         "🚚 [Delivery] Unique dates from delivery items:",
         Array.from(uniqueDates)
       );
+      console.log("🚚 [Delivery] Delivery fee per date:", deliveryFee);
       console.log("🚚 [Delivery] Delivery charges:", deliveryCharges);
     }
 
@@ -385,9 +388,10 @@ export default function PaymentPage() {
       salesTax: salesTax.toFixed(2),
       deliveryCharges: deliveryCharges.toFixed(2),
       uniqueDatesCount: uniqueDatesCount,
+      deliveryFeePerDate: deliveryFee,
       totalPayment: totalPayment.toFixed(2),
     };
-  }, [cartItems, fulfillmentAnalysis.hasDeliveryItems]);
+  }, [cartItems, fulfillmentAnalysis.hasDeliveryItems, deliveryFee]);
 
   // Handle file upload with react-dropzone
   const onDrop = async (acceptedFiles) => {
@@ -878,10 +882,15 @@ export default function PaymentPage() {
                 <div className="item-flex">
                   <span>
                     Delivery Charges
-                    {paymentCalculation.uniqueDatesCount > 1 && (
+                    {paymentCalculation.uniqueDatesCount > 0 && (
                       <span className="delivery-multiplier">
                         {" "}
-                        ({paymentCalculation.uniqueDatesCount}x)
+                        (${paymentCalculation.deliveryFeePerDate} ×{" "}
+                        {paymentCalculation.uniqueDatesCount}{" "}
+                        {paymentCalculation.uniqueDatesCount === 1
+                          ? "date"
+                          : "dates"}
+                        )
                       </span>
                     )}
                   </span>

@@ -650,9 +650,43 @@ export const createOrderObject = ({
 }) => {
   const now = new Date();
   const orderID = generateOrderID();
+
+  // ✅ Handle both old structure (grabAndGo, preOrders) and new structure (pickup/delivery with nested grabAndGo, preOrders)
+  let allGrabAndGo = [];
+  let allPreOrders = {};
+
+  if (groupedCartItems?.pickup || groupedCartItems?.delivery) {
+    // New structure: { pickup: { grabAndGo, preOrders }, delivery: { grabAndGo, preOrders } }
+    allGrabAndGo = [
+      ...(groupedCartItems.pickup?.grabAndGo || []),
+      ...(groupedCartItems.delivery?.grabAndGo || []),
+    ];
+
+    // Merge preOrders from both pickup and delivery
+    const pickupPreOrders = groupedCartItems.pickup?.preOrders || {};
+    const deliveryPreOrders = groupedCartItems.delivery?.preOrders || {};
+
+    // Combine preOrders by date
+    allPreOrders = { ...pickupPreOrders };
+    Object.keys(deliveryPreOrders).forEach((date) => {
+      if (allPreOrders[date]) {
+        allPreOrders[date] = [
+          ...allPreOrders[date],
+          ...deliveryPreOrders[date],
+        ];
+      } else {
+        allPreOrders[date] = deliveryPreOrders[date];
+      }
+    });
+  } else {
+    // Old structure: { grabAndGo, preOrders }
+    allGrabAndGo = groupedCartItems?.grabAndGo || [];
+    allPreOrders = groupedCartItems?.preOrders || {};
+  }
+
   // Determine order type based on cart items
-  const hasPreOrder = Object.keys(groupedCartItems.preOrders).length > 0;
-  const hasGrabAndGo = groupedCartItems.grabAndGo.length > 0;
+  const hasPreOrder = Object.keys(allPreOrders).length > 0;
+  const hasGrabAndGo = allGrabAndGo.length > 0;
 
   let orderType = "grabAndGo";
   if (hasPreOrder && !hasGrabAndGo) {
@@ -664,7 +698,7 @@ export const createOrderObject = ({
   let datePickedUp = now;
   if (hasPreOrder) {
     // Use the earliest preorder date
-    const preOrderDates = Object.keys(groupedCartItems.preOrders);
+    const preOrderDates = Object.keys(allPreOrders);
     if (preOrderDates.length > 0) {
       const earliestDate = preOrderDates.sort()[0];
       datePickedUp = new Date(earliestDate);
@@ -687,6 +721,8 @@ export const createOrderObject = ({
     orderStatus: "inProgress",
     orderType:
       item.pickupDetails.orderType === "PRE_ORDER" ? "preorder" : "grabAndGo",
+    // ✅ NEW: orderType1 based on fulfillmentType (1 = delivery, 2 = pickup)
+    orderType1: item.fulfillmentType || 2, // Default to pickup (2) if not specified
     rating: 0,
     specialInstructions: item.specialInstructions || "",
     preOrder: {
