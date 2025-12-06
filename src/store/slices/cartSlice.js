@@ -55,6 +55,8 @@ const cartSlice = createSlice({
           selectedDate: newItem.selectedDate || null,
           selectedTime: newItem.selectedTime || null,
           orderType: newItem.orderType || "GO_GRAB",
+          // fulfillmentType: 1 = delivery, 2 = pickup, undefined/null = pickup (default)
+          fulfillmentType: newItem.fulfillmentType || null,
           specialInstructions: newItem.specialInstructions || "",
           food: newItem.food || null,
           kitchen: newItem.kitchen || null,
@@ -104,6 +106,7 @@ const cartSlice = createSlice({
         orderType,
         selectedDate,
         selectedTime,
+        fulfillmentType,
       } = action.payload;
 
       console.log("📝 Updating cart item:", action.payload);
@@ -124,6 +127,9 @@ const cartSlice = createSlice({
         }
         if (selectedTime !== undefined) {
           state.items[itemIndex].selectedTime = selectedTime;
+        }
+        if (fulfillmentType !== undefined) {
+          state.items[itemIndex].fulfillmentType = fulfillmentType;
         }
         state.items[itemIndex].updatedAt = new Date().toISOString();
         console.log("Updated cart redux items:", state.items);

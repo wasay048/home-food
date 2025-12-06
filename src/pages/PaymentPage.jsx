@@ -83,17 +83,54 @@ export default function PaymentPage() {
     setDeliveryPhone(formattedNumber);
   };
 
-  console.log("location.state?.orderMethod", location.state?.orderMethod);
-  const orderMethod = location.state?.orderMethod || "pickup";
-  const isDelivery = orderMethod === "delivery";
-
   // Get cart items from Redux
   const cartItems = useSelector((state) => state.cart.items);
   const currentKitchen = useSelector((state) => state.food.currentKitchen);
-  const currentUser = useSelector((state) => state.auth.user);
-  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
-  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-  // const isAuthenticated = true;
+  // const currentUser = useSelector((state) => state.auth.user);
+  const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+  // const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const isAuthenticated = true;
+
+  // ✅ NEW: Determine fulfillment types from cart items
+  // fulfillmentType: 1 = delivery, 2 = pickup, null/undefined/missing = pickup (default)
+  const fulfillmentAnalysis = useMemo(() => {
+    const deliveryItems = cartItems.filter(
+      (item) => item.fulfillmentType === 1 || item.food?.orderType === 1
+    );
+    const pickupItems = cartItems.filter(
+      (item) => item.fulfillmentType !== 1 && item.food?.orderType !== 1
+    );
+
+    const hasDeliveryItems = deliveryItems.length > 0;
+    const hasPickupItems = pickupItems.length > 0;
+    const hasBothTypes = hasDeliveryItems && hasPickupItems;
+    const isAllPickup = !hasDeliveryItems && hasPickupItems;
+    const isAllDelivery = hasDeliveryItems && !hasPickupItems;
+
+    console.log("📦 [PaymentPage] Fulfillment analysis:", {
+      totalItems: cartItems.length,
+      deliveryItems: deliveryItems.length,
+      pickupItems: pickupItems.length,
+      hasDeliveryItems,
+      hasPickupItems,
+      hasBothTypes,
+      isAllPickup,
+      isAllDelivery,
+    });
+
+    return {
+      deliveryItems,
+      pickupItems,
+      hasDeliveryItems,
+      hasPickupItems,
+      hasBothTypes,
+      isAllPickup,
+      isAllDelivery,
+    };
+  }, [cartItems]);
+
+  // ✅ UPDATED: Determine if we need delivery address based on fulfillmentType
+  const needsDeliveryAddress = fulfillmentAnalysis.hasDeliveryItems;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -165,6 +202,9 @@ export default function PaymentPage() {
   const handleModalPickupUpdate = async () => {
     if (editingItem && modalSelectedDate && modalSelectedTime) {
       const isPreOrder = editingItem.orderType === "PRE_ORDER";
+      // Check if the editing item is a delivery item
+      const isDeliveryItem =
+        editingItem.fulfillmentType === 1 || editingItem.food?.orderType === 1;
 
       const pickupDetails = {
         date: modalSelectedDate,
@@ -177,60 +217,34 @@ export default function PaymentPage() {
 
       console.log("🔄 Updating pickup details for item:", editingItem);
       console.log("🔄 New pickup details:", pickupDetails);
-      console.log("🔄 isDelivery mode:", isDelivery);
+      console.log("🔄 isDeliveryItem:", isDeliveryItem);
 
       try {
-        // ✅ DELIVERY MODE: Update time for ALL cart items (keep their original dates)
-        if (isDelivery) {
-          console.log(
-            "🚚 [Delivery] Updating time for ALL cart items:",
-            modalSelectedTime
-          );
+        // ✅ PICKUP MODE: Update only the single item (existing behavior)
+        await handleQuantityChange({
+          food: editingItem.food,
+          kitchen: kitchenInfo,
+          newQuantity: editingItem.quantity,
+          selectedDate: modalSelectedDate,
+          selectedTime: modalSelectedTime,
+          specialInstructions: editingItem.specialInstructions || "",
+          incomingOrderType: isPreOrder ? "PRE_ORDER" : "GO_GRAB",
+          calledFrom: "default",
+          updateFlag: "date",
+        });
 
-          for (const item of cartItems) {
-            await handleQuantityChange({
-              food: item.food,
-              kitchen: kitchenInfo,
-              newQuantity: item.quantity,
-              selectedDate: item.selectedDate, // ✅ Keep original date
-              selectedTime: modalSelectedTime, // ✅ Update only time
-              specialInstructions: item.specialInstructions || "",
-              incomingOrderType:
-                item.orderType || item.pickupDetails?.orderType || "GO_GRAB",
-              calledFrom: "delivery-time-update",
-              updateFlag: "time", // ✅ Flag for time-only update
-            });
-          }
-
-          setDeliveryTime(modalSelectedTime);
-          showToast.success(
-            `Delivery time updated to ${modalSelectedTime} for all items`
-          );
-        } else {
-          // ✅ PICKUP MODE: Update only the single item (existing behavior)
-          await handleQuantityChange({
-            food: editingItem.food,
-            kitchen: kitchenInfo,
-            newQuantity: editingItem.quantity,
-            selectedDate: modalSelectedDate,
-            selectedTime: modalSelectedTime,
-            specialInstructions: editingItem.specialInstructions || "",
-            incomingOrderType: isPreOrder ? "PRE_ORDER" : "GO_GRAB",
-            calledFrom: "default",
-            updateFlag: "date",
-          });
-
-          showToast.success(
-            `Pickup time updated to ${pickupDetails.display} at ${pickupDetails.time}`
-          );
-        }
+        showToast.success(
+          `${isDeliveryItem ? "Delivery" : "Pickup"} time updated to ${
+            pickupDetails.display
+          } at ${pickupDetails.time}`
+        );
 
         // Close the modal
         handleDateTimePickerClose();
       } catch (error) {
         console.error("Error updating pickup details:", error);
         showToast.error(
-          isDelivery
+          isDeliveryItem
             ? "Failed to update delivery time"
             : "Failed to update pickup time"
         );
@@ -240,26 +254,41 @@ export default function PaymentPage() {
     }
   };
 
-  // Group cart items by pickup date and time
+  // Group cart items by pickup date and time AND by fulfillment type
   const groupedCartItems = useMemo(() => {
     const groups = {
-      grabAndGo: [],
-      preOrders: {},
+      // Pickup items (fulfillmentType !== 1)
+      pickup: {
+        grabAndGo: [],
+        preOrders: {},
+      },
+      // Delivery items (fulfillmentType === 1)
+      delivery: {
+        grabAndGo: [],
+        preOrders: {},
+      },
     };
     console.log("Grouping cart items:", cartItems);
+
     cartItems.forEach((item) => {
       const orderType =
         item.pickupDetails?.orderType ||
         item.orderType ||
         (item.isPreOrder ? "PRE_ORDER" : "GO_GRAB");
 
+      // Determine if this is a delivery item (fulfillmentType === 1 or food.orderType === 1)
+      const isDeliveryItem =
+        item.fulfillmentType === 1 || item.food?.orderType === 1;
+      const targetGroup = isDeliveryItem ? groups.delivery : groups.pickup;
+
       if (orderType === "GO_GRAB") {
-        groups.grabAndGo.push({
+        targetGroup.grabAndGo.push({
           ...item,
           displayPickupTime: item.pickupDetails?.display || "Pick up today",
           displayPickupClock:
             item.pickupDetails?.time ||
             dayjs().add(30, "minutes").format("h:mm A"),
+          isDeliveryItem,
         });
       } else if (
         orderType === "PRE_ORDER" ||
@@ -268,36 +297,46 @@ export default function PaymentPage() {
       ) {
         const dateKey = item.selectedDate || item.pickupDetails?.date;
         if (dateKey) {
-          if (!groups.preOrders[dateKey]) {
-            groups.preOrders[dateKey] = [];
+          if (!targetGroup.preOrders[dateKey]) {
+            targetGroup.preOrders[dateKey] = [];
           }
-          groups.preOrders[dateKey].push({
+          targetGroup.preOrders[dateKey].push({
             ...item,
             displayPickupTime:
               item.pickupDetails?.display ||
               `Pick up ${dayjs(dateKey).format("MMM D ddd")}`,
             displayPickupClock: item.pickupDetails?.time || "6:30 PM",
+            isDeliveryItem,
           });
         }
       } else {
-        groups.grabAndGo.push({
+        targetGroup.grabAndGo.push({
           ...item,
           displayPickupTime: item.pickupDetails?.display || "Pick up today",
           displayPickupClock:
             item.pickupDetails?.time ||
             dayjs().add(30, "minutes").format("h:mm A"),
+          isDeliveryItem,
         });
       }
     });
 
-    // Sort preOrder dates
-    const sortedPreOrders = {};
-    Object.keys(groups.preOrders)
+    // Sort preOrder dates for both pickup and delivery
+    const sortedPickupPreOrders = {};
+    Object.keys(groups.pickup.preOrders)
       .sort((a, b) => dayjs(a).diff(dayjs(b)))
       .forEach((date) => {
-        sortedPreOrders[date] = groups.preOrders[date];
+        sortedPickupPreOrders[date] = groups.pickup.preOrders[date];
       });
-    groups.preOrders = sortedPreOrders;
+    groups.pickup.preOrders = sortedPickupPreOrders;
+
+    const sortedDeliveryPreOrders = {};
+    Object.keys(groups.delivery.preOrders)
+      .sort((a, b) => dayjs(a).diff(dayjs(b)))
+      .forEach((date) => {
+        sortedDeliveryPreOrders[date] = groups.delivery.preOrders[date];
+      });
+    groups.delivery.preOrders = sortedDeliveryPreOrders;
 
     return groups;
   }, [cartItems]);
@@ -313,19 +352,29 @@ export default function PaymentPage() {
     const salesTaxRate = 0; // 0%
     const salesTax = subtotal * salesTaxRate;
 
-    // ✅ Calculate delivery charges based on unique dates
+    // ✅ Calculate delivery charges based on unique dates FROM DELIVERY ITEMS ONLY
     let deliveryCharges = 0;
     let uniqueDatesCount = 0;
 
-    if (isDelivery && cartItems.length > 0) {
-      // Get unique dates from cart items
-      const uniqueDates = new Set(
-        cartItems.map((item) => item.selectedDate).filter(Boolean)
-      );
-      uniqueDatesCount = uniqueDates.size || 1; // At least 1 if there are items
+    // Only calculate delivery charges if there are delivery items
+    if (fulfillmentAnalysis.hasDeliveryItems) {
+      // Get unique dates from DELIVERY items only (fulfillmentType === 1)
+      const deliveryItemDates = cartItems
+        .filter(
+          (item) => item.fulfillmentType === 1 || item.food?.orderType === 1
+        )
+        .map((item) => item.selectedDate)
+        .filter(Boolean);
+
+      const uniqueDates = new Set(deliveryItemDates);
+      uniqueDatesCount =
+        uniqueDates.size || (deliveryItemDates.length > 0 ? 1 : 0);
       deliveryCharges = uniqueDatesCount * 10; // $10 per unique date
 
-      console.log("🚚 [Delivery] Unique dates:", Array.from(uniqueDates));
+      console.log(
+        "🚚 [Delivery] Unique dates from delivery items:",
+        Array.from(uniqueDates)
+      );
       console.log("🚚 [Delivery] Delivery charges:", deliveryCharges);
     }
 
@@ -338,7 +387,7 @@ export default function PaymentPage() {
       uniqueDatesCount: uniqueDatesCount,
       totalPayment: totalPayment.toFixed(2),
     };
-  }, [cartItems, isDelivery]);
+  }, [cartItems, fulfillmentAnalysis.hasDeliveryItems]);
 
   // Handle file upload with react-dropzone
   const onDrop = async (acceptedFiles) => {
@@ -405,13 +454,18 @@ export default function PaymentPage() {
 
   const handleDeliveryTimeChange = useCallback(
     async (newTime) => {
-      if (!isDelivery) return;
+      if (!needsDeliveryAddress) return;
 
       setDeliveryTime(newTime);
       console.log("🚚 [Delivery] Updating time for all cart items:", newTime);
 
-      // Update each cart item's time only
+      // Update each delivery cart item's time only
       for (const item of cartItems) {
+        // Only update delivery items
+        const isDeliveryItem =
+          item.fulfillmentType === 1 || item.food?.orderType === 1;
+        if (!isDeliveryItem) continue;
+
         try {
           await handleQuantityChange({
             food: item.food,
@@ -435,7 +489,7 @@ export default function PaymentPage() {
 
       showToast.success(`Delivery time updated to ${newTime} for all items`);
     },
-    [isDelivery, cartItems, handleQuantityChange, kitchenInfo]
+    [needsDeliveryAddress, cartItems, handleQuantityChange, kitchenInfo]
   );
   // Add this validation function before handlePlaceOrder
   const validatePickupDates = () => {
@@ -507,20 +561,24 @@ export default function PaymentPage() {
         return;
       }
 
-      if (isDelivery && !deliveryAddress.trim()) {
+      // ✅ UPDATED: Check delivery validation based on fulfillmentType
+      if (needsDeliveryAddress && !deliveryAddress.trim()) {
         console.log("❌ Delivery address is required");
         setShowAddressValidationDialog(true);
         return;
       }
 
-      if (isDelivery && !deliveryPhone.trim()) {
+      if (needsDeliveryAddress && !deliveryPhone.trim()) {
         console.log("❌ Phone number is required for delivery");
         setShowAddressValidationDialog(true);
         return;
       }
 
       // Validate phone number has 10 digits
-      if (isDelivery && getRawPhoneNumber(deliveryPhone).length < 10) {
+      if (
+        needsDeliveryAddress &&
+        getRawPhoneNumber(deliveryPhone).length < 10
+      ) {
         console.log("❌ Phone number must be 10 digits");
         showToast.error("Please enter a valid 10-digit phone number");
         return;
@@ -564,10 +622,13 @@ export default function PaymentPage() {
         return;
       }
       setIsPlacingOrder(true);
-      console.log("placeOrder --orderMethod", orderMethod);
       console.log(
-        "placeOrder --isDelivery",
-        isDelivery ? deliveryAddress.trim() : null
+        "placeOrder --hasDeliveryItems",
+        fulfillmentAnalysis.hasDeliveryItems
+      );
+      console.log(
+        "placeOrder --deliveryAddress",
+        needsDeliveryAddress ? deliveryAddress.trim() : null
       );
       // Create order object
       const orderData = createOrderObject({
@@ -578,9 +639,10 @@ export default function PaymentPage() {
         paymentCalculation,
         groupedCartItems,
         paymentType,
-        deliveryAddress,
-        isDelivery,
-        deliveryPhone,
+        deliveryAddress: needsDeliveryAddress ? deliveryAddress : null,
+        isDelivery: needsDeliveryAddress,
+        deliveryPhone: needsDeliveryAddress ? deliveryPhone : null,
+        fulfillmentAnalysis, // Pass the fulfillment analysis for detailed order info
       });
 
       console.log("Order data to be placed:", orderData);
@@ -609,9 +671,12 @@ export default function PaymentPage() {
             totalAmount: paymentCalculation?.totalPayment,
             kitchenName: kitchenInfo?.name,
             pickupAddress: kitchenInfo?.address,
-            isDelivery: isDelivery,
-            deliveryAddress: isDelivery ? deliveryAddress : null,
-            deliveryPhone: isDelivery ? deliveryPhone : null,
+            isDelivery: needsDeliveryAddress,
+            hasDeliveryItems: fulfillmentAnalysis.hasDeliveryItems,
+            hasPickupItems: fulfillmentAnalysis.hasPickupItems,
+            hasBothTypes: fulfillmentAnalysis.hasBothTypes,
+            deliveryAddress: needsDeliveryAddress ? deliveryAddress : null,
+            deliveryPhone: needsDeliveryAddress ? deliveryPhone : null,
             deliveryCharges: paymentCalculation?.deliveryCharges,
             uniqueDatesCount: paymentCalculation?.uniqueDatesCount,
             orderedItems: cartItems.map((item) => {
@@ -621,12 +686,16 @@ export default function PaymentPage() {
                 orderType === "PRE_ORDER" ||
                 item.isPreOrder ||
                 (pickupDate && pickupDate !== dayjs().format("YYYY-MM-DD"));
+              // Determine if this item is for delivery
+              const isDeliveryItem =
+                item.fulfillmentType === 1 || item.food?.orderType === 1;
 
               console.log("🔍 [PaymentPage] Mapping cart item:", {
                 name: item.food?.name,
                 pickupDate,
                 orderType,
                 isPreOrderItem,
+                isDeliveryItem,
                 originalIsPreOrder: item.isPreOrder,
               });
 
@@ -645,6 +714,8 @@ export default function PaymentPage() {
                 isPreOrder: isPreOrderItem,
                 orderType: orderType,
                 isFromPreorder: item?.isFromPreorder || isPreOrderItem,
+                fulfillmentType: item?.fulfillmentType || null,
+                isDeliveryItem: isDeliveryItem,
               };
             }),
           },
@@ -679,7 +750,8 @@ export default function PaymentPage() {
       <div className="container">
         <div className="mobile-container">
           <div className="padding-20 order-page">
-            {isDelivery && (
+            {/* ✅ Show Delivery Address section if ANY delivery items exist */}
+            {needsDeliveryAddress && (
               <div className="delivery-address-section mb-20">
                 <h4 className="medium-title mb-12">Delivery Address</h4>
                 <textarea
@@ -722,11 +794,11 @@ export default function PaymentPage() {
                     }}
                   />
                 </div>
-                {/* <div className="hr mt-18 mb-18"></div> */}
               </div>
             )}
 
-            {!isDelivery && (
+            {/* ✅ Show Pickup Address if there are pickup items */}
+            {fulfillmentAnalysis.hasPickupItems && (
               <>
                 <h4 className="medium-title mb-12">Pickup Address</h4>
                 <p className="body-text-med mb-20">{kitchenInfo?.address}</p>
@@ -801,7 +873,8 @@ export default function PaymentPage() {
                 <span>Sales Tax (0%)</span>
                 <span>${paymentCalculation.salesTax}</span>
               </div>
-              {isDelivery && (
+              {/* ✅ Show delivery charges if there are delivery items */}
+              {fulfillmentAnalysis.hasDeliveryItems && (
                 <div className="item-flex">
                   <span>
                     Delivery Charges
@@ -822,26 +895,16 @@ export default function PaymentPage() {
               </div>
             </div>
 
-            {/* Order Items with Pickup Times */}
-            <div className="order-items-section mb-20">
-              <h3 className="order-items-title">
-                {isDelivery
-                  ? "Select Delivery Date & Time"
-                  : "Select Pickup Date & Time"}
-              </h3>
-
-              {/* Check if cart has items */}
-              {cartItems.length === 0 ? (
-                <div className="empty-cart-message">
-                  <p className="body-text-med">No items in cart</p>
-                </div>
-              ) : (
+            {/* ✅ PICKUP Items Card - Show if there are pickup items */}
+            {fulfillmentAnalysis.hasPickupItems && (
+              <div className="order-items-section mb-20">
+                <h3 className="order-items-title">Select Pickup Date & Time</h3>
                 <div className="pickup-items-list">
-                  {/* Go&Grab Items */}
-                  {groupedCartItems.grabAndGo.length > 0 &&
-                    groupedCartItems.grabAndGo.map((item, index) => (
+                  {/* Go&Grab Pickup Items */}
+                  {groupedCartItems.pickup.grabAndGo.length > 0 &&
+                    groupedCartItems.pickup.grabAndGo.map((item, index) => (
                       <div
-                        key={`grab-${item.foodId}-${index}`}
+                        key={`pickup-grab-${item.foodId}-${index}`}
                         className="pickup-item-row"
                       >
                         <div className="item-info">
@@ -884,13 +947,13 @@ export default function PaymentPage() {
                       </div>
                     ))}
 
-                  {/* Pre-Order Items */}
-                  {Object.keys(groupedCartItems.preOrders).length > 0 &&
-                    Object.entries(groupedCartItems.preOrders).map(
+                  {/* Pre-Order Pickup Items */}
+                  {Object.keys(groupedCartItems.pickup.preOrders).length > 0 &&
+                    Object.entries(groupedCartItems.pickup.preOrders).map(
                       ([date, items]) =>
                         items.map((item, index) => (
                           <div
-                            key={`preorder-${item.foodId}-${date}-${index}`}
+                            key={`pickup-preorder-${item.foodId}-${date}-${index}`}
                             className="pickup-item-row"
                           >
                             <div className="item-info">
@@ -936,8 +999,114 @@ export default function PaymentPage() {
                         ))
                     )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* ✅ DELIVERY Items Card - Show if there are delivery items */}
+            {fulfillmentAnalysis.hasDeliveryItems && (
+              <div className="order-items-section mb-20">
+                <h3 className="order-items-title">
+                  Select Delivery Date & Time
+                </h3>
+                <div className="pickup-items-list">
+                  {/* Go&Grab Delivery Items */}
+                  {groupedCartItems.delivery.grabAndGo.length > 0 &&
+                    groupedCartItems.delivery.grabAndGo.map((item, index) => (
+                      <div
+                        key={`delivery-grab-${item.foodId}-${index}`}
+                        className="pickup-item-row"
+                      >
+                        <div className="item-info">
+                          <div className="food-image">
+                            <img
+                              src={item.food?.imageUrl || item.food?.image}
+                              alt={item.food?.name}
+                              onError={(e) => {
+                                e.target.style.display = "none";
+                              }}
+                            />
+                          </div>
+                          <div className="food-details">
+                            <h5 className="food-name">
+                              {item.food?.name || "Unknown Item"}
+                            </h5>
+                            <div className="pickup-time">
+                              {dayjs(item.selectedDate).format(
+                                "dddd, MMMM D, YYYY"
+                              )}{" "}
+                              at 6:00 PM
+                            </div>
+                            <div className="item-quantity">
+                              Qty: {item.quantity} × $
+                              {item.food?.cost || item.food?.price || "0.00"}
+                            </div>
+                          </div>
+                        </div>
+                        {/* ✅ Edit icon disabled for delivery items */}
+                        <div
+                          className="edit-icon"
+                          role="button"
+                          tabIndex={0}
+                          style={{ opacity: 0.3, cursor: "not-allowed" }}
+                        >
+                          <img src={Edit} alt="Edit disabled" />
+                        </div>
+                      </div>
+                    ))}
+
+                  {/* Pre-Order Delivery Items */}
+                  {Object.keys(groupedCartItems.delivery.preOrders).length >
+                    0 &&
+                    Object.entries(groupedCartItems.delivery.preOrders).map(
+                      ([date, items]) =>
+                        items.map((item, index) => (
+                          <div
+                            key={`delivery-preorder-${item.foodId}-${date}-${index}`}
+                            className="pickup-item-row"
+                          >
+                            <div className="item-info">
+                              <div className="food-image">
+                                <img
+                                  src={item.food?.imageUrl || item.food?.image}
+                                  alt={item.food?.name}
+                                  onError={(e) => {
+                                    e.target.style.display = "none";
+                                  }}
+                                />
+                              </div>
+                              <div className="food-details">
+                                <h5 className="food-name">
+                                  {item.food?.name || "Unknown Item"}
+                                </h5>
+                                <div className="pickup-time">
+                                  {dayjs(item.selectedDate).format(
+                                    "dddd, MMMM D, YYYY"
+                                  )}{" "}
+                                  at 6:00 PM
+                                </div>
+                                <div className="item-quantity">
+                                  Qty: {item.quantity} × $
+                                  {item.food?.cost ||
+                                    item.food?.price ||
+                                    "0.00"}
+                                </div>
+                              </div>
+                            </div>
+                            {/* ✅ Edit icon disabled for delivery items */}
+                            <div
+                              className="edit-icon"
+                              role="button"
+                              tabIndex={0}
+                              style={{ opacity: 0.3, cursor: "not-allowed" }}
+                            >
+                              <img src={Edit} alt="Edit disabled" />
+                            </div>
+                          </div>
+                        ))
+                    )}
+                </div>
+              </div>
+            )}
             <div className="mb-4">
               <div>
                 <input
@@ -1084,8 +1253,14 @@ export default function PaymentPage() {
                   className="payment-modal-picker"
                   dateLabel="Pickup / Delivery Date"
                   timeLabel="Pickup / Delivery Time"
-                  disableDateSelection={isDelivery}
-                  isDeliveryMode={isDelivery}
+                  disableDateSelection={
+                    editingItem?.fulfillmentType === 1 ||
+                    editingItem?.food?.orderType === 1
+                  }
+                  isDeliveryMode={
+                    editingItem?.fulfillmentType === 1 ||
+                    editingItem?.food?.orderType === 1
+                  }
                 />
               </div>
             </div>

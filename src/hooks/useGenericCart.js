@@ -433,6 +433,7 @@ export const useGenericCart = () => {
       incomingOrderType,
       calledFrom = "default",
       updateFlag = "combo",
+      fulfillmentType = null, // 1 = delivery, 2 = pickup, null = pickup (default)
     }) => {
       try {
         // ✅ NEW: Use calculateAvailability to determine proper order type
@@ -536,6 +537,15 @@ export const useGenericCart = () => {
           dispatch(updateCartItem(updateData));
         } else {
           // Add new item
+          // Determine fulfillmentType: 1 = delivery, 2 = pickup, null/undefined = pickup (default)
+          // This comes from food.orderType in Firebase (1 = delivery, 2 = pickup)
+          const itemFulfillmentType =
+            fulfillmentType || food?.orderType || null;
+
+          // For delivery items (fulfillmentType === 1), default time is 6:00 PM
+          const finalSelectedTime =
+            itemFulfillmentType === 1 ? "6:00 PM" : selectedTime;
+
           const cartItem = {
             foodId: food.id,
             food: {
@@ -544,6 +554,7 @@ export const useGenericCart = () => {
               cost: food.cost,
               imageUrl: food.imageUrl,
               description: food.description,
+              orderType: food?.orderType, // Preserve the food's orderType for fulfillment
             },
             kitchen: {
               id: kitchen.id,
@@ -552,14 +563,16 @@ export const useGenericCart = () => {
             kitchenId: kitchen.id,
             quantity: newQuantity,
             selectedDate: selectedDate, // Store the selected date for pickup preference
-            selectedTime: selectedTime,
+            selectedTime: finalSelectedTime,
             specialInstructions,
             isPreOrder: orderType === "PRE_ORDER",
             orderType,
             updateFlag: updateFlag,
+            fulfillmentType: itemFulfillmentType,
           };
           console.log("Adding new cart item:", cartItem);
           console.log("orderType", orderType);
+          console.log("fulfillmentType", itemFulfillmentType);
           dispatch(addToCart(cartItem));
         }
       } catch (error) {

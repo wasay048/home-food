@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import dayjs from "dayjs";
-import { clearCart, updateCartItem } from "../store/slices/cartSlice";
+import { clearCart } from "../store/slices/cartSlice";
 import { showToast } from "../utils/toast";
 import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
 
@@ -252,37 +252,6 @@ export default function OrderPage() {
       navigate("/foods");
     }
   };
-
-  const handleDeliveryCheckout = useCallback(() => {
-    const defaultDeliveryTime = "3:00 PM"; // First delivery slot
-
-    console.log(
-      "🚚 [Delivery Checkout] Setting default delivery time for all items:",
-      defaultDeliveryTime
-    );
-
-    // Update each cart item's time to 3:00 PM
-    cartItems.forEach((item) => {
-      dispatch(
-        updateCartItem({
-          cartItemId: item.id,
-          quantity: item.quantity,
-          selectedDate: item.selectedDate, // Keep existing date
-          selectedTime: defaultDeliveryTime, // Set to 3:00 PM
-          specialInstructions: item.specialInstructions || "",
-          orderType:
-            item.orderType || item.pickupDetails?.orderType || "GO_GRAB",
-        })
-      );
-
-      console.log(
-        `🚚 Updated item "${item.food?.name}" time to ${defaultDeliveryTime}`
-      );
-    });
-
-    // Navigate to checkout with delivery method
-    navigate("/checkout", { state: { orderMethod: "delivery" } });
-  }, [cartItems, dispatch, navigate]);
 
   const totalItemsCount = cartItems?.length || 0;
 
@@ -577,25 +546,12 @@ export default function OrderPage() {
                   marginTop: "16px",
                 }}
               >
-                {/* Pickup Checkout Button */}
+                {/* Single Checkout Button */}
                 <button
                   className="action-button"
-                  onClick={() =>
-                    navigate("/checkout", { state: { orderMethod: "pickup" } })
-                  }
+                  onClick={() => navigate("/checkout")}
                 >
-                  Check Out - I'll pick up
-                </button>
-
-                {/* Delivery Checkout Button */}
-                <button
-                  className="action-button"
-                  onClick={handleDeliveryCheckout}
-                  style={{
-                    background: "#3fc045",
-                  }}
-                >
-                  Check Out - Deliver to me!
+                  Check Out
                 </button>
 
                 {/* What Else is Available Button */}
