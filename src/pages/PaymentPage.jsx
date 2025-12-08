@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import dayjs from "dayjs";
 import Edit from "../assets/images/edit.svg";
+import scooterRider from "../assets/scooter-rider.png";
 import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import { Copy, X, Image as ImageIcon } from "lucide-react";
 import { uploadImageToStorage } from "../services/storageService";
@@ -1014,9 +1015,7 @@ export default function PaymentPage() {
             {/* ✅ DELIVERY Items Card - Show if there are delivery items */}
             {fulfillmentAnalysis.hasDeliveryItems && (
               <div className="order-items-section mb-20">
-                <h3 className="order-items-title">
-                  Select Delivery Date & Time
-                </h3>
+                <h3 className="order-items-title">Delivery Date & Time</h3>
                 <div className="pickup-items-list">
                   {/* Go&Grab Delivery Items */}
                   {groupedCartItems.delivery.grabAndGo.length > 0 &&
@@ -1045,9 +1044,27 @@ export default function PaymentPage() {
                               )}{" "}
                               at 6:00 PM
                             </div>
-                            <div className="item-quantity">
-                              Qty: {item.quantity} × $
-                              {item.food?.cost || item.food?.price || "0.00"}
+                            <div
+                              className="item-quantity"
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                marginLeft: "5px",
+                              }}
+                            >
+                              <span>
+                                Qty: {item.quantity} × $
+                                {item.food?.cost || item.food?.price || "0.00"}
+                              </span>
+                              <img
+                                src={scooterRider}
+                                alt="Delivery"
+                                style={{
+                                  marginLeft: "8px",
+                                  width: "15px",
+                                  height: "15px",
+                                }}
+                              />
                             </div>
                           </div>
                         </div>
@@ -1093,11 +1110,28 @@ export default function PaymentPage() {
                                   )}{" "}
                                   at 6:00 PM
                                 </div>
-                                <div className="item-quantity">
-                                  Qty: {item.quantity} × $
-                                  {item.food?.cost ||
-                                    item.food?.price ||
-                                    "0.00"}
+                                <div
+                                  className="item-quantity"
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <span>
+                                    Qty: {item.quantity} × $
+                                    {item.food?.cost ||
+                                      item.food?.price ||
+                                      "0.00"}
+                                  </span>
+                                  <img
+                                    src={scooterRider}
+                                    alt="Delivery"
+                                    style={{
+                                      width: "15px",
+                                      height: "15px",
+                                      marginLeft: "5px",
+                                    }}
+                                  />
                                 </div>
                               </div>
                             </div>

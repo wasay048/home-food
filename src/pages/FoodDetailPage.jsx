@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 // import { showToast } from "../utils/toast";
 import ProductImage from "../assets/images/product.png";
+import scooterRider from "../assets/scooter-rider.png";
 import User1 from "../assets/images/user1.svg";
 import { useFoodDetailRedux } from "../hooks/useFoodDetailRedux";
 import MobileLoader from "../components/Loader/MobileLoader";
@@ -1114,30 +1115,47 @@ export default function FoodDetailPage() {
                 style={{
                   display: "flex",
                   alignItems: "center",
+                  justifyContent: "space-between",
                 }}
               >
                 <div>
                   <span className="currency">$</span>
                   {food?.cost && parseFloat(food?.cost).toFixed(2)}
                 </div>
-                {getCurrentAvailability < 4 && (
-                  <div className="availability-status">
-                    {(() => {
-                      if (getCurrentAvailability === 0) {
-                        return (
-                          <span className="status sold-out">Sold Out</span>
-                        );
-                      } else if (getCurrentAvailability <= 3) {
-                        return (
-                          <span className="status low-stock">
-                            {getCurrentAvailability} left
-                          </span>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </div>
-                )}
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  {food?.orderType === 1 && (
+                    <img
+                      src={scooterRider}
+                      alt="Delivery"
+                      style={{
+                        marginLeft: "5px",
+                        marginTop: "-2px",
+                        width: "15px",
+                        height: "15px",
+                      }}
+                    />
+                  )}
+                  {getCurrentAvailability < 4 && (
+                    <div className="availability-status">
+                      {(() => {
+                        if (getCurrentAvailability === 0) {
+                          return (
+                            <span className="status sold-out">Sold Out</span>
+                          );
+                        } else if (getCurrentAvailability <= 3) {
+                          return (
+                            <span className="status low-stock">
+                              {getCurrentAvailability} left
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <QuantitySelector

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
 import qrCode from "../assets/images/home-food-qr.svg";
+import scooterRider from "../assets/scooter-rider.png";
 import { useGenericCart } from "../hooks/useGenericCart";
 // import Edit from "../assets/images/edit.svg";
 import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
@@ -362,7 +363,26 @@ export default function ListingPage() {
                             {food.description ||
                               "This dish features tender, juicy flavors"}
                           </div>
-                          <div className="price">$ {food.cost}</div>
+                          <div
+                            className="price"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            <span>$ {food.cost}</span>
+                            {food.orderType === 1 && (
+                              <img
+                                src={scooterRider}
+                                alt="Delivery"
+                                style={{
+                                  marginLeft: "5px",
+                                  width: "15px",
+                                  height: "15px",
+                                }}
+                              />
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -471,7 +491,26 @@ export default function ListingPage() {
                               {food.description ||
                                 "This dish features tender, juicy flavors"}
                             </div>
-                            <div className="price">$ {food.cost}</div>
+                            <div
+                              className="price"
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                              }}
+                            >
+                              <span>$ {food.cost}</span>
+                              {food.orderType === 1 && (
+                                <img
+                                  src={scooterRider}
+                                  alt="Delivery"
+                                  style={{
+                                    marginLeft: "5px",
+                                    width: "15px",
+                                    height: "15px",
+                                  }}
+                                />
+                              )}
+                            </div>
                           </div>
                         </div>
 

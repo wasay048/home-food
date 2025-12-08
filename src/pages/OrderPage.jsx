@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import { clearCart } from "../store/slices/cartSlice";
 import { showToast } from "../utils/toast";
 import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
+import scooterRider from "../assets/scooter-rider.png";
 
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
 import { useGenericCart } from "../hooks/useGenericCart";
@@ -358,8 +359,26 @@ export default function OrderPage() {
                                 {item.food?.description ||
                                   "This dish features tender, juicy flavors"}
                               </div>
-                              <div className="price">
-                                $ {item.food?.cost || "0.00"}
+                              <div
+                                className="price"
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <span>$ {item.food?.cost || "0.00"}</span>
+                                {(item.fulfillmentType === 1 ||
+                                  item.food?.orderType === 1) && (
+                                  <img
+                                    src={scooterRider}
+                                    alt="Delivery"
+                                    style={{
+                                      marginLeft: "5px",
+                                      width: "15px",
+                                      height: "15px",
+                                    }}
+                                  />
+                                )}
                               </div>
                             </div>
                           </div>
@@ -442,8 +461,26 @@ export default function OrderPage() {
                                   {item.food?.description ||
                                     "This dish features tender, juicy flavors"}
                                 </div>
-                                <div className="price">
-                                  $ {item.food?.cost || "0.00"}
+                                <div
+                                  className="price"
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <span>$ {item.food?.cost || "0.00"}</span>
+                                  {(item.fulfillmentType === 1 ||
+                                    item.food?.orderType === 1) && (
+                                    <img
+                                      src={scooterRider}
+                                      alt="Delivery"
+                                      style={{
+                                        marginLeft: "5px",
+                                        width: "15px",
+                                        height: "15px",
+                                      }}
+                                    />
+                                  )}
                                 </div>
                               </div>
                             </div>
