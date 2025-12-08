@@ -1,23 +1,37 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { fetchRemoteConfig, getDeliveryFees } from "../services/firebase";
 
 /**
  * Custom hook to fetch delivery fee from Firebase Remote Config
- * @returns {Object} { deliveryFee, loading, error }
+ * @returns {Object} { deliveryFee, loading, error, refetch }
  */
 const useDeliveryFee = () => {
   const [deliveryFee, setDeliveryFee] = useState(null); // No default - must come from Remote Config
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchDeliveryFee = async () => {
+  // Detect WeChat browser
+  const isWeChat =
+    typeof navigator !== "undefined" &&
+    /MicroMessenger/i.test(navigator.userAgent);
+
+  const fetchDeliveryFee = useCallback(
+    async (forceRefresh = false) => {
       try {
         setLoading(true);
         setError(null);
 
+        // For WeChat browser, always force refresh to avoid caching issues
+        const shouldForceRefresh = forceRefresh || isWeChat;
+
+        console.log("🚚 [useDeliveryFee] Fetching delivery fee...", {
+          isWeChat,
+          forceRefresh: shouldForceRefresh,
+          timestamp: new Date().toISOString(),
+        });
+
         // Fetch and activate remote config
-        await fetchRemoteConfig();
+        await fetchRemoteConfig(shouldForceRefresh);
 
         // Get the delivery fees value
         const fees = getDeliveryFees();
@@ -54,12 +68,20 @@ const useDeliveryFee = () => {
       } finally {
         setLoading(false);
       }
-    };
+    },
+    [isWeChat]
+  );
 
+  useEffect(() => {
     fetchDeliveryFee();
-  }, []);
+  }, [fetchDeliveryFee]);
 
-  return { deliveryFee, loading, error };
+  // Expose refetch function for manual refresh
+  const refetch = useCallback(() => {
+    return fetchDeliveryFee(true);
+  }, [fetchDeliveryFee]);
+
+  return { deliveryFee, loading, error, refetch };
 };
 
 export default useDeliveryFee;

@@ -35,8 +35,27 @@ if (!firebaseDisabled) {
 
   // Initialize Remote Config
   remoteConfig = getRemoteConfig(firebaseApp);
-  // Set minimum fetch interval (in production, use longer intervals)
-  remoteConfig.settings.minimumFetchIntervalMillis = 3600000; // 1 hour
+
+  // Detect WeChat browser for shorter cache interval
+  const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+  const isDevelopment =
+    import.meta.env.DEV || import.meta.env.MODE === "development";
+
+  // Use shorter fetch interval for WeChat and development (1 minute), longer for production (1 hour)
+  // WeChat in-app browser has aggressive caching, so we need to fetch more frequently
+  const fetchInterval = isWeChat || isDevelopment ? 60000 : 3600000; // 1 min for WeChat/dev, 1 hour for production
+
+  remoteConfig.settings.minimumFetchIntervalMillis = fetchInterval;
+
+  console.log(
+    "🔧 [RemoteConfig] Initialized with fetch interval:",
+    fetchInterval,
+    "ms",
+    {
+      isWeChat,
+      isDevelopment,
+    }
+  );
 
   if (config.measurementId) {
     analyticsPromise = analyticsIsSupported().then((ok) => {
@@ -54,7 +73,8 @@ if (!firebaseDisabled) {
 }
 
 // Helper function to fetch and get remote config values
-export const fetchRemoteConfig = async () => {
+// forceRefresh: if true, bypasses cache by temporarily setting fetch interval to 0
+export const fetchRemoteConfig = async (forceRefresh = false) => {
   if (firebaseDisabled || !remoteConfig) {
     console.log(
       "🔧 [RemoteConfig] Firebase disabled, no remote config available"
@@ -63,8 +83,24 @@ export const fetchRemoteConfig = async () => {
   }
 
   try {
-    await fetchAndActivate(remoteConfig);
-    console.log("🔧 [RemoteConfig] Fetched and activated successfully");
+    // For force refresh, temporarily set fetch interval to 0
+    if (forceRefresh) {
+      const originalInterval = remoteConfig.settings.minimumFetchIntervalMillis;
+      remoteConfig.settings.minimumFetchIntervalMillis = 0;
+      console.log("🔧 [RemoteConfig] Force refresh enabled, bypassing cache");
+
+      await fetchAndActivate(remoteConfig);
+
+      // Restore original interval
+      remoteConfig.settings.minimumFetchIntervalMillis = originalInterval;
+    } else {
+      await fetchAndActivate(remoteConfig);
+    }
+
+    console.log(
+      "🔧 [RemoteConfig] Fetched and activated successfully at:",
+      new Date().toISOString()
+    );
     return true;
   } catch (error) {
     console.error("🔧 [RemoteConfig] Error fetching:", error);
