@@ -721,8 +721,7 @@ export const createOrderObject = ({
     orderStatus: "inProgress",
     orderType:
       item.pickupDetails.orderType === "PRE_ORDER" ? "preorder" : "grabAndGo",
-    // ✅ NEW: orderType1 based on fulfillmentType (1 = delivery, 2 = pickup)
-    orderType1: item.fulfillmentType || 2, // Default to pickup (2) if not specified
+    orderType1: item.fulfillmentType || 2,
     rating: 0,
     specialInstructions: item.specialInstructions || "",
     preOrder: {
