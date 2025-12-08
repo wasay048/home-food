@@ -88,10 +88,10 @@ export default function PaymentPage() {
   // Get cart items from Redux
   const cartItems = useSelector((state) => state.cart.items);
   const currentKitchen = useSelector((state) => state.food.currentKitchen);
-  // const currentUser = useSelector((state) => state.auth.user);
-  const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
-  // const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-  const isAuthenticated = true;
+  const currentUser = useSelector((state) => state.auth.user);
+  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  // const isAuthenticated = true;
 
   // ✅ NEW: Determine fulfillment types from cart items
   // fulfillmentType: 1 = delivery, 2 = pickup, null/undefined/missing = pickup (default)
