@@ -414,8 +414,17 @@ export default function ListingPage() {
                             }}
                             disabled={!food || !kitchen}
                             className="listing-page-picker"
-                            dateLabel=""
-                            timeLabel=""
+                            dateLabel={
+                              food.orderType === 1
+                                ? "Delivery Date"
+                                : "Pickup Date"
+                            }
+                            timeLabel={
+                              food.orderType === 1
+                                ? "Deliver Time"
+                                : "Pickup Time"
+                            }
+                            isDeliveryMode={food.orderType === 1}
                           />
                         </div>
                       </div>
@@ -545,8 +554,17 @@ export default function ListingPage() {
                               }}
                               disabled={!food || !kitchen}
                               className="listing-page-picker"
-                              dateLabel=""
-                              timeLabel=""
+                              dateLabel={
+                                food.orderType === 1
+                                  ? "Delivery Date"
+                                  : "Pickup Date"
+                              }
+                              timeLabel={
+                                food.orderType === 1
+                                  ? "Deliver Time"
+                                  : "Pickup Time"
+                              }
+                              isDeliveryMode={food.orderType === 1}
                             />
                           </div>
                         </div>

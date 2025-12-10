@@ -1215,54 +1215,73 @@ const DateTimePicker = ({
       <div className="picker-field" {...timePickerProps}>
         <label className="picker-label">{timeLabel}</label>
 
-        {/* ✅ UNIVERSAL: Custom styled select wrapper for ALL devices */}
-        <div className="time-select-wrapper">
-          <select
-            className="picker-select time-select"
-            value={internalTime || ""}
-            onChange={(e) => handleTimeChange(e.target.value)}
-            disabled={disabled || availableTimeSlots.length === 0}
-          >
-            <option value="" disabled>
-              Select time
-            </option>
-            {availableTimeSlots.map((timeOption) => (
-              <option
-                key={timeOption.value}
-                value={timeOption.value}
-                disabled={!timeOption.isAvailable}
-                data-recommended={timeOption.isRecommended || false}
-              >
-                {timeOption.display}
-              </option>
-            ))}
-          </select>
-
-          {/* ✅ UNIVERSAL: Custom display layer for ALL devices */}
-          <div className="time-select-display">
-            <span className="time-select-text">
-              {internalTime
-                ? availableTimeSlots.find((slot) => slot.value === internalTime)
-                    ?.display || internalTime
-                : "Select time"}
-            </span>
-            <svg
-              className="picker-arrow"
-              width="12"
-              height="8"
-              viewBox="0 0 12 8"
-              fill="none"
+        {/* ✅ For delivery mode: Show fixed "Before 6pm" text */}
+        {isDeliveryMode ? (
+          <div className="time-select-wrapper" style={{ minHeight: "auto" }}>
+            <div
+              className="time-select-display delivery-time-fixed"
+              style={{
+                cursor: "default",
+                padding: "8px 12px",
+                minHeight: "unset",
+                height: "auto",
+                fontSize: "14px",
+              }}
             >
-              <path
-                d="M1 1L6 6L11 1"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+              <span className="time-select-text">Before 6 PM</span>
+            </div>
           </div>
-        </div>
+        ) : (
+          /* ✅ UNIVERSAL: Custom styled select wrapper for ALL devices */
+          <div className="time-select-wrapper">
+            <select
+              className="picker-select time-select"
+              value={internalTime || ""}
+              onChange={(e) => handleTimeChange(e.target.value)}
+              disabled={disabled || availableTimeSlots.length === 0}
+            >
+              <option value="" disabled>
+                Select time
+              </option>
+              {availableTimeSlots.map((timeOption) => (
+                <option
+                  key={timeOption.value}
+                  value={timeOption.value}
+                  disabled={!timeOption.isAvailable}
+                  data-recommended={timeOption.isRecommended || false}
+                >
+                  {timeOption.display}
+                </option>
+              ))}
+            </select>
+
+            {/* ✅ UNIVERSAL: Custom display layer for ALL devices */}
+            <div className="time-select-display">
+              <span className="time-select-text">
+                {internalTime
+                  ? availableTimeSlots.find(
+                      (slot) => slot.value === internalTime
+                    )?.display || internalTime
+                  : "Select time"}
+              </span>
+              <svg
+                className="picker-arrow"
+                width="12"
+                height="8"
+                viewBox="0 0 12 8"
+                fill="none"
+              >
+                <path
+                  d="M1 1L6 6L11 1"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Custom Mobile Date Picker */}

@@ -1242,6 +1242,13 @@ export default function FoodDetailPage() {
                 }}
                 disabled={!food || !kitchen}
                 className="food-detail-picker"
+                dateLabel={
+                  food?.orderType === 1 ? "Delivery Date" : "Pickup Date"
+                }
+                timeLabel={
+                  food?.orderType === 1 ? "Deliver Time" : "Pickup Time"
+                }
+                isDeliveryMode={food?.orderType === 1}
               />
             </div>
           </div>

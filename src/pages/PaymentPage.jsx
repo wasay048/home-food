@@ -908,7 +908,7 @@ export default function PaymentPage() {
             {/* ✅ PICKUP Items Card - Show if there are pickup items */}
             {fulfillmentAnalysis.hasPickupItems && (
               <div className="order-items-section mb-20">
-                <h3 className="order-items-title">Select Pickup Date & Time</h3>
+                <h3 className="order-items-title">Pickup Date & Time</h3>
                 <div className="pickup-items-list">
                   {/* Go&Grab Pickup Items */}
                   {groupedCartItems.pickup.grabAndGo.length > 0 &&
@@ -1015,7 +1015,7 @@ export default function PaymentPage() {
             {/* ✅ DELIVERY Items Card - Show if there are delivery items */}
             {fulfillmentAnalysis.hasDeliveryItems && (
               <div className="order-items-section mb-20">
-                <h3 className="order-items-title">Delivery Date & Time</h3>
+                <h3 className="order-items-title">Delivery Date</h3>
                 <div className="pickup-items-list">
                   {/* Go&Grab Delivery Items */}
                   {groupedCartItems.delivery.grabAndGo.length > 0 &&
@@ -1042,7 +1042,7 @@ export default function PaymentPage() {
                               {dayjs(item.selectedDate).format(
                                 "dddd, MMMM D, YYYY"
                               )}{" "}
-                              at 6:00 PM
+                              - Before 6 PM
                             </div>
                             <div
                               className="item-quantity"
@@ -1108,7 +1108,7 @@ export default function PaymentPage() {
                                   {dayjs(item.selectedDate).format(
                                     "dddd, MMMM D, YYYY"
                                   )}{" "}
-                                  at 6:00 PM
+                                  - Before 6 PM
                                 </div>
                                 <div
                                   className="item-quantity"
