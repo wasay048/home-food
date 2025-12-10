@@ -1217,16 +1217,25 @@ const DateTimePicker = ({
 
         {/* ✅ For delivery mode: Show fixed "Before 6pm" text */}
         {isDeliveryMode ? (
-          <div className="time-select-wrapper" style={{ minHeight: "auto" }}>
+          <div
+            className="time-select-wrapper"
+            style={
+              className.includes("listing-page") ? { minHeight: "auto" } : {}
+            }
+          >
             <div
               className="time-select-display delivery-time-fixed"
-              style={{
-                cursor: "default",
-                padding: "8px 12px",
-                minHeight: "unset",
-                height: "auto",
-                fontSize: "14px",
-              }}
+              style={
+                className.includes("listing-page")
+                  ? {
+                      cursor: "default",
+                      padding: "8px 12px",
+                      minHeight: "unset",
+                      height: "auto",
+                      fontSize: "14px",
+                    }
+                  : { cursor: "default" }
+              }
             >
               <span className="time-select-text">Before 6 PM</span>
             </div>
