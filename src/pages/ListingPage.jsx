@@ -383,6 +383,14 @@ export default function ListingPage() {
                               />
                             )}
                           </div>
+                          {(() => {
+                            const cartItem = getCartItem(food.id);
+                            return cartItem?.specialInstructions ? (
+                              <div className="text" style={{ marginTop: "4px", fontStyle: "italic" }}>
+                                Note: {cartItem.specialInstructions}
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
                       </div>
 
@@ -520,6 +528,18 @@ export default function ListingPage() {
                                 />
                               )}
                             </div>
+                            {(() => {
+                              const cartItem = cartItems.find(
+                                (item) =>
+                                  item.foodId === food.id &&
+                                  item.selectedDate === dateInfo.dateString
+                              );
+                              return cartItem?.specialInstructions ? (
+                                <div className="text" style={{ marginTop: "4px", fontStyle: "italic" }}>
+                                  Note: {cartItem.specialInstructions}
+                                </div>
+                              ) : null;
+                            })()}
                           </div>
                         </div>
 

@@ -490,17 +490,13 @@ export const useGenericCart = () => {
             matchesDate = false;
           }
 
-          const matchesInstructions =
-            (item.specialInstructions || "") === (specialInstructions || "");
-
           // ✅ NEW: Add missing matchesOrderType variable
           const matchesOrderType = isGoGrab ? itemIsGoGrab : !itemIsGoGrab;
 
           return (
             matchesFood &&
             matchesOrderType &&
-            matchesDate &&
-            matchesInstructions
+            matchesDate
           );
         });
 
