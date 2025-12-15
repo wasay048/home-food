@@ -119,7 +119,7 @@ const cartSlice = createSlice({
         if (quantity !== undefined) {
           state.items[itemIndex].quantity = quantity;
         }
-        if (specialInstructions !== undefined) {
+        if (specialInstructions && specialInstructions !== undefined) {
           state.items[itemIndex].specialInstructions = specialInstructions;
         }
         if (selectedDate !== undefined) {

@@ -8,10 +8,6 @@ import { useFoodDetailRedux } from "../hooks/useFoodDetailRedux";
 import MobileLoader from "../components/Loader/MobileLoader";
 import { LazyImage } from "../components/LazyImage/LazyImage";
 import StarRating from "../components/StarRating/StarRating";
-import {
-  debugReviewsQuery,
-  testFirestoreConnection,
-} from "../services/foodService";
 import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
 // import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
@@ -789,10 +785,11 @@ export default function FoodDetailPage() {
       !document.referrer || !document.referrer.includes(window.location.origin);
 
     if (isDirectLanding) {
-      console.log("🛒 [Direct Landing] Clearing cart");
+      console.log("🛒 [Direct Landing] Clearing cart and resetting special instructions");
       dispatch(clearCart());
       setPickupDate(null);
       setPickupTime(null);
+      setSpecialInstructions(""); // Reset special instructions on direct landing
     }
   }, [dispatch]);
 
@@ -1272,7 +1269,7 @@ export default function FoodDetailPage() {
                 padding: "12px",
                 border: "1px solid #e0e0e0",
                 borderRadius: "8px",
-                fontSize: "14px",
+                fontSize: "16px",
                 fontFamily: "inherit",
                 resize: "vertical",
                 marginBottom: "10px",
@@ -1289,6 +1286,23 @@ export default function FoodDetailPage() {
                     alert(
                       "♡ this food to the chef that we want it! When it is added to Go&Grab or Pre-Order, you will be notified."
                     );
+                    return;
+                  }
+                  // If cart quantity is 0, add 1 item to cart first
+                  if (food && kitchen) {
+                    console.log("detailll-page - selectedQuantity", selectedQuantity);
+                    console.log("detailll-page - cartQuantity", cartQuantity);
+                    console.log("detailll-page - special instructions", specialInstructions);
+                    handleCartQuantityChange({
+                      food,
+                      kitchen,
+                      newQuantity: cartQuantity || 1,
+                      selectedDate: pickupDate || dayjs().format("YYYY-MM-DD"),
+                      selectedTime: pickupTime,
+                      specialInstructions,
+                      incomingOrderType: orderType,
+                      calledFrom: "FoodDetailPage Add to Cart button",
+                    });
                   }
                   localStorage.setItem("skipListing", "true");
                   navigate("/order");
