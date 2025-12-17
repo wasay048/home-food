@@ -387,7 +387,7 @@ export default function ListingPage() {
                             const cartItem = getCartItem(food.id);
                             return cartItem?.specialInstructions ? (
                               <div className="text" style={{ marginTop: "4px", fontStyle: "italic" }}>
-                                Note: {cartItem.specialInstructions}
+                                Special Instruction: {cartItem.specialInstructions}
                               </div>
                             ) : null;
                           })()}
@@ -536,7 +536,7 @@ export default function ListingPage() {
                               );
                               return cartItem?.specialInstructions ? (
                                 <div className="text" style={{ marginTop: "4px", fontStyle: "italic" }}>
-                                  Note: {cartItem.specialInstructions}
+                                  Special Instruction: {cartItem.specialInstructions}
                                 </div>
                               ) : null;
                             })()}

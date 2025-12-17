@@ -572,7 +572,7 @@ export default function FoodDetailPage() {
         setSpecialInstructions(existingCartItem.specialInstructions);
       }
     }
-  }, [existingCartItem, pickupDate, pickupTime, specialInstructions]);
+  }, [existingCartItem, pickupDate, pickupTime]);
 
   // Date/Time picker handlers
   // const handleDateChange = useCallback((newDate) => {

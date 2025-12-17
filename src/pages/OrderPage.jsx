@@ -382,7 +382,7 @@ export default function OrderPage() {
                               </div>
                               {item.specialInstructions && (
                                 <div className="text" style={{ marginTop: "4px", fontStyle: "italic" }}>
-                                  Note: {item.specialInstructions}
+                                  Special Instruction: {item.specialInstructions}
                                 </div>
                               )}
                             </div>
@@ -489,7 +489,7 @@ export default function OrderPage() {
                                 </div>
                                 {item.specialInstructions && (
                                   <div className="text" style={{ marginTop: "4px", fontStyle: "italic" }}>
-                                    Note: {item.specialInstructions}
+                                    Special Instruction: {item.specialInstructions}
                                   </div>
                                 )}
                               </div>
