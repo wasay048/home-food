@@ -35,13 +35,13 @@ export default function ListingPage() {
     return Math.max(...categories.filter((c) => !isNaN(c)), 0);
   }, []);
 
-  // ✅ Sort Go&Grab items by foodCategory in descending order
+  // ✅ Sort Go&Grab items by foodCategory in ascending order
   const sortedGoGrabItems = useMemo(() => {
     if (!goGrabItems || goGrabItems.length === 0) return [];
     return [...goGrabItems].sort((a, b) => {
       const maxCatA = getMaxCategoryId(a.foodCategory);
       const maxCatB = getMaxCategoryId(b.foodCategory);
-      return maxCatB - maxCatA; // Descending order
+      return maxCatA - maxCatB; // Ascending order
     });
   }, [goGrabItems, getMaxCategoryId]);
 
