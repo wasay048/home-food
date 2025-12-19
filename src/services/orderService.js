@@ -709,6 +709,7 @@ export const createOrderObject = ({
   const orderedFoodItems = cartItems.map((item) => ({
     countRating: 0,
     foodItemId: item.foodId || item.id,
+    foodCategory: item.foodCategory || item.food?.foodCategory || "",
     id: generateUniqueId(), // Generate a unique ID for the order item
     imageUrl: item.food?.imageUrl || item.food?.image || "",
     isFromPreorder:
