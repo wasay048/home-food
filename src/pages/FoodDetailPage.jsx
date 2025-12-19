@@ -1246,6 +1246,7 @@ export default function FoodDetailPage() {
                   food?.orderType === 1 ? "Deliver Time" : "Pickup Time"
                 }
                 isDeliveryMode={food?.orderType === 1}
+                fulfillmentType={food?.orderType}
               />
             </div>
           </div>

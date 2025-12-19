@@ -551,6 +551,7 @@ export const useGenericCart = () => {
               imageUrl: food.imageUrl,
               description: food.description,
               orderType: food?.orderType, // Preserve the food's orderType for fulfillment
+              foodCategory: food?.foodCategory, // Save food category for filtering
             },
             kitchen: {
               id: kitchen.id,

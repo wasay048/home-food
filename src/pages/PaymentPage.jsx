@@ -89,10 +89,23 @@ export default function PaymentPage() {
   // Get cart items from Redux
   const cartItems = useSelector((state) => state.cart.items);
   const currentKitchen = useSelector((state) => state.food.currentKitchen);
-  const currentUser = useSelector((state) => state.auth.user);
-  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
-  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-  // const isAuthenticated = true;
+  // const currentUser = useSelector((state) => state.auth.user);
+  const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+  // const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const isAuthenticated = true;
+
+  // ✅ Check if any cart item contains foodCategory 7 or 8 (cash payment not allowed)
+  const hasCashRestrictedItems = useMemo(() => {
+    return cartItems.some((item) => {
+      // foodCategory format is comma-separated like "5, 7"
+      const foodCategory = item.foodCategory || item.food?.foodCategory || "";
+      if (!foodCategory) return false;
+      
+      // Split the category string and check for 7 or 8
+      const categories = foodCategory.split(",").map((c) => c.trim());
+      return categories.includes("7") || categories.includes("8");
+    });
+  }, [cartItems]);
 
   // ✅ NEW: Determine fulfillment types from cart items
   // fulfillmentType: 1 = delivery, 2 = pickup, null/undefined/missing = pickup (default)
@@ -1165,19 +1178,22 @@ export default function PaymentPage() {
                   Online payment
                 </label>
               </div>
-              <div>
-                <input
-                  type="radio"
-                  id="paymentType2"
-                  value="cash"
-                  checked={paymentType === "cash"}
-                  name="paymentType"
-                  onChange={() => setPaymentType("cash")}
-                />
-                <label htmlFor="paymentType2" className="body-text-med ms-2">
-                  I will pay cash
-                </label>
-              </div>
+              {/* Hide cash payment option if any item has foodCategory 7 or 8 */}
+              {!hasCashRestrictedItems && (
+                <div>
+                  <input
+                    type="radio"
+                    id="paymentType2"
+                    value="cash"
+                    checked={paymentType === "cash"}
+                    name="paymentType"
+                    onChange={() => setPaymentType("cash")}
+                  />
+                  <label htmlFor="paymentType2" className="body-text-med ms-2">
+                    I will pay cash
+                  </label>
+                </div>
+              )}
             </div>
             {paymentType === "online" && (
               <div className="upload-section mb-20">

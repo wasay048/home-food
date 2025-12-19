@@ -45,7 +45,6 @@ const cartSlice = createSlice({
           addedQuantity: newItem.quantity || 1,
         });
       } else {
-        // Add new item with proper structure
         const itemToAdd = {
           id: `cart-item-${Date.now()}-${Math.random()}`,
           foodId: newItem.foodId,
@@ -58,6 +57,7 @@ const cartSlice = createSlice({
           // fulfillmentType: 1 = delivery, 2 = pickup, undefined/null = pickup (default)
           fulfillmentType: newItem.fulfillmentType || null,
           specialInstructions: newItem.specialInstructions || "",
+          foodCategory: newItem.food?.foodCategory || newItem.foodCategory || null,
           food: newItem.food || null,
           kitchen: newItem.kitchen || null,
           pickupDetails: newItem.pickupDetails || {

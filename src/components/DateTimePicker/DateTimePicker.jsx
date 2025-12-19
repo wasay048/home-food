@@ -34,7 +34,27 @@ const DateTimePicker = ({
   style = {},
   disableDateSelection = false,
   isDeliveryMode = false,
+  fulfillmentType = null, // 1 = delivery, 2 = pickup, null = pickup (default)
 }) => {
+  console.log("use24HourTimeSlots fulfillmentType", fulfillmentType);
+  // Check if food has category 7 or 8 (special category requiring 24-hour time slots)
+  const hasSpecialCategory = useMemo(() => {
+    const foodCategory = food?.foodCategory || "";
+    if (!foodCategory) return false;
+    const categories = foodCategory.split(",").map((c) => c.trim());
+    return categories.includes("7") || categories.includes("8");
+  }, [food?.foodCategory]);
+  console.log("hasSpecialCategory use24HourTimeSlots", hasSpecialCategory);
+  // Check if this is a pickup item (not delivery)
+  const isPickupItem = useMemo(() => {
+    // fulfillmentType 1 = delivery, anything else = pickup
+    const actualFulfillmentType = fulfillmentType || food?.orderType || 2;
+    return actualFulfillmentType !== 1 && !isDeliveryMode;
+  }, [fulfillmentType, food?.orderType, isDeliveryMode]);
+  console.log("use24HourTimeSlots isPickupItem", isPickupItem);
+  // Enable 24-hour time slots when both conditions are met
+  const use24HourTimeSlots = hasSpecialCategory && isPickupItem;
+  console.log("use24HourTimeSlots", use24HourTimeSlots);
   const [internalDate, setInternalDate] = useState(selectedDate);
   const [internalTime, setInternalTime] = useState(selectedTime);
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
@@ -238,7 +258,17 @@ const DateTimePicker = ({
       // ✅ Different time ranges based on day type
       let startHour, startMinute, endHour, endMinute;
 
-      if (isWeekend) {
+      // ✅ NEW: Check for special category items (7 or 8) - use 24-hour slots
+      if (use24HourTimeSlots) {
+        // Special category (7 or 8) pickup items: 7:00 AM - 11:30 PM (full day)
+        startHour = 0;
+        startMinute = 0;
+        endHour = 23; // 11 PM in 24-hour format
+        endMinute = 45;
+        console.log(
+          "🍷 Special category detected - using 24-hour time slots (7:00 AM - 11:30 PM)"
+        );
+      } else if (isWeekend) {
         // Weekend (Saturday-Sunday): 11:00 AM - 7:30 PM
         startHour = 11;
         startMinute = 0;
@@ -257,7 +287,10 @@ const DateTimePicker = ({
         {
           isWeekend,
           dayOfWeek,
-          timeRange: isWeekend
+          use24HourTimeSlots,
+          timeRange: use24HourTimeSlots
+            ? "Special Category (7:00 AM - 11:30 PM)"
+            : isWeekend
             ? "Weekend (11:00 AM - 7:30 PM)"
             : "Weekday (5:30 PM - 7:30 PM)",
         }
@@ -303,6 +336,58 @@ const DateTimePicker = ({
     } else if (orderType === "PRE_ORDER") {
       // ✅ ENHANCED: PRE_ORDER logic to generate time slots between start and end times
       console.log("🍽️ Processing PRE_ORDER time slots");
+
+      // ✅ NEW: Check for special category items (7 or 8) with pickup - use 24-hour slots
+      if (use24HourTimeSlots) {
+        console.log(
+          "🍷 PRE_ORDER: Special category detected - using 24-hour time slots (12:00 AM - 11:45 PM)"
+        );
+
+        const selectedDateObj = dayjs(internalDate);
+        const timeSlots = [];
+
+        // Special category (7 or 8) pickup items: 12:00 AM - 11:45 PM (full day)
+        const startHour = 0;
+        const startMinute = 0;
+        const endHour = 23;
+        const endMinute = 45;
+
+        const startSlot = selectedDateObj
+          .hour(startHour)
+          .minute(startMinute)
+          .second(0);
+
+        const endSlot = selectedDateObj
+          .hour(endHour)
+          .minute(endMinute)
+          .second(0);
+
+        console.log(`⏰ PRE_ORDER 24-hour time slot range:`, {
+          start: startSlot.format("h:mm A"),
+          end: endSlot.format("h:mm A"),
+        });
+
+        // Generate 15-minute interval slots
+        let currentSlot = startSlot;
+        while (currentSlot.isBefore(endSlot) || currentSlot.isSame(endSlot)) {
+          timeSlots.push({
+            value: currentSlot.format("h:mm A"),
+            display: currentSlot.format("h:mm A"),
+            dayjs: currentSlot,
+            isAvailable: true,
+          });
+
+          currentSlot = currentSlot.add(15, "minutes");
+        }
+
+        console.log("✅ PRE_ORDER 24-hour time slots:", {
+          count: timeSlots.length,
+          firstSlot: timeSlots[0]?.value,
+          lastSlot: timeSlots[timeSlots.length - 1]?.value,
+        });
+
+        return timeSlots;
+      }
 
       if (!kitchen?.preorderSchedule?.dates || !food?.id) {
         console.log("❌ No preorder schedule or food ID");
@@ -580,6 +665,7 @@ const DateTimePicker = ({
     kitchen?.id,
     kitchen?.preorderSchedule?.dates,
     food?.id,
+    use24HourTimeSlots,
   ]);
   console.log("Order type: outside of the useMemo()" + orderType);
   console.log(
@@ -1215,8 +1301,8 @@ const DateTimePicker = ({
       <div className="picker-field" {...timePickerProps}>
         <label className="picker-label">{timeLabel}</label>
 
-        {/* ✅ For delivery mode: Show fixed "Before 6pm" text */}
-        {isDeliveryMode ? (
+        {/* ✅ For delivery mode: Show fixed "Before 6pm" text, UNLESS it's a special category pickup item */}
+        {isDeliveryMode && !use24HourTimeSlots ? (
           <div
             className="time-select-wrapper"
             style={

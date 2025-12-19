@@ -26,6 +26,25 @@ export default function ListingPage() {
   // Use the generic cart hook for all cart operations
   const { cartItems, getCartQuantity, getCartItem } = useGenericCart();
 
+  // ✅ Helper function to get max category ID from comma-separated string (e.g., "5, 7" -> 7)
+  const getMaxCategoryId = useCallback((foodCategory) => {
+    if (!foodCategory) return 0;
+    const categories = foodCategory
+      .split(",")
+      .map((c) => parseInt(c.trim(), 10));
+    return Math.max(...categories.filter((c) => !isNaN(c)), 0);
+  }, []);
+
+  // ✅ Sort Go&Grab items by foodCategory in descending order
+  const sortedGoGrabItems = useMemo(() => {
+    if (!goGrabItems || goGrabItems.length === 0) return [];
+    return [...goGrabItems].sort((a, b) => {
+      const maxCatA = getMaxCategoryId(a.foodCategory);
+      const maxCatB = getMaxCategoryId(b.foodCategory);
+      return maxCatB - maxCatA; // Descending order
+    });
+  }, [goGrabItems, getMaxCategoryId]);
+
   // State for managing pickup dates and times for each food item
   const [pickupDates, setPickupDates] = useState({});
   const [pickupTimes, setPickupTimes] = useState({});
@@ -326,11 +345,11 @@ export default function ListingPage() {
           </h2>
 
           {/* Go & Grab Section */}
-          {goGrabItems.length > 0 && (
+          {sortedGoGrabItems.length > 0 && (
             <>
               <h2 className="small-title mb-20">Grab & Go</h2>
               <div className="menu-listing">
-                {goGrabItems.map((food) => {
+                {sortedGoGrabItems.map((food) => {
                   const cartQty = getMemoizedCartQuantity(food.id);
                   const currentPickupDate = getPickupDate(food.id, false);
                   const currentPickupTime = getPickupTime(food.id, false);
@@ -386,8 +405,15 @@ export default function ListingPage() {
                           {(() => {
                             const cartItem = getCartItem(food.id);
                             return cartItem?.specialInstructions ? (
-                              <div className="text" style={{ marginTop: "4px", fontStyle: "italic" }}>
-                                Special Instruction: {cartItem.specialInstructions}
+                              <div
+                                className="text"
+                                style={{
+                                  marginTop: "4px",
+                                  fontStyle: "italic",
+                                }}
+                              >
+                                Special Instruction:{" "}
+                                {cartItem.specialInstructions}
                               </div>
                             ) : null;
                           })()}
@@ -433,6 +459,7 @@ export default function ListingPage() {
                                 : "Pickup Time"
                             }
                             isDeliveryMode={food.orderType === 1}
+                            fulfillmentType={food.orderType}
                           />
                         </div>
                       </div>
@@ -535,8 +562,15 @@ export default function ListingPage() {
                                   item.selectedDate === dateInfo.dateString
                               );
                               return cartItem?.specialInstructions ? (
-                                <div className="text" style={{ marginTop: "4px", fontStyle: "italic" }}>
-                                  Special Instruction: {cartItem.specialInstructions}
+                                <div
+                                  className="text"
+                                  style={{
+                                    marginTop: "4px",
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  Special Instruction:{" "}
+                                  {cartItem.specialInstructions}
                                 </div>
                               ) : null;
                             })()}
@@ -585,6 +619,7 @@ export default function ListingPage() {
                                   : "Pickup Time"
                               }
                               isDeliveryMode={food.orderType === 1}
+                              fulfillmentType={food.orderType}
                             />
                           </div>
                         </div>

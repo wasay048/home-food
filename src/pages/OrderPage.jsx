@@ -316,7 +316,7 @@ export default function OrderPage() {
                   marginTop: "16px",
                 }}
               >
-                Continue Shopping
+                What else is available?
               </Link>
             </div>
           ) : (
