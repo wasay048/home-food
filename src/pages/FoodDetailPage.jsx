@@ -19,12 +19,18 @@ import {
   setListingData,
   setListingLoading,
 } from "../store/slices/listingSlice";
+import {
+  setFoodCategories,
+  setFoodCategoriesLoading,
+} from "../store/slices/foodCategoriesSlice";
+import { getFoodCategories } from "../services/foodService";
 import dayjs from "dayjs";
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
 import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import { setWeChatUser } from "../store/slices/authSlice";
 import { db } from "../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
+
 
 // Custom Slider Component
 // Enhanced Custom Slider Component with better styling
@@ -845,6 +851,36 @@ export default function FoodDetailPage() {
       }
     };
   }, [food?.id]);
+
+  // 🆕 Background fetch food categories for ListingPage grouping
+  const existingCategories = useSelector((state) => state.foodCategories?.categories || []);
+  const categoriesLastUpdated = useSelector((state) => state.foodCategories?.lastUpdated);
+  
+  useEffect(() => {
+    const fetchCategoriesInBackground = async () => {
+      // Skip if categories already exist and are less than 1 hour old
+      const oneHour = 60 * 60 * 1000;
+      const isStale = !categoriesLastUpdated || (Date.now() - categoriesLastUpdated > oneHour);
+      
+      if (existingCategories.length > 0 && !isStale) {
+        console.log("📂 [FoodCategories] Using cached categories:", existingCategories.length);
+        return;
+      }
+
+      try {
+        dispatch(setFoodCategoriesLoading(true));
+        const categories = await getFoodCategories();
+        dispatch(setFoodCategories(categories));
+        console.log("📂 [FoodCategories] Background fetch complete:", categories.length, "categories");
+      } catch (error) {
+        console.error("📂 [FoodCategories] Background fetch error:", error);
+        dispatch(setFoodCategoriesLoading(false));
+      }
+    };
+
+    fetchCategoriesInBackground();
+  }, [dispatch, existingCategories.length, categoriesLastUpdated]);
+
 
   // Add this useEffect after the existing useEffects to process and store listing data
   useEffect(() => {

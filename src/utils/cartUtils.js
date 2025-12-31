@@ -137,7 +137,7 @@ export const handleGenericAddToCart = async (
         price: food.price || food.cost,
         imageUrl: food.imageUrl,
         description:
-          food.description || "This dish features tender, juicy flavors",
+          food.description || "",
         // Include any other relevant food fields
         ...food,
       },

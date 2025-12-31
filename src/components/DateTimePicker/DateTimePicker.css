@@ -196,6 +196,12 @@ ld {
   background: white;
 }
 
+/* Reduced height for pickup time selector in listing page */
+.listing-page-picker .time-select-display:not(.delivery-time-fixed) {
+  min-height: 32px;
+  padding: 6px 10px;
+}
+
 /* Compact layout for listing page */
 .pickup-time-section {
   padding-top: 0px;

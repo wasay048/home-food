@@ -357,7 +357,7 @@ export default function OrderPage() {
                               </div>
                               <div className="text">
                                 {item.food?.description ||
-                                  "This dish features tender, juicy flavors"}
+                                  ""}
                               </div>
                               <div
                                 className="price"
@@ -464,7 +464,7 @@ export default function OrderPage() {
                                 </div>
                                 <div className="text">
                                   {item.food?.description ||
-                                    "This dish features tender, juicy flavors"}
+                                    ""}
                                 </div>
                                 <div
                                   className="price"

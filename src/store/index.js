@@ -8,12 +8,13 @@ import cartReducer from "./slices/cartSlice";
 import kitchenReducer from "./slices/kitchenSlice";
 import reviewsReducer from "./slices/reviewsSlice";
 import listingSlice from "./slices/listingSlice";
+import foodCategoriesReducer from "./slices/foodCategoriesSlice";
 
 // Persist configuration
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["auth", "cart", "food", "kitchen", "listing"], // Only persist auth and cart data
+  whitelist: ["auth", "cart", "food", "kitchen", "listing", "foodCategories"], // Only persist auth and cart data
   blacklist: ["reviews"], // Don't persist temporary data
 };
 
@@ -61,6 +62,14 @@ const listingPersistConfig = {
   blacklist: ["isLoading", "error"], // Don't persist loading states
 };
 
+// ✅ NEW: Food Categories persist config
+const foodCategoriesPersistConfig = {
+  key: "foodCategories",
+  storage,
+  whitelist: ["categories", "lastUpdated"], // Persist categories data
+  blacklist: ["isLoading"], // Don't persist loading states
+};
+
 const rootReducer = combineReducers({
   auth: persistReducer(authPersistConfig, authReducer),
   food: persistReducer(foodPersistConfig, foodReducer),
@@ -68,6 +77,7 @@ const rootReducer = combineReducers({
   kitchen: persistReducer(kitchenPersistConfig, kitchenReducer),
   reviews: reviewsReducer,
   listing: persistReducer(listingPersistConfig, listingSlice),
+  foodCategories: persistReducer(foodCategoriesPersistConfig, foodCategoriesReducer),
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -91,3 +101,4 @@ export const store = configureStore({
 export const persistor = persistStore(store);
 
 export default store;
+

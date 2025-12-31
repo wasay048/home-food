@@ -294,6 +294,18 @@ body,
   font-weight: 700;
   color: var(--bs-body-color);
 }
+
+/* Category grouping for listing page */
+.category-group {
+  margin-bottom: 16px;
+}
+.category-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #3fc045;
+  margin-bottom: 10px;
+  padding-left: 2px;
+}
 .body-text {
   font-size: 12px;
   font-weight: 400;
@@ -1056,7 +1068,8 @@ body,
 }
 
 .menu-listing .menu-list {
-  padding: 12px;
+  padding: 10px;
+  padding-top: 0px;
   margin-bottom: 16px;
   border-radius: 12px;
   border: 1px solid #eaedf3;

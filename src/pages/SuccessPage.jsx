@@ -274,7 +274,7 @@ export default function SuccessPage() {
                             </div>
                             <div className="text">
                               {item.description ||
-                                "This dish features tender, juicy flavors"}
+                                ""}
                             </div>
                             <div className="price">
                               $ {item.price || item.cost || "0.00"}
@@ -334,7 +334,7 @@ export default function SuccessPage() {
                               </div>
                               <div className="text">
                                 {item.description ||
-                                  "This dish features tender, juicy flavors"}
+                                  ""}
                               </div>
                               <div className="price">
                                 $ {item.price || item.cost || "0.00"}

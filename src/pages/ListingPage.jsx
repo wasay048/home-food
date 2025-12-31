@@ -23,6 +23,9 @@ export default function ListingPage() {
     lastUpdated,
   } = useSelector((state) => state.listing);
 
+  // ✅ Get food categories from Redux store
+  const foodCategories = useSelector((state) => state.foodCategories?.categories || []);
+
   // Use the generic cart hook for all cart operations
   const { cartItems, getCartQuantity, getCartItem } = useGenericCart();
 
@@ -44,6 +47,34 @@ export default function ListingPage() {
       return maxCatA - maxCatB; // Ascending order
     });
   }, [goGrabItems, getMaxCategoryId]);
+
+  // ✅ Group Go&Grab items by category for display
+  const groupedGoGrabItems = useMemo(() => {
+    if (!sortedGoGrabItems || sortedGoGrabItems.length === 0) return [];
+
+    // Create a map from category id to category name
+    const categoryNameMap = {};
+    foodCategories.forEach((cat) => {
+      categoryNameMap[cat.id] = cat.name;
+    });
+
+    // Group items by their max category ID
+    const groups = {};
+    sortedGoGrabItems.forEach((food) => {
+      const maxCatId = getMaxCategoryId(food.foodCategory);
+      if (!groups[maxCatId]) {
+        groups[maxCatId] = {
+          categoryId: maxCatId,
+          categoryName: categoryNameMap[String(maxCatId)] || `Category ${maxCatId}`,
+          items: [],
+        };
+      }
+      groups[maxCatId].items.push(food);
+    });
+
+    // Convert to array and sort by category ID (ascending)
+    return Object.values(groups).sort((a, b) => a.categoryId - b.categoryId);
+  }, [sortedGoGrabItems, foodCategories, getMaxCategoryId]);
 
   // State for managing pickup dates and times for each food item
   const [pickupDates, setPickupDates] = useState({});
@@ -344,129 +375,133 @@ export default function ListingPage() {
             {kitchen?.name || "Coco&apos;s Kitchen"}
           </h2>
 
-          {/* Go & Grab Section */}
-          {sortedGoGrabItems.length > 0 && (
+          {/* Go & Grab Section - Grouped by Category */}
+          {groupedGoGrabItems.length > 0 && (
             <>
-              <h2 className="small-title mb-20">Grab & Go</h2>
-              <div className="menu-listing">
-                {sortedGoGrabItems.map((food) => {
-                  const cartQty = getMemoizedCartQuantity(food.id);
-                  const currentPickupDate = getPickupDate(food.id, false);
-                  const currentPickupTime = getPickupTime(food.id, false);
-                  return (
-                    <div key={food.id} className="menu-list">
-                      <div
-                        className="left"
-                        onClick={() =>
-                          window.open(
-                            `/share?kitchenId=${kitchen?.id}&foodId=${food.id}`,
-                            "_blank"
-                          )
-                        }
-                        style={{ cursor: "pointer" }}
-                      >
-                        <div className="image">
-                          <img
-                            src={
-                              food.imageUrl || "/src/assets/images/product.png"
-                            }
-                            alt={food.name}
-                            onError={(e) => {
-                              e.target.src = "/src/assets/images/product.png";
-                            }}
-                          />
-                        </div>
-                        <div className="data">
-                          <div className="title">{food.name}</div>
-                          <div className="text">
-                            {food.description ||
-                              "This dish features tender, juicy flavors"}
-                          </div>
+              <h2 className="small-title mb-20">Available Today</h2>
+              {groupedGoGrabItems.map((group) => (
+                <div key={group.categoryId} className="category-group">
+                  <h3 className="category-title">{group.categoryName}</h3>
+                  <div className="menu-listing">
+                    {group.items.map((food) => {
+                      const cartQty = getMemoizedCartQuantity(food.id);
+                      const currentPickupDate = getPickupDate(food.id, false);
+                      const currentPickupTime = getPickupTime(food.id, false);
+                      return (
+                        <div key={food.id} className="menu-list">
                           <div
-                            className="price"
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                            }}
+                            className="left"
+                            onClick={() =>
+                              window.open(
+                                `/share?kitchenId=${kitchen?.id}&foodId=${food.id}`,
+                                "_blank"
+                              )
+                            }
+                            style={{ cursor: "pointer" }}
                           >
-                            <span>$ {food.cost}</span>
-                            {food.orderType === 1 && (
+                            <div className="image">
                               <img
-                                src={scooterRider}
-                                alt="Delivery"
-                                style={{
-                                  marginLeft: "5px",
-                                  width: "15px",
-                                  height: "15px",
+                                src={
+                                  food.imageUrl || "/src/assets/images/product.png"
+                                }
+                                alt={food.name}
+                                onError={(e) => {
+                                  e.target.src = "/src/assets/images/product.png";
                                 }}
                               />
-                            )}
-                          </div>
-                          {(() => {
-                            const cartItem = getCartItem(food.id);
-                            return cartItem?.specialInstructions ? (
+                            </div>
+                            <div className="data">
+                              <div className="title">{food.name}</div>
+                              <div className="text">
+                                {food.description || ""}
+                              </div>
                               <div
-                                className="text"
+                                className="price"
                                 style={{
-                                  marginTop: "4px",
-                                  fontStyle: "italic",
+                                  display: "flex",
+                                  alignItems: "center",
                                 }}
                               >
-                                Special Instruction:{" "}
-                                {cartItem.specialInstructions}
+                                <span>$ {food.cost}</span>
+                                {food.orderType === 1 && (
+                                  <img
+                                    src={scooterRider}
+                                    alt="Delivery"
+                                    style={{
+                                      marginLeft: "5px",
+                                      width: "15px",
+                                      height: "15px",
+                                    }}
+                                  />
+                                )}
                               </div>
-                            ) : null;
-                          })()}
-                        </div>
-                      </div>
+                              {(() => {
+                                const cartItem = getCartItem(food.id);
+                                return cartItem?.specialInstructions ? (
+                                  <div
+                                    className="text"
+                                    style={{
+                                      marginTop: "4px",
+                                      fontStyle: "italic",
+                                    }}
+                                  >
+                                    Special Instruction:{" "}
+                                    {cartItem.specialInstructions}
+                                  </div>
+                                ) : null;
+                              })()}
+                            </div>
+                          </div>
 
-                      <div className="quantity-warpper">
-                        <div className="right mb-1">
-                          <QuantitySelector
-                            food={food}
-                            kitchen={kitchen}
-                            selectedDate={pickupDates[food.id]}
-                            size="small"
-                            initialQuantity={cartQty}
-                            minQuantity={0}
-                            orderType={"GO_GRAB"}
-                            selectedTime={pickupTimes[food.id]}
-                          />
+                          <div className="quantity-warpper">
+                            <div className="right mb-1">
+                              <QuantitySelector
+                                food={food}
+                                kitchen={kitchen}
+                                selectedDate={pickupDates[food.id]}
+                                size="small"
+                                initialQuantity={cartQty}
+                                minQuantity={0}
+                                orderType={"GO_GRAB"}
+                                selectedTime={pickupTimes[food.id]}
+                              />
+                            </div>
+                            <div className="pickup-time-section">
+                              <DateTimePicker
+                                food={food}
+                                kitchen={kitchen}
+                                orderType="GO_GRAB"
+                                selectedDate={currentPickupDate}
+                                selectedTime={currentPickupTime}
+                                onDateChange={(newDate) => {
+                                  handleDateChange(food.id, newDate, false);
+                                }}
+                                onTimeChange={(newTime) => {
+                                  handleTimeChange(food.id, newTime, false);
+                                }}
+                                disabled={!food || !kitchen}
+                                className="listing-page-picker"
+                                dateLabel={
+                                  food.orderType === 1
+                                    ? "Delivery Date"
+                                    : "Pickup Date"
+                                }
+                                timeLabel={
+                                  food.orderType === 1
+                                    ? "Deliver Time"
+                                    : "Pickup Time"
+                                }
+                                isDeliveryMode={food.orderType === 1}
+                                fulfillmentType={food.orderType}
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <div className="pickup-time-section">
-                          <DateTimePicker
-                            food={food}
-                            kitchen={kitchen}
-                            orderType="GO_GRAB"
-                            selectedDate={currentPickupDate}
-                            selectedTime={currentPickupTime}
-                            onDateChange={(newDate) => {
-                              handleDateChange(food.id, newDate, false);
-                            }}
-                            onTimeChange={(newTime) => {
-                              handleTimeChange(food.id, newTime, false);
-                            }}
-                            disabled={!food || !kitchen}
-                            className="listing-page-picker"
-                            dateLabel={
-                              food.orderType === 1
-                                ? "Delivery Date"
-                                : "Pickup Date"
-                            }
-                            timeLabel={
-                              food.orderType === 1
-                                ? "Deliver Time"
-                                : "Pickup Time"
-                            }
-                            isDeliveryMode={food.orderType === 1}
-                            fulfillmentType={food.orderType}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </>
           )}
 
@@ -533,7 +568,7 @@ export default function ListingPage() {
                             <div className="title">{food.name}</div>
                             <div className="text">
                               {food.description ||
-                                "This dish features tender, juicy flavors"}
+                                ""}
                             </div>
                             <div
                               className="price"

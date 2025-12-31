@@ -10,6 +10,36 @@ import {
 import { db, firebaseDisabled } from "./firebase";
 
 /**
+ * Get all food categories from Firestore
+ * @returns {Promise<Array<{id: string, name: string}>>} Array of category objects
+ */
+export async function getFoodCategories() {
+  console.log("[getFoodCategories] Starting fetch for all food categories");
+
+  if (firebaseDisabled) {
+    console.warn("[getFoodCategories] Firebase disabled, returning empty array");
+    return [];
+  }
+
+  try {
+    const categoriesRef = collection(db, "foodCategories");
+    const querySnapshot = await getDocs(categoriesRef);
+    
+    const categories = querySnapshot.docs.map((doc) => ({
+      id: doc.data().id || doc.id, // Use the 'id' field from data, fallback to doc.id
+      name: doc.data().name || "Unknown Category",
+    }));
+
+    console.log(`[getFoodCategories] Found ${categories.length} categories:`, categories);
+    return categories;
+  } catch (error) {
+    console.error("[getFoodCategories] Error fetching food categories:", error);
+    return [];
+  }
+}
+
+
+/**
  * Get reviews for a specific food item from kitchen subcollections
  */
 export async function getFoodReviews(
