@@ -704,42 +704,57 @@ export const createOrderObject = ({
       datePickedUp = new Date(earliestDate);
     }
   }
-  console.log("kitchenInfo:", kitchenInfo);
+  // ✅ Helper to get max category ID from comma-separated string
+  const getMaxCategoryId = (foodCategory) => {
+    if (!foodCategory) return 0;
+    const categories = foodCategory.split(",").map((c) => parseInt(c.trim(), 10));
+    return Math.max(...categories.filter((c) => !isNaN(c)), 0);
+  };
+
   // Transform cart items to order format
-  const orderedFoodItems = cartItems.map((item) => ({
-    countRating: 0,
-    foodItemId: item.foodId || item.id,
-    foodCategory: item.foodCategory || item.food?.foodCategory || "",
-    id: generateUniqueId(), // Generate a unique ID for the order item
-    imageUrl: item.food?.imageUrl || item.food?.image || "",
-    isFromPreorder:
-      item.pickupDetails?.orderType === "PRE_ORDER" || item.isPreOrder || false,
-    name: item.food?.name || "Unknown Item",
-    numOfLike: item.food?.numOfLike || 0,
-    numOfSoldItem: item.food?.numOfSoldItem || 0,
-    numberOfAvailableItem: item.food?.numberOfAvailableItem || 0,
-    quantity: parseInt(item.quantity || 1),
-    orderStatus: "inProgress",
-    orderType:
-      item.pickupDetails.orderType === "PRE_ORDER" ? "preorder" : "grabAndGo",
-    orderType1: item.fulfillmentType || 2,
-    rating: 0,
-    specialInstructions: item.specialInstructions || "",
-    preOrder: {
-      availableTimes: [],
+  const orderedFoodItems = cartItems.map((item) => {
+    const foodCategory = item.foodCategory || item.food?.foodCategory || "";
+    const isCategory8 = getMaxCategoryId(foodCategory) === 8;
+    
+    // Default date/time for category 8 items
+    const defaultCategory8Date = new Date("2000-01-01T00:00:00");
+    
+    return {
+      countRating: 0,
       foodItemId: item.foodId || item.id,
-      id: generateUniqueId(),
-      isLimitedOrder: item?.food?.isLimitedOrder || false,
-      nameOfFood: item.food?.name || "Unknown Item",
-      numOfAvailableItems: item.food?.numberOfAvailableItem || 0,
+      foodCategory: foodCategory,
+      id: generateUniqueId(), // Generate a unique ID for the order item
+      imageUrl: item.food?.imageUrl || item.food?.image || "",
+      isFromPreorder:
+        item.pickupDetails?.orderType === "PRE_ORDER" || item.isPreOrder || false,
+      name: item.food?.name || "Unknown Item",
+      numOfLike: item.food?.numOfLike || 0,
+      numOfSoldItem: item.food?.numOfSoldItem || 0,
+      numberOfAvailableItem: item.food?.numberOfAvailableItem || 0,
+      quantity: parseInt(item.quantity || 1),
+      orderStatus: "inProgress",
+      orderType:
+        item.pickupDetails.orderType === "PRE_ORDER" ? "preorder" : "grabAndGo",
+      orderType1: item.fulfillmentType || 2,
+      rating: 0,
+      specialInstructions: item.specialInstructions || "",
+      preOrder: {
+        availableTimes: [],
+        foodItemId: item.foodId || item.id,
+        id: generateUniqueId(),
+        isLimitedOrder: item?.food?.isLimitedOrder || false,
+        nameOfFood: item.food?.name || "Unknown Item",
+        numOfAvailableItems: item.food?.numberOfAvailableItem || 0,
+        price: parseFloat(item.food?.cost || item.food?.price || 0),
+      },
       price: parseFloat(item.food?.cost || item.food?.price || 0),
-    },
-    price: parseFloat(item.food?.cost || item.food?.price || 0),
-    pickupDate: new Date(item.selectedDate),
-    pickupDateString: dayjs(item.selectedDate).format("MM,DD,YYYY"),
-    pickupTime: item.selectedTime || "4:30 PM",
-    paymentType: paymentType || "online",
-  }));
+      // ✅ Use default date for category 8 items
+      pickupDate: isCategory8 ? defaultCategory8Date : new Date(item.selectedDate),
+      pickupDateString: isCategory8 ? "01,01,2000" : dayjs(item.selectedDate).format("MM,DD,YYYY"),
+      pickupTime: isCategory8 ? "12:00 AM" : (item.selectedTime || "4:30 PM"),
+      paymentType: paymentType || "online",
+    };
+  });
   let paymentVia = { other: {} };
   if (paymentType === "cash") {
     paymentVia = { cash: {} };

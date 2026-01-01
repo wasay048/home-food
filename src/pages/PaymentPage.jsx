@@ -21,6 +21,25 @@ import { useUserAccount } from "../hooks/useUserAccount";
 import useDeliveryFee from "../hooks/useDeliveryFee";
 import "./PaymentPage.css";
 
+// ✅ Helper function to get max category ID from comma-separated string (e.g., "5, 7" -> 7)
+const getMaxCategoryId = (foodCategory) => {
+  if (!foodCategory) return 0;
+  const categories = foodCategory
+    .split(",")
+    .map((c) => parseInt(c.trim(), 10));
+  return Math.max(...categories.filter((c) => !isNaN(c)), 0);
+};
+
+// ✅ Check if item is category 8 (uses max category if multiple)
+const isCategory8Item = (item) => {
+  const foodCategory = item.foodCategory || item.food?.foodCategory || "";
+  return getMaxCategoryId(foodCategory) === 8;
+};
+
+// ✅ Default date/time for category 8 items
+const CATEGORY_8_DEFAULT_DATE = "January 1, 2000";
+const CATEGORY_8_DEFAULT_TIME = "12:00 AM";
+
 // Phone number formatting function - formats as (XXX) XXX-XXXX
 const formatPhoneNumber = (value) => {
   // Remove all non-digit characters
@@ -89,10 +108,10 @@ export default function PaymentPage() {
   // Get cart items from Redux
   const cartItems = useSelector((state) => state.cart.items);
   const currentKitchen = useSelector((state) => state.food.currentKitchen);
-  // const currentUser = useSelector((state) => state.auth.user);
-  const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
-  // const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-  const isAuthenticated = true;
+  const currentUser = useSelector((state) => state.auth.user);
+  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  // const isAuthenticated = true;
 
   // ✅ Check if any cart item contains foodCategory 7 or 8 (cash payment not allowed)
   const hasCashRestrictedItems = useMemo(() => {
@@ -944,13 +963,22 @@ export default function PaymentPage() {
                             <h5 className="food-name">
                               {item.food?.name || "Unknown Item"}
                             </h5>
+                            {/* Show default date/time for category 8 items */}
                             <div className="pickup-time">
-                              {dayjs(item.selectedDate).format(
-                                "dddd, MMMM D, YYYY"
-                              )}{" "}
-                              at{" "}
-                              {dayjs(item.selectedTime, "h:mm A").format(
-                                "h:mm A"
+                              {isCategory8Item(item) ? (
+                                <>
+                                  {CATEGORY_8_DEFAULT_DATE} at {CATEGORY_8_DEFAULT_TIME}
+                                </>
+                              ) : (
+                                <>
+                                  {dayjs(item.selectedDate).format(
+                                    "dddd, MMMM D, YYYY"
+                                  )}{" "}
+                                  at{" "}
+                                  {dayjs(item.selectedTime, "h:mm A").format(
+                                    "h:mm A"
+                                  )}
+                                </>
                               )}
                             </div>
                             <div className="item-quantity">
@@ -959,14 +987,17 @@ export default function PaymentPage() {
                             </div>
                           </div>
                         </div>
-                        <div
-                          className="edit-icon"
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => handleEditPickupTime(item)}
-                        >
-                          <img src={Edit} alt="Edit pickup time" />
-                        </div>
+                        {/* Hide edit icon for category 8 items */}
+                        {!isCategory8Item(item) && (
+                          <div
+                            className="edit-icon"
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => handleEditPickupTime(item)}
+                          >
+                            <img src={Edit} alt="Edit pickup time" />
+                          </div>
+                        )}
                       </div>
                     ))}
 
@@ -993,13 +1024,22 @@ export default function PaymentPage() {
                                 <h5 className="food-name">
                                   {item.food?.name || "Unknown Item"}
                                 </h5>
+                                {/* Show default date/time for category 8 items */}
                                 <div className="pickup-time">
-                                  {dayjs(item.selectedDate).format(
-                                    "dddd, MMMM D, YYYY"
-                                  )}{" "}
-                                  at{" "}
-                                  {dayjs(item.selectedTime, "h:mm A").format(
-                                    "h:mm A"
+                                  {isCategory8Item(item) ? (
+                                    <>
+                                      {CATEGORY_8_DEFAULT_DATE} at {CATEGORY_8_DEFAULT_TIME}
+                                    </>
+                                  ) : (
+                                    <>
+                                      {dayjs(item.selectedDate).format(
+                                        "dddd, MMMM D, YYYY"
+                                      )}{" "}
+                                      at{" "}
+                                      {dayjs(item.selectedTime, "h:mm A").format(
+                                        "h:mm A"
+                                      )}
+                                    </>
                                   )}
                                 </div>
                                 <div className="item-quantity">
@@ -1010,14 +1050,17 @@ export default function PaymentPage() {
                                 </div>
                               </div>
                             </div>
-                            <div
-                              className="edit-icon"
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => handleEditPickupTime(item)}
-                            >
-                              <img src={Edit} alt="Edit pickup time" />
-                            </div>
+                            {/* Hide edit icon for category 8 items */}
+                            {!isCategory8Item(item) && (
+                              <div
+                                className="edit-icon"
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => handleEditPickupTime(item)}
+                              >
+                                <img src={Edit} alt="Edit pickup time" />
+                              </div>
+                            )}
                           </div>
                         ))
                     )}

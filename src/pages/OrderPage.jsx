@@ -11,6 +11,25 @@ import { useKitchenWithFoods } from "../hooks/useKitchenListing";
 import { useGenericCart } from "../hooks/useGenericCart";
 import { CornerDownLeft } from "lucide-react";
 
+// ✅ Helper function to get max category ID from comma-separated string (e.g., "5, 7" -> 7)
+const getMaxCategoryId = (foodCategory) => {
+  if (!foodCategory) return 0;
+  const categories = foodCategory
+    .split(",")
+    .map((c) => parseInt(c.trim(), 10));
+  return Math.max(...categories.filter((c) => !isNaN(c)), 0);
+};
+
+// ✅ Check if item is category 8 (uses max category if multiple)
+const isCategory8Item = (item) => {
+  const foodCategory = item.foodCategory || item.food?.foodCategory || "";
+  return getMaxCategoryId(foodCategory) === 8;
+};
+
+// ✅ Default date/time for category 8 items
+const CATEGORY_8_DEFAULT_DATE = "January 1, 2000";
+const CATEGORY_8_DEFAULT_TIME = "12:00 AM";
+
 export default function OrderPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -400,23 +419,35 @@ export default function OrderPage() {
                                 orderType="GO_GRAB"
                               />
                             </div>
-                            <div className="title">
-                              {item.selectedDate
-                                ? dayjs(item.selectedDate).format(
-                                    "MMMM D, YYYY"
-                                  )
-                                : dayjs().format("MMMM D, YYYY")}{" "}
-                            </div>
-                            <div className="bottom">
-                              <div className="time">
-                                at{" "}
-                                {item?.selectedTime
-                                  ? dayjs(item?.selectedTime, "h:mm A").format(
-                                      "h:mm A"
-                                    )
-                                  : "5:30 PM"}
-                              </div>
-                            </div>
+                            {/* Show default date/time for category 8 items */}
+                            {isCategory8Item(item) ? (
+                              <>
+                                <div className="title">{CATEGORY_8_DEFAULT_DATE}</div>
+                                <div className="bottom">
+                                  <div className="time">at {CATEGORY_8_DEFAULT_TIME}</div>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="title">
+                                  {item.selectedDate
+                                    ? dayjs(item.selectedDate).format(
+                                        "MMMM D, YYYY"
+                                      )
+                                    : dayjs().format("MMMM D, YYYY")}{" "}
+                                </div>
+                                <div className="bottom">
+                                  <div className="time">
+                                    at{" "}
+                                    {item?.selectedTime
+                                      ? dayjs(item?.selectedTime, "h:mm A").format(
+                                          "h:mm A"
+                                        )
+                                      : "5:30 PM"}
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
                       );
@@ -507,22 +538,34 @@ export default function OrderPage() {
                                   orderType="PRE_ORDER"
                                 />
                               </div>
-                              <div className="title">
-                                {dayjs(item.selectedDate).format(
-                                  "MMMM D, YYYY"
-                                )}{" "}
-                              </div>
-                              <div className="bottom">
-                                <div className="time">
-                                  at{" "}
-                                  {item?.selectedTime
-                                    ? dayjs(
-                                        item?.selectedTime,
-                                        "h:mm A"
-                                      ).format("h:mm A")
-                                    : "5:30 PM"}
-                                </div>
-                              </div>
+                              {/* Show default date/time for category 8 items */}
+                              {isCategory8Item(item) ? (
+                                <>
+                                  <div className="title">{CATEGORY_8_DEFAULT_DATE}</div>
+                                  <div className="bottom">
+                                    <div className="time">at {CATEGORY_8_DEFAULT_TIME}</div>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="title">
+                                    {dayjs(item.selectedDate).format(
+                                      "MMMM D, YYYY"
+                                    )}{" "}
+                                  </div>
+                                  <div className="bottom">
+                                    <div className="time">
+                                      at{" "}
+                                      {item?.selectedTime
+                                        ? dayjs(
+                                            item?.selectedTime,
+                                            "h:mm A"
+                                          ).format("h:mm A")
+                                        : "5:30 PM"}
+                                    </div>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </div>
                         );

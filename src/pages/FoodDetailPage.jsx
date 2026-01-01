@@ -31,6 +31,23 @@ import { setWeChatUser } from "../store/slices/authSlice";
 import { db } from "../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
+// ✅ Helper function to get max category ID from comma-separated string (e.g., "5, 7" -> 7)
+const getMaxCategoryId = (foodCategory) => {
+  if (!foodCategory) return 0;
+  const categories = foodCategory
+    .split(",")
+    .map((c) => parseInt(c.trim(), 10));
+  return Math.max(...categories.filter((c) => !isNaN(c)), 0);
+};
+
+// ✅ Calculate group order percentage: ((maxByGroup - numAvailable) / minByGroup) * 100
+const calculateGroupOrderPercentage = (food) => {
+  if (!food?.minByGroup || food.minByGroup <= 0) return null;
+  const maxByGroup = food.maxByGroup || food.minByGroup; // fallback to minByGroup if maxByGroup not set
+  const percentage = ((maxByGroup - (food.numAvailable || 0)) / food.minByGroup) * 100;
+  return Math.round(Math.min(100, Math.max(0, percentage))); // Cap at 100, floor at 0
+};
+
 
 // Custom Slider Component
 // Enhanced Custom Slider Component with better styling
@@ -1151,9 +1168,11 @@ export default function FoodDetailPage() {
                   justifyContent: "space-between",
                 }}
               >
-                <div>
-                  <span className="currency">$</span>
-                  {food?.cost && parseFloat(food?.cost).toFixed(2)}
+                <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                  <span>
+                    <span className="currency">$</span>
+                    {food?.cost && parseFloat(food?.cost).toFixed(2)}
+                  </span>
                 </div>
                 <div
                   style={{ display: "flex", alignItems: "center", gap: "8px" }}
@@ -1207,6 +1226,22 @@ export default function FoodDetailPage() {
                 orderType={orderType}
               />
             </div>
+
+            {/* Show group order percentage for category 8 items - on its own line */}
+            {getMaxCategoryId(food?.foodCategory) === 8 && calculateGroupOrderPercentage(food) !== null && (
+              <div
+                style={{
+                  color: "#e74c3c",
+                  fontSize: "16px",
+                  fontWeight: "500",
+                  marginTop: "12px",
+                  marginBottom: "8px",
+                }}
+              >
+                Group Order Filled: {calculateGroupOrderPercentage(food)}%
+              </div>
+            )}
+
             {/* <div className="price-quantity-section">
                 
               <div className="availability-status">

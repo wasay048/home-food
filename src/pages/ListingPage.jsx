@@ -58,6 +58,14 @@ export default function ListingPage() {
       categoryNameMap[cat.id] = cat.name;
     });
 
+    // Helper function to calculate group order percentage
+    const getGroupOrderPercentage = (food) => {
+      if (!food?.minByGroup || food.minByGroup <= 0) return 0;
+      const maxByGroup = food.maxByGroup || food.minByGroup;
+      const percentage = ((maxByGroup - (food.numAvailable || 0)) / food.minByGroup) * 100;
+      return Math.min(100, Math.max(0, percentage));
+    };
+
     // Group items by their max category ID
     const groups = {};
     sortedGoGrabItems.forEach((food) => {
@@ -71,6 +79,15 @@ export default function ListingPage() {
       }
       groups[maxCatId].items.push(food);
     });
+
+    // Sort category 8 items by group order percentage (high to low)
+    if (groups[8]) {
+      groups[8].items.sort((a, b) => {
+        const percentA = getGroupOrderPercentage(a);
+        const percentB = getGroupOrderPercentage(b);
+        return percentB - percentA; // Descending order (high to low)
+      });
+    }
 
     // Convert to array and sort by category ID (ascending)
     return Object.values(groups).sort((a, b) => a.categoryId - b.categoryId);
@@ -466,6 +483,22 @@ export default function ListingPage() {
                                 selectedTime={pickupTimes[food.id]}
                               />
                             </div>
+                            {/* Show group order percentage for category 8 items - on its own line */}
+                            {getMaxCategoryId(food.foodCategory) === 8 && food.minByGroup > 0 && (
+                              <div
+                                style={{
+                                  color: "#e74c3c",
+                                  fontSize: "12px",
+                                  fontWeight: "500",
+                                  marginTop: "4px",
+                                  width: "100%",
+                                }}
+                              >
+                                Group order filled: {Math.min(100, Math.round(((food.maxByGroup || food.minByGroup) - (food.numAvailable || 0)) / food.minByGroup * 100))}%
+                              </div>
+                            )}
+                            {/* Hide DateTimePicker for category 8 items */}
+                            {getMaxCategoryId(food.foodCategory) !== 8 && (
                             <div className="pickup-time-section">
                               <DateTimePicker
                                 food={food}
@@ -495,6 +528,7 @@ export default function ListingPage() {
                                 fulfillmentType={food.orderType}
                               />
                             </div>
+                            )}
                           </div>
                         </div>
                       );
