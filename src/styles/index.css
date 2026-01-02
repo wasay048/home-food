@@ -2206,3 +2206,436 @@ body,
 .btn-danger:hover {
   background-color: #c82333;
 }
+
+/* ===== My Orders Page Styles ===== */
+.my-orders-page {
+  padding: 16px;
+  min-height: 100vh;
+  background-color: #ffffff;
+}
+
+.my-orders-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eaedf3;
+}
+
+.my-orders-header .back-button {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.my-orders-header .back-button:hover {
+  background-color: #f5f5f5;
+}
+
+.my-orders-header .page-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #212226;
+  margin: 0;
+}
+
+/* Empty and Error States */
+.orders-empty,
+.orders-error {
+  text-align: center;
+  padding: 60px 20px;
+  color: #646568;
+}
+
+.orders-empty p,
+.orders-error p {
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+.orders-empty .button,
+.orders-error .button {
+  background-color: #3fc045;
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 67px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.orders-empty .button:hover,
+.orders-error .button:hover {
+  background-color: #36a83c;
+}
+
+/* Orders List */
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Order Card */
+.order-card {
+  background: #ffffff;
+  border: 1px solid #eaedf3;
+  border-radius: 12px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+
+.order-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Delivered Order Overlay */
+.order-card.delivered {
+  position: relative;
+}
+
+.order-card .delivered-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  z-index: 10;
+  border-radius: 12px;
+}
+
+.order-card-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Food Image */
+.order-item-image {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.order-item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Food Details */
+.order-item-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.order-item-details .item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #212226;
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.order-item-details .item-price {
+  font-size: 14px;
+  font-weight: 600;
+  color: #3fc045;
+  margin: 0;
+}
+
+/* Order Info (Right Side) */
+.order-item-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.order-item-info .quantity {
+  font-size: 16px;
+  font-weight: 600;
+  color: #212226;
+}
+
+/* Status Tags */
+.status-tag {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-tag.delivered-tag {
+  background-color: #e8f5e9;
+  color: #3fc045;
+}
+
+.status-tag.error-tag {
+  background-color: #ffebee;
+  color: #e53935;
+  font-size: 10px;
+}
+
+/* Delivery Info */
+.delivery-info {
+  text-align: right;
+}
+
+.delivery-info .delivery-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: #212226;
+  margin-bottom: 2px;
+}
+
+.delivery-info .delivery-time {
+  font-size: 11px;
+  color: #646568;
+}
+
+/* Pickup Selectors */
+.pickup-selectors {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pickup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pickup-field label {
+  font-size: 10px;
+  color: #8d93a1;
+  font-weight: 500;
+}
+
+.pickup-select {
+  padding: 4px 8px;
+  border: 1px solid #eaedf3;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #212226;
+  background: #f8f8f8;
+  min-width: 100px;
+  cursor: pointer;
+  appearance: menulist;
+}
+
+.pickup-select:focus {
+  outline: none;
+  border-color: #3fc045;
+}
+
+/* Group Progress */
+.group-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.group-progress .progress-label {
+  font-size: 11px;
+  color: #646568;
+}
+
+.group-progress .progress-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e74c3c;
+}
+
+/* Manage Orders Button in Food Detail Page */
+.manage-orders-btn {
+  background-color: #333333 !important;
+  color: #ffffff !important;
+  transition: background-color 0.2s;
+}
+
+.manage-orders-btn:hover {
+  background-color: #1a1a1a !important;
+}
+
+/* Save Pickup Button */
+.save-pickup-btn {
+  background-color: #3fc045;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 4px;
+}
+
+.save-pickup-btn:hover {
+  background-color: #36a83c;
+}
+
+.save-pickup-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Compact DateTimePicker for My Orders Page */
+.my-orders-picker.date-time-picker {
+  flex-direction: column;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.my-orders-picker .picker-field {
+  margin-bottom: 0;
+  gap: 2px;
+}
+
+.my-orders-picker .picker-label {
+  font-size: 10px;
+  color: #8d93a1;
+  margin-bottom: 2px;
+}
+
+.my-orders-picker .picker-select {
+  width: auto;
+  min-width: 80px;
+  max-width: 100px;
+  padding: 4px 6px;
+  font-size: 11px;
+  min-height: 28px;
+  border: 1px solid #eaedf3;
+  border-radius: 6px;
+  background: #f8f9fa;
+}
+
+.my-orders-picker .date-display-text {
+  padding: 4px 6px;
+  font-size: 11px;
+  min-height: 20px;
+}
+
+.my-orders-picker .date-input-wrapper {
+  width: auto;
+  min-width: 80px;
+  max-width: 100px;
+}
+
+.my-orders-picker .date-input-wrapper input {
+  padding: 4px 6px;
+  font-size: 11px;
+  min-height: 20px;
+}
+
+.my-orders-picker .picker-select:focus,
+.my-orders-picker input:focus {
+  outline: none;
+  border-color: #3fc045;
+}
+
+/* Make pickup selectors container horizontal */
+.pickup-selectors {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+/* Ensure mobile date picker appears above all order items */
+.my-orders-page .mobile-date-picker-overlay,
+.mobile-container .mobile-date-picker-overlay {
+  z-index: 99999 !important;
+  position: fixed !important;
+}
+
+.my-orders-page .mobile-date-picker-content,
+.mobile-container .mobile-date-picker-content {
+  z-index: 100000 !important;
+}
+
+/* Give order cards a stacking context with higher z-index for earlier cards */
+.order-card {
+  position: relative;
+  z-index: 100;
+  background: #fff;
+}
+
+/* Push all order items below the current one behind */
+.orders-list {
+  position: relative;
+  z-index: 1;
+}
+
+/* When DateTimePicker is active in an order card, raise its z-index */
+.order-card:has(.date-time-picker) {
+  z-index: 200;
+}
+
+/* Ensure pickup selectors appear above other cards */
+.pickup-selectors {
+  position: relative;
+  z-index: 150;
+}
+
+/* Order Tabs Styling */
+.order-tabs {
+  display: flex;
+  gap: 0;
+  margin: 16px;
+  background: #f0f0f0;
+  border-radius: 25px;
+  padding: 4px;
+}
+
+.order-tab {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+}
+
+.order-tab.active {
+  background: #3fc045;
+  color: white;
+  font-weight: 600;
+}
+
+.order-tab:not(.active):hover {
+  background: rgba(63, 192, 69, 0.1);
+  color: #3fc045;
+}
+
+
