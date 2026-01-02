@@ -1,4 +1,4 @@
-import { collection, addDoc, doc, updateDoc, getDoc } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc, getDoc, getDocs, query, where, orderBy } from "firebase/firestore";
 import { db } from "./firebase";
 import dayjs from "../lib/dayjs";
 
@@ -801,4 +801,39 @@ const generateUniqueId = () => {
     const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16).toUpperCase();
   });
+};
+
+/**
+ * Fetch all orders for a specific user
+ * @param {string} userId - The user ID to fetch orders for
+ * @returns {Promise<Array>} - Array of order objects sorted by date placed (newest first)
+ */
+export const getUserOrders = async (userId) => {
+  try {
+    console.log("📋 [ORDER SERVICE] Fetching orders for user:", userId);
+    
+    if (!userId) {
+      console.warn("⚠️ [ORDER SERVICE] No userId provided to getUserOrders");
+      return [];
+    }
+
+    const ordersRef = collection(db, "orders");
+    const q = query(
+      ordersRef,
+      where("userId", "==", userId),
+      orderBy("datePlaced", "desc")
+    );
+    
+    const snapshot = await getDocs(q);
+    const orders = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    console.log(`✅ [ORDER SERVICE] Found ${orders.length} orders for user`);
+    return orders;
+  } catch (error) {
+    console.error("❌ [ORDER SERVICE] Error fetching user orders:", error);
+    throw error;
+  }
 };
