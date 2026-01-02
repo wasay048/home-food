@@ -530,9 +530,24 @@ export default function MyOrdersPage() {
                               </div>
                             )}
 
-                            {/* CASE 3: Editable Pickup - Using existing DateTimePicker */}
+                            {/* CASE 3: Editable Pickup - Showing static display (DateTimePicker temporarily hidden) */}
                             {displayCase === "editable_pickup" && (
-                              <div className="pickup-selectors">
+                              <div className="delivery-info">
+                                <div className="delivery-date">
+                                  {formatDate(item.pickupDate)}
+                                </div>
+                                <div className="delivery-time">
+                                  {formatTime(item.pickupTime) || "Pickup"}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 
+                            ===== TEMPORARILY HIDDEN - DateTimePicker for editable pickup =====
+                            To restore: uncomment this block and remove the static display above
+                            
+                            {displayCase === "editable_pickup" && (
+                              <div className="pickup-time-section">
                                 <DateTimePicker
                                   food={{
                                     id: item.foodItemId,
@@ -547,13 +562,12 @@ export default function MyOrdersPage() {
                                   onDateChange={(newDate) => handlePickupDateChange(order.id, index, newDate)}
                                   onTimeChange={(newTime) => handlePickupTimeChange(order.id, index, newTime)}
                                   disabled={false}
-                                  className="my-orders-picker"
+                                  className="listing-page-picker"
                                   dateLabel="Pickup Date"
                                   timeLabel="Pickup Time"
                                   isDeliveryMode={false}
                                   fulfillmentType={item.orderType1 || 2}
                                 />
-                                {/* Save button - only show if there are changes */}
                                 {hasChanges(order.id, index) && (
                                   <button
                                     className="save-pickup-btn"
@@ -565,6 +579,8 @@ export default function MyOrdersPage() {
                                 )}
                               </div>
                             )}
+                            ===== END TEMPORARILY HIDDEN =====
+                            */}
 
                             {/* CASE 4: Group Progress */}
                             {displayCase === "group_progress" && (
