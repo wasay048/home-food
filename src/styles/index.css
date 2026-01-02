@@ -2593,6 +2593,59 @@ body,
   z-index: 1;
 }
 
+/* Remove tap/click highlight on ALL devices for order cards and date pickers */
+.my-orders-page .order-card,
+.my-orders-page .order-card *,
+.my-orders-page .pickup-time-section,
+.my-orders-page .pickup-time-section *,
+.my-orders-page .date-time-picker,
+.my-orders-page .date-time-picker * {
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  outline: none !important;
+}
+
+.my-orders-page .order-card:focus,
+.my-orders-page .order-card:active,
+.my-orders-page .order-card:hover,
+.my-orders-page .pickup-time-section:focus,
+.my-orders-page .pickup-time-section:active,
+.my-orders-page .date-time-picker:focus,
+.my-orders-page .date-time-picker:active {
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: inherit;
+}
+
+/* Reduced padding for pickup time selector on My Orders page */
+.my-orders-page .pickup-time-section .picker-select,
+.my-orders-page .pickup-time-section .time-select-display,
+.my-orders-page .pickup-time-section select {
+  padding: 4px 6px !important;
+  min-height: 28px !important;
+  font-size: 11px !important;
+}
+
+.my-orders-page .pickup-time-section .date-display-text {
+  padding: 4px 6px !important;
+  min-height: 20px !important;
+  font-size: 11px !important;
+}
+
+.my-orders-page .pickup-time-section .picker-label {
+  font-size: 10px !important;
+  margin-bottom: 2px !important;
+}
+
+.my-orders-page .pickup-time-section .picker-field {
+  margin-bottom: 4px !important;
+  gap: 2px !important;
+}
+
 /* When DateTimePicker is active in an order card, raise its z-index */
 .order-card:has(.date-time-picker) {
   z-index: 200;

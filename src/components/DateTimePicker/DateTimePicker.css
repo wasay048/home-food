@@ -167,27 +167,28 @@ ld {
 
 /* Listing Page specific styles */
 .listing-page-picker {
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .listing-page-picker .picker-field {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  gap: 2px;
 }
 
 .listing-page-picker .picker-label {
-  font-size: 12px;
+  font-size: 10px;
   color: #666;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   font-weight: 500;
 }
 
 .listing-page-picker .picker-select {
-  padding: 6px 8px;
-  font-size: 12px;
+  padding: 4px 6px;
+  font-size: 11px;
   border-radius: 6px;
   border: 1px solid #e0e0e0;
   background: #f8f9fa;
-  min-height: 32px;
+  min-height: 28px;
 }
 
 .listing-page-picker .picker-select:focus {
@@ -198,8 +199,14 @@ ld {
 
 /* Reduced height for pickup time selector in listing page */
 .listing-page-picker .time-select-display:not(.delivery-time-fixed) {
-  min-height: 32px;
-  padding: 6px 10px;
+  min-height: 28px;
+  padding: 4px 6px;
+}
+
+.listing-page-picker .date-display-text {
+  padding: 4px 6px;
+  min-height: 20px;
+  font-size: 11px;
 }
 
 /* Compact layout for listing page */
