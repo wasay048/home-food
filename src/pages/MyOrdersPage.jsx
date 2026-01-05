@@ -88,8 +88,8 @@ const getOrderDisplayCase = (order, item) => {
 
 export default function MyOrdersPage() {
   const navigate = useNavigate();
-   const currentUser = useSelector((state) => state.auth.user);
-  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+  //  const currentUser = useSelector((state) => state.auth.user);
+  const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

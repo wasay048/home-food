@@ -5,3 +5,11 @@ node_modules
 .DS_Store
 coverage
 *.log
+
+# Firebase service account key (secrets)
+serviceAccountKey.json
+**/serviceAccountKey.json
+
+# Scripts backup files
+scripts/backups/
+scripts/*.json
