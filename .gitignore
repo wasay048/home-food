@@ -1,7 +1,6 @@
 node_modules
 .dist
 .vite
-.env
 .DS_Store
 coverage
 *.log
@@ -13,3 +12,4 @@ serviceAccountKey.json
 # Scripts backup files
 scripts/backups/
 scripts/*.json
+config.bat
