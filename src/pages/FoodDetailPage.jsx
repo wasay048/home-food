@@ -1232,8 +1232,8 @@ export default function FoodDetailPage() {
               <div
                 style={{
                   color: "#e74c3c",
-                  fontSize: "16px",
-                  fontWeight: "500",
+                  fontSize: "18px",
+                  fontWeight: "700",
                   marginTop: "12px",
                   marginBottom: "8px",
                 }}

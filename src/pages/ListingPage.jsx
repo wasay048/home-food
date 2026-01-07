@@ -488,8 +488,8 @@ export default function ListingPage() {
                               <div
                                 style={{
                                   color: "#e74c3c",
-                                  fontSize: "12px",
-                                  fontWeight: "500",
+                                  fontSize: "14px",
+                                  fontWeight: "700",
                                   marginTop: "4px",
                                   width: "100%",
                                 }}
