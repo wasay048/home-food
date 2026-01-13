@@ -1270,7 +1270,8 @@ export default function FoodDetailPage() {
                 })()}
               </div>
             </div> */}
-            {/* Dynamic Date Time Picker */}
+            {/* Dynamic Date Time Picker - Hide for category 8 items */}
+            {getMaxCategoryId(food?.foodCategory) !== 8 && (
             <div className="pickup-details">
               <DateTimePicker
                 food={food}
@@ -1320,6 +1321,7 @@ export default function FoodDetailPage() {
                 fulfillmentType={food?.orderType}
               />
             </div>
+            )}
           </div>
 
           <div className="padding-20">

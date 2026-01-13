@@ -734,7 +734,7 @@ export const createOrderObject = ({
       quantity: parseInt(item.quantity || 1),
       orderStatus: "inProgress",
       orderType:
-        item.pickupDetails.orderType === "PRE_ORDER" ? "preorder" : "grabAndGo",
+        item.pickupDetails?.orderType === "PRE_ORDER" ? "preorder" : "grabAndGo",
       orderType1: item.fulfillmentType || 2,
       rating: 0,
       specialInstructions: item.specialInstructions || "",
