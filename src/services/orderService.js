@@ -396,11 +396,9 @@ export const placeOrder = async (orderData) => {
             });
 
             // Continue with your existing calculation logic...
-            const currentSold = currentData.numOfSoldItem || 0;
             const currentAvailable = currentData.numAvailable || 0;
             const orderQuantity = parseInt(item.quantity);
 
-            const newSoldItems = currentSold + orderQuantity;
             const newAvailableItems = Math.max(
               0,
               currentAvailable - orderQuantity
@@ -408,17 +406,15 @@ export const placeOrder = async (orderData) => {
 
             // ... rest of your existing update logic
             console.log("📊 [ORDER SERVICE] Inventory calculation:", {
-              currentSold,
               currentAvailable,
               orderQuantity,
-              newSoldItems,
               newAvailableItems,
-              calculation: `Sold: ${currentSold} + ${orderQuantity} = ${newSoldItems}, Available: ${currentAvailable} - ${orderQuantity} = ${newAvailableItems}`,
+              calculation: `Available: ${currentAvailable} - ${orderQuantity} = ${newAvailableItems}`,
             });
 
             // Validate the calculation
-            if (isNaN(newSoldItems) || isNaN(newAvailableItems)) {
-              const errorMsg = `Invalid calculation: newSoldItems=${newSoldItems}, newAvailableItems=${newAvailableItems}`;
+            if (isNaN(newAvailableItems)) {
+              const errorMsg = `Invalid calculation: newAvailableItems=${newAvailableItems}`;
               throw new Error(errorMsg);
             }
 
@@ -428,7 +424,7 @@ export const placeOrder = async (orderData) => {
             );
 
             await updateDoc(foodRef, {
-              numOfSoldItem: newSoldItems,
+              // ✅ Only update numAvailable - do NOT update numOfSoldItem
               numAvailable: newAvailableItems,
             });
           } else {

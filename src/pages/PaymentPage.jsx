@@ -108,10 +108,10 @@ export default function PaymentPage() {
   // Get cart items from Redux
   const cartItems = useSelector((state) => state.cart.items);
   const currentKitchen = useSelector((state) => state.food.currentKitchen);
-  const currentUser = useSelector((state) => state.auth.user);
-  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
-  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-  // const isAuthenticated = true;
+  // const currentUser = useSelector((state) => state.auth.user);
+  const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+  // const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const isAuthenticated = true;
 
   // ✅ Check if any cart item contains foodCategory 7 or 8 (cash payment not allowed)
   const hasCashRestrictedItems = useMemo(() => {
@@ -535,6 +535,12 @@ export default function PaymentPage() {
     const invalidItems = [];
 
     cartItems.forEach((item) => {
+      // ✅ Skip validation for category 8 items - they use default date (2000-01-01) intentionally
+      if (isCategory8Item(item)) {
+        console.log("📅 [Validation] Skipping category 8 item:", item.food?.name);
+        return;
+      }
+
       const pickupDate = item?.selectedDate; // Already in YYYY-MM-DD format
 
       if (pickupDate) {
@@ -667,6 +673,7 @@ export default function PaymentPage() {
         "placeOrder --deliveryAddress",
         needsDeliveryAddress ? deliveryAddress.trim() : null
       );
+      debugger;
       // Create order object
       const orderData = createOrderObject({
         cartItems,

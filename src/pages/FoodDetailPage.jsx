@@ -837,6 +837,12 @@ export default function FoodDetailPage() {
 
       if (!hasProcessed) {
         sessionStorage.setItem(`direct-landing-processed-${food.id}`, "true");
+        
+        // ✅ Check if this is a category 8 item - use default date/time
+        const isCategory8 = getMaxCategoryId(food?.foodCategory) === 8;
+        const category8DefaultDate = "2000-01-01";
+        const category8DefaultTime = "12:00 AM";
+        
         // Use setTimeout to ensure this runs after all other state updates
         const timer = setTimeout(() => {
           handleCartQuantityChange({
@@ -844,8 +850,11 @@ export default function FoodDetailPage() {
             kitchen,
             newQuantity: getCurrentAvailability === 0 ? 0 : 1, // Default quantity
             // currentQuantity: 0,
-            selectedDate: pickupDate || dayjs().format("YYYY-MM-DD"),
-            selectedTime: pickupTime,
+            // ✅ Use default date for category 8, otherwise use normal date
+            selectedDate: isCategory8 
+              ? category8DefaultDate 
+              : (pickupDate || dayjs().format("YYYY-MM-DD")),
+            selectedTime: isCategory8 ? category8DefaultTime : pickupTime,
             specialInstructions: "",
             incomingOrderType: orderType,
             calledFrom: "direct-landing-useEffect",
@@ -1367,12 +1376,21 @@ export default function FoodDetailPage() {
                     console.log("detailll-page - selectedQuantity", selectedQuantity);
                     console.log("detailll-page - cartQuantity", cartQuantity);
                     console.log("detailll-page - special instructions", specialInstructions);
+                    
+                    // ✅ Check if this is a category 8 item - use default date/time
+                    const isCategory8 = getMaxCategoryId(food?.foodCategory) === 8;
+                    const category8DefaultDate = "2000-01-01";
+                    const category8DefaultTime = "12:00 AM";
+                    
                     handleCartQuantityChange({
                       food,
                       kitchen,
                       newQuantity: cartQuantity || 1,
-                      selectedDate: pickupDate || dayjs().format("YYYY-MM-DD"),
-                      selectedTime: pickupTime,
+                      // ✅ Use default date for category 8, otherwise use normal date
+                      selectedDate: isCategory8 
+                        ? category8DefaultDate 
+                        : (pickupDate || dayjs().format("YYYY-MM-DD")),
+                      selectedTime: isCategory8 ? category8DefaultTime : pickupTime,
                       specialInstructions,
                       incomingOrderType: orderType,
                       calledFrom: "FoodDetailPage Add to Cart button",

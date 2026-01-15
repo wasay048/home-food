@@ -436,6 +436,21 @@ export const useGenericCart = () => {
       fulfillmentType = null, // 1 = delivery, 2 = pickup, null = pickup (default)
     }) => {
       try {
+        // ✅ Helper function to get max category ID
+        const getMaxCategoryId = (foodCategory) => {
+          if (!foodCategory) return 0;
+          const categories = foodCategory.split(",").map((c) => parseInt(c.trim(), 10));
+          return Math.max(...categories.filter((c) => !isNaN(c)), 0);
+        };
+        
+        // ✅ Check if this is a category 8 item - override date/time with defaults
+        const isCategory8 = getMaxCategoryId(food?.foodCategory) === 8;
+        if (isCategory8) {
+          console.log("🔥 [Category 8] Using default date/time for category 8 item:", food?.name);
+          selectedDate = "2000-01-01";
+          selectedTime = "12:00 AM";
+        }
+        
         // ✅ NEW: Use calculateAvailability to determine proper order type
         console.log("selectedDate", selectedDate);
         console.log("selectedTime updations", selectedTime, calledFrom);
