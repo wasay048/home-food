@@ -809,7 +809,7 @@ export default function FoodDetailPage() {
 
     if (isDirectLanding) {
       console.log("🛒 [Direct Landing] Clearing cart and resetting special instructions");
-      dispatch(clearCart());
+      // dispatch(clearCart());
       setPickupDate(null);
       setPickupTime(null);
       setSpecialInstructions(""); // Reset special instructions on direct landing

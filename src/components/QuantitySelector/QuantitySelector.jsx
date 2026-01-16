@@ -57,7 +57,9 @@ export const QuantitySelector = ({
         return;
       }
 
-      if (newQuantity > availabilityStatus.maxAvailable) {
+      // ✅ FIX: Only check availability when INCREASING quantity, not when decreasing
+      // Users should always be able to remove items from cart even if item is now out of stock
+      if (newQuantity > cartQuantity && newQuantity > availabilityStatus.maxAvailable) {
         if (availabilityStatus.maxAvailable === 0) {
           alert(
             "♡ this food to the chef that we want it! When it is added to Go&Grab or Pre-Order, you will be notified."
