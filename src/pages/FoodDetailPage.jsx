@@ -45,7 +45,7 @@ const calculateGroupOrderPercentage = (food) => {
   if (!food?.minByGroup || food.minByGroup <= 0) return null;
   const maxByGroup = food.maxByGroup || food.minByGroup; // fallback to minByGroup if maxByGroup not set
   const percentage = ((maxByGroup - (food.numAvailable || 0)) / food.minByGroup) * 100;
-  return Math.round(Math.min(100, Math.max(0, percentage))); // Cap at 100, floor at 0
+  return Math.round(Math.max(0, percentage)); // Floor at 0, no cap (can exceed 100%)
 };
 
 

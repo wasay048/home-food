@@ -48,7 +48,7 @@ const calculateGroupOrderPercentage = (foodData) => {
 
   if (minByGroup <= 0) return null;
   const percentage = ((maxByGroup - numAvailable) / minByGroup) * 100;
-  return Math.round(Math.min(100, Math.max(0, percentage)));
+  return Math.round(Math.max(0, percentage)); // Floor at 0, no cap (can exceed 100%)
 };
 
 /**

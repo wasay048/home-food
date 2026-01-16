@@ -63,7 +63,7 @@ export default function ListingPage() {
       if (!food?.minByGroup || food.minByGroup <= 0) return 0;
       const maxByGroup = food.maxByGroup || food.minByGroup;
       const percentage = ((maxByGroup - (food.numAvailable || 0)) / food.minByGroup) * 100;
-      return Math.min(100, Math.max(0, percentage));
+      return Math.max(0, percentage); // Floor at 0, no cap
     };
 
     // Group items by their max category ID
@@ -494,7 +494,7 @@ export default function ListingPage() {
                                   width: "100%",
                                 }}
                               >
-                                Group order filled: {Math.min(100, Math.round(((food.maxByGroup || food.minByGroup) - (food.numAvailable || 0)) / food.minByGroup * 100))}%
+                                Group order filled: {Math.max(0, Math.round(((food.maxByGroup || food.minByGroup) - (food.numAvailable || 0)) / food.minByGroup * 100))}%
                               </div>
                             )}
                             {/* Hide DateTimePicker for category 8 items */}
