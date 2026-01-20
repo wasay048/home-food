@@ -4,10 +4,12 @@ import dayjs from "dayjs";
 import qrCode from "../assets/images/home-food-qr.svg";
 import scooterRider from "../assets/scooter-rider.png";
 import { useGenericCart } from "../hooks/useGenericCart";
+import { useKitchenWithFoods } from "../hooks/useKitchenListing";
+import { setListingData, setListingLoading } from "../store/slices/listingSlice";
 // import Edit from "../assets/images/edit.svg";
 import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 
 export default function ListingPage() {
   const navigate = useNavigate();
@@ -21,7 +23,108 @@ export default function ListingPage() {
     kitchen,
     isLoading: listingLoading,
     lastUpdated,
+    kitchenId,
   } = useSelector((state) => state.listing);
+
+  const dispatch = useDispatch();
+
+  // ✅ Fetch fresh data from Firebase when mounting/refreshing
+  const {
+    kitchen: fullKitchen,
+    foods: allFoods,
+    loading: freshLoading,
+  } = useKitchenWithFoods(kitchenId);
+
+  // ✅ Update Redux with fresh data when it arrives
+  useEffect(() => {
+    // Only proceed if we have fresh data and a valid kitchenId
+    if (
+      !fullKitchen ||
+      !allFoods ||
+      allFoods.length === 0 ||
+      !kitchenId
+    ) {
+      return;
+    }
+
+    // Optional: Only update if data has actually changed or if it's been a while?
+    // For now, we update on every mount/refresh to ensure fresh percentages
+    console.log("🔄 [ListingPage] Refreshed data received from Firebase");
+
+    try {
+      // Process Go & Grab items
+      const goGrabItems = allFoods.filter((food) => {
+        const numAvailable =
+          food.availability?.numAvailable || food.numAvailable || 0;
+        return numAvailable > 0 && food.kitchenId === kitchenId;
+      });
+
+      // Process Pre-Order items
+      let preOrderItems = [];
+      let availablePreorderDates = [];
+
+      if (fullKitchen?.preorderSchedule?.dates) {
+        // Get dates for the next 7 days (including today)
+        const today = dayjs();
+        const preorderFoodIds = new Set();
+        availablePreorderDates = [];
+
+        // Loop through the next 7 days
+        for (let i = 0; i < 7; i++) {
+          const currentDate = today.add(i, "day");
+          const dateStr = currentDate.format("YYYY-MM-DD");
+          const schedule = fullKitchen.preorderSchedule.dates[dateStr];
+
+          // Check if schedule exists for this date
+          if (schedule && Array.isArray(schedule) && schedule.length > 0) {
+            // Format display date
+            let displayDate;
+            if (i === 0) {
+              displayDate = `Today, ${currentDate.format("MMM D")}`;
+            } else if (i === 1) {
+              displayDate = `Tomorrow, ${currentDate.format("MMM D")}`;
+            } else {
+              displayDate = currentDate.format("ddd, MMM D");
+            }
+
+            availablePreorderDates.push({
+              dateString: dateStr,
+              displayDate: displayDate,
+              scheduleItems: schedule,
+            });
+
+            // Add food IDs from this date's schedule
+            schedule.forEach((item) => {
+              preorderFoodIds.add(item.foodItemId);
+            });
+          }
+        }
+
+        // Filter foods that are in any of the week's preorder schedules
+        if (preorderFoodIds.size > 0) {
+          preOrderItems = allFoods.filter((food) => {
+            return preorderFoodIds.has(food.id) && food.kitchenId === kitchenId;
+          });
+        } else {
+          preOrderItems = [];
+        }
+      } else {
+        availablePreorderDates = [];
+        preOrderItems = [];
+      }
+
+      const listingData = {
+        goGrabItems,
+        preOrderItems,
+        availablePreorderDates,
+        kitchen: fullKitchen,
+      };
+
+      dispatch(setListingData(listingData));
+    } catch (error) {
+      console.error("❌ [ListingPage] Error processing fresh data:", error);
+    }
+  }, [fullKitchen, allFoods, kitchenId, dispatch]);
 
   // ✅ Get food categories from Redux store
   const foodCategories = useSelector((state) => state.foodCategories?.categories || []);

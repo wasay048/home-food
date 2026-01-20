@@ -589,6 +589,19 @@ export default function MyOrdersPage() {
                                 <span className="progress-value">
                                   Filled {calculateGroupOrderPercentage(foodItemsData[item.foodItemId]) || 0}%
                                 </span>
+                                {/* Show date/time only if pickupDateString is not the default */}
+                                {item.pickupDateString &&  !["01,01,2000", "01/01/2000"].includes(item.pickupDateString) && (
+                                  <div className="delivery-info" style={{ marginTop: "4px" }}>
+                                    <div className="delivery-date">
+                                      {item.pickupDateString 
+                                        ? dayjs(item.pickupDateString, "MM/DD/YYYY").format("MMM D, YYYY")
+                                        : ""}
+                                    </div>
+                                    <div className="delivery-time">
+                                      {item.pickupTime || ""}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
 
