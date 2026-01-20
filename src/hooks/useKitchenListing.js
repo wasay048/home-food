@@ -12,6 +12,13 @@ export function useKitchenWithFoods(kitchenId) {
   const [foods, setFoods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Function to trigger a manual refetch
+  const refetch = () => {
+    console.log("[useKitchenWithFoods] Manual refetch triggered");
+    setRefreshKey((prev) => prev + 1);
+  };
 
   useEffect(() => {
     async function fetchKitchenData() {
@@ -43,7 +50,7 @@ export function useKitchenWithFoods(kitchenId) {
     }
 
     fetchKitchenData();
-  }, [kitchenId]);
+  }, [kitchenId, refreshKey]);
 
   return {
     kitchen,
@@ -51,6 +58,7 @@ export function useKitchenWithFoods(kitchenId) {
     loading,
     error,
     hasData: !!kitchen && foods.length > 0,
+    refetch,
   };
 }
 

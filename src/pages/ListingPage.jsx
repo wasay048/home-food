@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
 import qrCode from "../assets/images/home-food-qr.svg";
@@ -33,7 +33,57 @@ export default function ListingPage() {
     kitchen: fullKitchen,
     foods: allFoods,
     loading: freshLoading,
+    refetch,
   } = useKitchenWithFoods(kitchenId);
+
+  // ✅ Pull-to-refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const touchStartY = useRef(0);
+  const containerRef = useRef(null);
+  const PULL_THRESHOLD = 80; // pixels to pull before triggering refresh
+
+  // Handle touch start for pull-to-refresh
+  const handleTouchStart = useCallback((e) => {
+    if (window.scrollY === 0) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+  }, []);
+
+  // Handle touch move for pull-to-refresh
+  const handleTouchMove = useCallback((e) => {
+    if (isRefreshing) return;
+    if (window.scrollY > 0) {
+      setPullDistance(0);
+      return;
+    }
+    
+    const touchY = e.touches[0].clientY;
+    const diff = touchY - touchStartY.current;
+    
+    if (diff > 0) {
+      // Pulling down - apply resistance
+      setPullDistance(Math.min(diff * 0.5, PULL_THRESHOLD + 20));
+    }
+  }, [isRefreshing]);
+
+  // Handle touch end for pull-to-refresh
+  const handleTouchEnd = useCallback(async () => {
+    if (pullDistance >= PULL_THRESHOLD && !isRefreshing) {
+      setIsRefreshing(true);
+      console.log("🔄 [ListingPage] Pull-to-refresh triggered");
+      
+      try {
+        // Trigger refetch
+        refetch();
+        // Wait a bit to show the refresh animation
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } finally {
+        setIsRefreshing(false);
+      }
+    }
+    setPullDistance(0);
+  }, [pullDistance, isRefreshing, refetch]);
 
   // ✅ Update Redux with fresh data when it arrives
   useEffect(() => {
@@ -465,7 +515,41 @@ export default function ListingPage() {
     cartItems.map((item) => item.foodId)
   );
   return (
-    <div className="container">
+    <div 
+      className="container"
+      ref={containerRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={{ 
+        transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : 'none',
+        transition: pullDistance === 0 ? 'transform 0.2s ease-out' : 'none'
+      }}
+    >
+      {/* Pull-to-refresh indicator */}
+      {(pullDistance > 0 || isRefreshing) && (
+        <div 
+          style={{
+            position: 'absolute',
+            top: pullDistance > 0 ? -40 + pullDistance : 10,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            textAlign: 'center',
+            color: '#3fc045',
+            fontSize: '14px',
+            fontWeight: '500',
+            zIndex: 1000,
+          }}
+        >
+          {isRefreshing ? (
+            <span>🔄 Refreshing...</span>
+          ) : pullDistance >= 80 ? (
+            <span>↓ Release to refresh</span>
+          ) : (
+            <span>↓ Pull to refresh</span>
+          )}
+        </div>
+      )}
       <div className="mobile-container">
         <div className="padding-20">
           <div className="back-link-title">
