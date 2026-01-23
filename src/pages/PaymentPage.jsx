@@ -970,24 +970,18 @@ export default function PaymentPage() {
                             <h5 className="food-name">
                               {item.food?.name || "Unknown Item"}
                             </h5>
-                            {/* Show default date/time for category 8 items */}
-                            <div className="pickup-time">
-                              {isCategory8Item(item) ? (
-                                <>
-                                  {CATEGORY_8_DEFAULT_DATE} at {CATEGORY_8_DEFAULT_TIME}
-                                </>
-                              ) : (
-                                <>
-                                  {dayjs(item.selectedDate).format(
-                                    "dddd, MMMM D, YYYY"
-                                  )}{" "}
-                                  at{" "}
-                                  {dayjs(item.selectedTime, "h:mm A").format(
-                                    "h:mm A"
-                                  )}
-                                </>
-                              )}
-                            </div>
+                            {/* Hide date/time for category 8 items */}
+                            {!isCategory8Item(item) && (
+                              <div className="pickup-time">
+                                {dayjs(item.selectedDate).format(
+                                  "dddd, MMMM D, YYYY"
+                                )}{" "}
+                                at{" "}
+                                {dayjs(item.selectedTime, "h:mm A").format(
+                                  "h:mm A"
+                                )}
+                              </div>
+                            )}
                             <div className="item-quantity">
                               Qty: {item.quantity} × $
                               {item.food?.cost || item.food?.price || "0.00"}
@@ -1031,24 +1025,18 @@ export default function PaymentPage() {
                                 <h5 className="food-name">
                                   {item.food?.name || "Unknown Item"}
                                 </h5>
-                                {/* Show default date/time for category 8 items */}
-                                <div className="pickup-time">
-                                  {isCategory8Item(item) ? (
-                                    <>
-                                      {CATEGORY_8_DEFAULT_DATE} at {CATEGORY_8_DEFAULT_TIME}
-                                    </>
-                                  ) : (
-                                    <>
-                                      {dayjs(item.selectedDate).format(
-                                        "dddd, MMMM D, YYYY"
-                                      )}{" "}
-                                      at{" "}
-                                      {dayjs(item.selectedTime, "h:mm A").format(
-                                        "h:mm A"
-                                      )}
-                                    </>
-                                  )}
-                                </div>
+                                {/* Hide date/time for category 8 items */}
+                                {!isCategory8Item(item) && (
+                                  <div className="pickup-time">
+                                    {dayjs(item.selectedDate).format(
+                                      "dddd, MMMM D, YYYY"
+                                    )}{" "}
+                                    at{" "}
+                                    {dayjs(item.selectedTime, "h:mm A").format(
+                                      "h:mm A"
+                                    )}
+                                  </div>
+                                )}
                                 <div className="item-quantity">
                                   Qty: {item.quantity} × $
                                   {item.food?.cost ||

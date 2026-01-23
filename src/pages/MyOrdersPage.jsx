@@ -100,7 +100,26 @@ export default function MyOrdersPage() {
   const [activeTab, setActiveTab] = useState("inProgress"); // "inProgress" or "delivered"
 
   /**
+   * Format date header based on relative date (Today, Yesterday, or formatted date)
+   */
+  const formatDateHeader = useCallback((datePlaced) => {
+    const date = datePlaced?.toDate ? datePlaced.toDate() : new Date(datePlaced);
+    const dateObj = dayjs(date);
+    const today = dayjs().startOf("day");
+    const yesterday = today.subtract(1, "day");
+    
+    if (dateObj.isSame(today, "day")) {
+      return "Today";
+    } else if (dateObj.isSame(yesterday, "day")) {
+      return "Yesterday";
+    } else {
+      return dateObj.format("MMM D, YYYY");
+    }
+  }, []);
+
+  /**
    * Filter orders and items based on the active tab
+   * Groups items by order date (Today, Yesterday, etc.)
    * Each order may have multiple items with different statuses
    */
   const getFilteredOrderItems = useCallback(() => {
@@ -118,8 +137,25 @@ export default function MyOrdersPage() {
       });
     });
     
-    return filteredItems;
-  }, [orders, activeTab]);
+    // Sort by datePlaced (newest first)
+    filteredItems.sort((a, b) => {
+      const dateA = a.order.datePlaced?.toDate ? a.order.datePlaced.toDate() : new Date(a.order.datePlaced);
+      const dateB = b.order.datePlaced?.toDate ? b.order.datePlaced.toDate() : new Date(b.order.datePlaced);
+      return dateB - dateA; // Descending
+    });
+    
+    // Group by date header
+    const groupedByDate = {};
+    filteredItems.forEach((item) => {
+      const dateHeader = formatDateHeader(item.order.datePlaced);
+      if (!groupedByDate[dateHeader]) {
+        groupedByDate[dateHeader] = [];
+      }
+      groupedByDate[dateHeader].push(item);
+    });
+    
+    return groupedByDate;
+  }, [orders, activeTab, formatDateHeader]);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -455,7 +491,7 @@ export default function MyOrdersPage() {
           )}
 
           {/* Empty State for current tab */}
-          {currentUser && !error && getFilteredOrderItems().length === 0 && orders.length > 0 && (
+          {currentUser && !error && Object.keys(getFilteredOrderItems()).length === 0 && orders.length > 0 && (
             <div className="orders-empty">
               <p>No {activeTab === "delivered" ? "delivered" : "in progress"} orders.</p>
             </div>
@@ -474,10 +510,28 @@ export default function MyOrdersPage() {
             </div>
           )}
 
-          {/* Orders List - Using filtered items */}
-          {currentUser && !error && getFilteredOrderItems().length > 0 && (
+          {/* Orders List - Using grouped items by date */}
+          {currentUser && !error && Object.keys(getFilteredOrderItems()).length > 0 && (
             <div className="orders-list">
-              {getFilteredOrderItems().map(({ order, item, index }) => {
+              {Object.entries(getFilteredOrderItems()).map(([dateHeader, items]) => (
+                <div key={dateHeader} className="orders-date-group">
+                  {/* Date Header */}
+                  <div 
+                    className="date-header"
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      color: "#333",
+                      padding: "12px 0 8px 0",
+                      borderBottom: "1px solid #eee",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    {dateHeader}
+                  </div>
+                  
+                  {/* Items for this date */}
+                  {items.map(({ order, item, index }) => {
                 const displayCase = getOrderDisplayCase(order, item);
 
                 return (
@@ -587,19 +641,113 @@ export default function MyOrdersPage() {
                               <div className="group-progress">
                                 <span className="progress-label">Group Order</span>
                                 <span className="progress-value">
-                                  Filled {calculateGroupOrderPercentage(foodItemsData[item.foodItemId]) || 0}%
+                                  {/* Show wholesale message only for default date */}
+                                {item.pickupDateString && ["01,01,2000", "01/01/2000"].includes(item.pickupDateString) && (
+                                  <span style={{ fontSize: "11px", color: "#666", display: "block", marginTop: "2px" }}>
+                                    Need more orders to meet wholesale volume
+                                  </span>
+                                )} 
+                                <span>Filled {calculateGroupOrderPercentage(foodItemsData[item.foodItemId]) || 0}%</span>
                                 </span>
-                                {/* Show date/time only if pickupDateString is not the default */}
-                                {item.pickupDateString &&  !["01,01,2000", "01/01/2000"].includes(item.pickupDateString) && (
-                                  <div className="delivery-info" style={{ marginTop: "4px" }}>
-                                    <div className="delivery-date">
-                                      {item.pickupDateString 
-                                        ? dayjs(item.pickupDateString, "MM/DD/YYYY").format("MMM D, YYYY")
-                                        : ""}
+                                {/* Show editable date/time when chef has set a pickup date (non-default) */}
+                                {item.pickupDateString && !["01,01,2000", "01/01/2000"].includes(item.pickupDateString) && (
+                                  <div className="ready-pickup-section" style={{ marginTop: "8px" }}>
+                                    <span style={{ fontSize: "12px", color: "#3fc045", fontWeight: "500", display: "block", marginBottom: "8px" }}>
+                                      Ready for pick up on:
+                                    </span>
+                                    {/* Using DateTimePicker structure for iOS compatibility */}
+                                    <div className="date-time-picker listing-page-picker" style={{ flexDirection: "column", gap: "6px", maxWidth: "140px" }}>
+                                      {/* Date Picker Field */}
+                                      <div className="picker-field" style={{ marginBottom: "0" }}>
+                                        <label className="picker-label">Pickup Date</label>
+                                        <select
+                                          className="picker-select date-select"
+                                          style={{ width: "100%" }}
+                                          value={pickupDates[`${order.id}-${index}`] || dayjs(item.pickupDateString, "MM,DD,YYYY").format("YYYY-MM-DD")}
+                                          onChange={(e) => handlePickupDateChange(order.id, index, e.target.value)}
+                                        >
+                                          {/* Only chef date + next day (within 24 hours) */}
+                                          {(() => {
+                                            const chefDate = dayjs(item.pickupDateString, "MM,DD,YYYY");
+                                            const dates = [
+                                              { value: chefDate.format("YYYY-MM-DD"), label: chefDate.format("MMM D, YYYY") },
+                                              { value: chefDate.add(1, "day").format("YYYY-MM-DD"), label: chefDate.add(1, "day").format("MMM D, YYYY") },
+                                            ];
+                                            return dates.map((d) => (
+                                              <option key={d.value} value={d.value}>{d.label}</option>
+                                            ));
+                                          })()}
+                                        </select>
+                                      </div>
+                                      {/* Time Picker Field */}
+                                      <div className="picker-field" style={{ marginBottom: "0" }}>
+                                        <label className="picker-label">Pickup Time</label>
+                                        <select
+                                          className="picker-select time-select"
+                                          style={{ width: "100%" }}
+                                          value={pickupTimes[`${order.id}-${index}`] || item.pickupTime || ""}
+                                          onChange={(e) => handlePickupTimeChange(order.id, index, e.target.value)}
+                                        >
+                                          <option value="" disabled>Select time</option>
+                                          {(() => {
+                                            const chefTime = item.pickupTime || "12:00 PM";
+                                            const chefDateStr = item.pickupDateString;
+                                            const chefDateTime = dayjs(`${dayjs(chefDateStr, "MM,DD,YYYY").format("YYYY-MM-DD")} ${chefTime}`, "YYYY-MM-DD h:mm A");
+                                            const maxDateTime = chefDateTime.add(24, "hours");
+                                            
+                                            const selectedDateStr = pickupDates[`${order.id}-${index}`] || dayjs(chefDateStr, "MM,DD,YYYY").format("YYYY-MM-DD");
+                                            const selectedDate = dayjs(selectedDateStr);
+                                            const isChefDay = selectedDate.isSame(dayjs(chefDateStr, "MM,DD,YYYY"), "day");
+                                            
+                                            const timeSlots = [];
+                                            let startSlot = isChefDay 
+                                              ? chefDateTime 
+                                              : selectedDate.startOf("day");
+                                            
+                                            let endSlot = selectedDate.isSame(maxDateTime, "day")
+                                              ? maxDateTime
+                                              : selectedDate.endOf("day").hour(23).minute(45);
+                                            
+                                            if (endSlot.isAfter(maxDateTime)) {
+                                              endSlot = maxDateTime;
+                                            }
+                                            
+                                            let currentSlot = startSlot;
+                                            while (currentSlot.isBefore(endSlot) || currentSlot.isSame(endSlot)) {
+                                              const timeStr = currentSlot.format("h:mm A");
+                                              timeSlots.push({ value: timeStr, label: timeStr });
+                                              currentSlot = currentSlot.add(15, "minutes");
+                                            }
+                                            
+                                            return timeSlots.map((t) => (
+                                              <option key={t.value} value={t.value}>{t.label}</option>
+                                            ));
+                                          })()}
+                                        </select>
+                                      </div>
                                     </div>
-                                    <div className="delivery-time">
-                                      {item.pickupTime || ""}
-                                    </div>
+                                    {/* Save button if changes were made */}
+                                    {hasChanges(order.id, index) && (
+                                      <button
+                                        className="save-pickup-btn"
+                                        style={{
+                                          marginTop: "8px",
+                                          padding: "10px 12px",
+                                          fontSize: "14px",
+                                          backgroundColor: "#3fc045",
+                                          color: "#fff",
+                                          border: "none",
+                                          borderRadius: "8px",
+                                          cursor: "pointer",
+                                          width: "100%",
+                                          fontWeight: "500",
+                                        }}
+                                        onClick={() => savePickupChanges(order.id, index, order)}
+                                        disabled={savingItems[`${order.id}-${index}`]}
+                                      >
+                                        {savingItems[`${order.id}-${index}`] ? "Saving..." : "Save Changes"}
+                                      </button>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -616,6 +764,8 @@ export default function MyOrdersPage() {
                       </div>
                     );
                   })}
+                </div>
+              ))}
             </div>
           )}
         </div>

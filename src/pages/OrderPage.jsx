@@ -419,15 +419,8 @@ export default function OrderPage() {
                                 orderType="GO_GRAB"
                               />
                             </div>
-                            {/* Show default date/time for category 8 items */}
-                            {isCategory8Item(item) ? (
-                              <>
-                                <div className="title">{CATEGORY_8_DEFAULT_DATE}</div>
-                                <div className="bottom">
-                                  <div className="time">at {CATEGORY_8_DEFAULT_TIME}</div>
-                                </div>
-                              </>
-                            ) : (
+                            {/* Hide date/time for category 8 items */}
+                            {!isCategory8Item(item) && (
                               <>
                                 <div className="title">
                                   {item.selectedDate
@@ -538,15 +531,8 @@ export default function OrderPage() {
                                   orderType="PRE_ORDER"
                                 />
                               </div>
-                              {/* Show default date/time for category 8 items */}
-                              {isCategory8Item(item) ? (
-                                <>
-                                  <div className="title">{CATEGORY_8_DEFAULT_DATE}</div>
-                                  <div className="bottom">
-                                    <div className="time">at {CATEGORY_8_DEFAULT_TIME}</div>
-                                  </div>
-                                </>
-                              ) : (
+                              {/* Hide date/time for category 8 items */}
+                              {!isCategory8Item(item) && (
                                 <>
                                   <div className="title">
                                     {dayjs(item.selectedDate).format(
