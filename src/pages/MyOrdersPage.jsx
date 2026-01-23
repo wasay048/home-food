@@ -69,21 +69,14 @@ const getOrderDisplayCase = (order, item) => {
   // For pickup orders (orderType1 === 2 or not 1)
   const foodCategory = item?.foodCategory;
   const maxCategoryId = getMaxCategoryId(foodCategory);
-  const pickupDate = item?.pickupDate;
-  const isDefault = isDefaultDate(pickupDate);
 
-  // CASE 3: Pickup orders where category != 8 OR pickup date != default → Show editable date/time
-  if (maxCategoryId !== 8 || !isDefault) {
-    return "editable_pickup";
-  }
-
-  // CASE 4: Category 8 with default date → Show group progress
-  if (maxCategoryId === 8 && isDefault) {
+  // CASE 4: Category 8 → ALWAYS show group progress (with percentage and date/time picker when chef sets date)
+  if (maxCategoryId === 8) {
     return "group_progress";
   }
 
-  // CASE 5: Error case
-  return "error";
+  // CASE 3: Non-category 8 pickup orders → Show editable date/time
+  return "editable_pickup";
 };
 
 export default function MyOrdersPage() {
@@ -538,6 +531,7 @@ export default function MyOrdersPage() {
                   <div
                     key={`${order.id}-${index}`}
                     className={`order-card ${displayCase === "delivered" ? "delivered" : ""}`}
+                    style={{ marginBottom: "12px" }}
                   >
                         {/* Delivered Overlay */}
                         {displayCase === "delivered" && (
@@ -641,14 +635,14 @@ export default function MyOrdersPage() {
                               <div className="group-progress">
                                 <span className="progress-label">Group Order</span>
                                 <span className="progress-value">
-                                  {/* Show wholesale message only for default date */}
+                                Filled {calculateGroupOrderPercentage(foodItemsData[item.foodItemId]) || 0}%
+                                </span>
+                                {/* Show wholesale message only for default date - placed below the percentage */}
                                 {item.pickupDateString && ["01,01,2000", "01/01/2000"].includes(item.pickupDateString) && (
-                                  <span style={{ fontSize: "11px", color: "#666", display: "block", marginTop: "2px" }}>
+                                  <span style={{ fontSize: "10px", color: "#666", display: "block", marginTop: "4px", whiteSpace: "normal", lineHeight: "1.3" }}>
                                     Need more orders to meet wholesale volume
                                   </span>
-                                )} 
-                                <span>Filled {calculateGroupOrderPercentage(foodItemsData[item.foodItemId]) || 0}%</span>
-                                </span>
+                                )}
                                 {/* Show editable date/time when chef has set a pickup date (non-default) */}
                                 {item.pickupDateString && !["01,01,2000", "01/01/2000"].includes(item.pickupDateString) && (
                                   <div className="ready-pickup-section" style={{ marginTop: "8px" }}>

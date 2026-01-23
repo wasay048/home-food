@@ -2372,6 +2372,8 @@ body,
   align-items: flex-end;
   gap: 6px;
   flex-shrink: 0;
+  max-width: 140px;
+  text-align: right;
 }
 
 .order-item-info .quantity {
