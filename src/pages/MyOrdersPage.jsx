@@ -251,11 +251,21 @@ export default function MyOrdersPage() {
         sortedOrders.forEach((order) => {
           order.orderedFoodItems?.forEach((item, index) => {
             const key = `${order.id}-${index}`;
-            // Convert pickupDate to YYYY-MM-DD format for DateTimePicker
-            const pickupDate = item.pickupDate?.toDate 
-              ? item.pickupDate.toDate() 
-              : new Date(item.pickupDate);
-            initialDates[key] = dayjs(pickupDate).format("YYYY-MM-DD");
+            
+            // For category 8 items with pickupDateString, use that as source of truth
+            if (item.pickupDateString && !["01,01,2000", "01/01/2000"].includes(item.pickupDateString)) {
+              // Parse pickupDateString - handle both "MM,DD,YYYY" and "MM/DD/YYYY" formats
+              const parsedDate = item.pickupDateString.includes("/") 
+                ? dayjs(item.pickupDateString, "MM/DD/YYYY") 
+                : dayjs(item.pickupDateString, "MM,DD,YYYY");
+              initialDates[key] = parsedDate.format("YYYY-MM-DD");
+            } else {
+              // Fallback to pickupDate timestamp
+              const pickupDate = item.pickupDate?.toDate 
+                ? item.pickupDate.toDate() 
+                : new Date(item.pickupDate);
+              initialDates[key] = dayjs(pickupDate).format("YYYY-MM-DD");
+            }
             initialTimes[key] = item.pickupTime || null;
           });
         });
@@ -657,12 +667,17 @@ export default function MyOrdersPage() {
                                         <select
                                           className="picker-select date-select"
                                           style={{ width: "100%" }}
-                                          value={pickupDates[`${order.id}-${index}`] || dayjs(item.pickupDateString, "MM,DD,YYYY").format("YYYY-MM-DD")}
+                                          value={pickupDates[`${order.id}-${index}`] || (item.pickupDateString.includes("/") ? dayjs(item.pickupDateString, "MM/DD/YYYY").format("YYYY-MM-DD") : dayjs(item.pickupDateString, "MM,DD,YYYY").format("YYYY-MM-DD"))}
                                           onChange={(e) => handlePickupDateChange(order.id, index, e.target.value)}
                                         >
-                                          {/* Only chef date + next day (within 24 hours) */}
+                                          {/* Only chef date + next day (within 24 hours) - use CHEF's original date */}
                                           {(() => {
-                                            const chefDate = dayjs(item.pickupDateString, "MM,DD,YYYY");
+                                            // Use chefPickupDateString as the source of truth for date range calculation
+                                            const chefDateStr = item.chefPickupDateString || item.pickupDateString;
+                                            // Parse date - handle both "MM,DD,YYYY" and "MM/DD/YYYY" formats
+                                            const chefDate = chefDateStr.includes("/") 
+                                              ? dayjs(chefDateStr, "MM/DD/YYYY") 
+                                              : dayjs(chefDateStr, "MM,DD,YYYY");
                                             const dates = [
                                               { value: chefDate.format("YYYY-MM-DD"), label: chefDate.format("MMM D, YYYY") },
                                               { value: chefDate.add(1, "day").format("YYYY-MM-DD"), label: chefDate.add(1, "day").format("MMM D, YYYY") },
@@ -684,14 +699,35 @@ export default function MyOrdersPage() {
                                         >
                                           <option value="" disabled>Select time</option>
                                           {(() => {
-                                            const chefTime = item.pickupTime || "12:00 PM";
-                                            const chefDateStr = item.pickupDateString;
-                                            const chefDateTime = dayjs(`${dayjs(chefDateStr, "MM,DD,YYYY").format("YYYY-MM-DD")} ${chefTime}`, "YYYY-MM-DD h:mm A");
+                                            // Use CHEF's original date/time as the source of truth for 24-hour window
+                                            const rawChefTime = item.chefPickupTime || item.pickupTime || "12:00 PM";
+                                            const chefTime = rawChefTime.replace(/^0/, ""); // Remove leading zero
+                                            const chefDateStr = item.chefPickupDateString || item.pickupDateString;
+                                            // Parse date - handle both "MM,DD,YYYY" and "MM/DD/YYYY" formats
+                                            const parsedChefDate = chefDateStr.includes("/") 
+                                              ? dayjs(chefDateStr, "MM/DD/YYYY") 
+                                              : dayjs(chefDateStr, "MM,DD,YYYY");
+                                            
+                                            // Create chef datetime - try multiple formats
+                                            let chefDateTime = dayjs(`${parsedChefDate.format("YYYY-MM-DD")} ${chefTime}`, "YYYY-MM-DD h:mm A");
+                                            if (!chefDateTime.isValid()) {
+                                              // Fallback: try with HH:mm format
+                                              chefDateTime = dayjs(`${parsedChefDate.format("YYYY-MM-DD")} ${rawChefTime}`, "YYYY-MM-DD HH:mm A");
+                                            }
+                                            if (!chefDateTime.isValid()) {
+                                              // Final fallback: use noon
+                                              chefDateTime = parsedChefDate.hour(12).minute(0);
+                                            }
+                                            
                                             const maxDateTime = chefDateTime.add(24, "hours");
                                             
-                                            const selectedDateStr = pickupDates[`${order.id}-${index}`] || dayjs(chefDateStr, "MM,DD,YYYY").format("YYYY-MM-DD");
+                                            // Get selected date - default to chef's date if not set
+                                            const currentPickupDate = pickupDates[`${order.id}-${index}`];
+                                            const selectedDateStr = currentPickupDate || parsedChefDate.format("YYYY-MM-DD");
                                             const selectedDate = dayjs(selectedDateStr);
-                                            const isChefDay = selectedDate.isSame(dayjs(chefDateStr, "MM,DD,YYYY"), "day");
+                                            
+                                            // Check if selected date is chef's day - compare actual dates
+                                            const isChefDay = selectedDate.format("YYYY-MM-DD") === parsedChefDate.format("YYYY-MM-DD");
                                             
                                             const timeSlots = [];
                                             let startSlot = isChefDay 
