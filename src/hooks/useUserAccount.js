@@ -568,6 +568,125 @@ export const useUserAccount = () => {
     }
   }, []);
 
+  /**
+   * Get user's account balance
+   * @param {string} userId - The user ID
+   * @returns {Promise<number>} - The user's account balance
+   */
+  const getUserBalance = useCallback(async (userId) => {
+    console.log("[useUserAccount] Getting balance for user:", userId);
+
+    if (!userId) {
+      console.log("[useUserAccount] No user ID provided");
+      return 0;
+    }
+
+    try {
+      const accountRef = doc(db, "accounts", userId);
+      const accountSnap = await getDoc(accountRef);
+
+      if (accountSnap.exists()) {
+        const data = accountSnap.data();
+        const balance = data.accountBalance || 0;
+        console.log("[useUserAccount] User balance:", balance);
+        return balance;
+      }
+
+      console.log("[useUserAccount] User not found, returning 0 balance");
+      return 0;
+    } catch (error) {
+      console.error("[useUserAccount] Error getting balance:", error);
+      return 0;
+    }
+  }, []);
+
+  /**
+   * Add amount to user's account balance (for refunds)
+   * @param {string} userId - The user ID
+   * @param {number} amount - Amount to add
+   * @returns {Promise<{success: boolean, newBalance?: number, error?: string}>}
+   */
+  const addToBalance = useCallback(async (userId, amount) => {
+    console.log("[useUserAccount] Adding to balance:", { userId, amount });
+
+    if (!userId) {
+      return { success: false, error: "No user ID provided" };
+    }
+
+    if (amount <= 0) {
+      return { success: false, error: "Amount must be positive" };
+    }
+
+    try {
+      const accountRef = doc(db, "accounts", userId);
+      const accountSnap = await getDoc(accountRef);
+
+      if (!accountSnap.exists()) {
+        return { success: false, error: "User not found" };
+      }
+
+      const currentBalance = accountSnap.data().accountBalance || 0;
+      const newBalance = currentBalance + amount;
+
+      await updateDoc(accountRef, {
+        accountBalance: newBalance,
+        lastBalanceUpdate: serverTimestamp(),
+      });
+
+      console.log("[useUserAccount] Balance updated:", { currentBalance, amount, newBalance });
+      return { success: true, newBalance };
+    } catch (error) {
+      console.error("[useUserAccount] Error adding to balance:", error);
+      return { success: false, error: error.message };
+    }
+  }, []);
+
+  /**
+   * Deduct amount from user's account balance (for payments)
+   * @param {string} userId - The user ID
+   * @param {number} amount - Amount to deduct
+   * @returns {Promise<{success: boolean, newBalance?: number, error?: string}>}
+   */
+  const deductFromBalance = useCallback(async (userId, amount) => {
+    console.log("[useUserAccount] Deducting from balance:", { userId, amount });
+
+    if (!userId) {
+      return { success: false, error: "No user ID provided" };
+    }
+
+    if (amount <= 0) {
+      return { success: false, error: "Amount must be positive" };
+    }
+
+    try {
+      const accountRef = doc(db, "accounts", userId);
+      const accountSnap = await getDoc(accountRef);
+
+      if (!accountSnap.exists()) {
+        return { success: false, error: "User not found" };
+      }
+
+      const currentBalance = accountSnap.data().accountBalance || 0;
+
+      if (currentBalance < amount) {
+        return { success: false, error: "Insufficient balance" };
+      }
+
+      const newBalance = currentBalance - amount;
+
+      await updateDoc(accountRef, {
+        accountBalance: newBalance,
+        lastBalanceUpdate: serverTimestamp(),
+      });
+
+      console.log("[useUserAccount] Balance deducted:", { currentBalance, amount, newBalance });
+      return { success: true, newBalance };
+    } catch (error) {
+      console.error("[useUserAccount] Error deducting balance:", error);
+      return { success: false, error: error.message };
+    }
+  }, []);
+
   return {
     // State
     loading,
@@ -584,5 +703,9 @@ export const useUserAccount = () => {
     checkAccountExists,
     signOutFromFirebase,
     initializeAuthListener,
+    // Balance management
+    getUserBalance,
+    addToBalance,
+    deductFromBalance,
   };
 };

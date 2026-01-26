@@ -643,6 +643,7 @@ export const createOrderObject = ({
   deliveryAddress,
   isDelivery,
   deliveryPhone,
+  balanceToUse = 0, // Amount to deduct from user's account balance
 }) => {
   const now = new Date();
   const orderID = generateOrderID();
@@ -782,6 +783,9 @@ export const createOrderObject = ({
     salesTax: parseFloat(paymentCalculation.salesTax),
     taxRate: 0.0725,
     paymentType: paymentType || "online",
+    // Payment breakdown fields
+    paidFromBalance: parseFloat(balanceToUse.toFixed(2)),
+    paidFromOnline: parseFloat(Math.max(0, parseFloat(paymentCalculation.totalPayment) - balanceToUse).toFixed(2)),
   };
 
   return orderObject;

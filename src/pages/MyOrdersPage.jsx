@@ -7,6 +7,7 @@ import { db } from "../services/firebase";
 import MobileLoader from "../components/Loader/MobileLoader";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import dayjs from "../lib/dayjs";
+import { useUserAccount } from "../hooks/useUserAccount";
 import "../styles/index.css";
 
 /**
@@ -81,8 +82,8 @@ const getOrderDisplayCase = (order, item) => {
 
 export default function MyOrdersPage() {
   const navigate = useNavigate();
-   const currentUser = useSelector((state) => state.auth.user);
-  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+  //  const currentUser = useSelector((state) => state.auth.user);
+  const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -91,6 +92,22 @@ export default function MyOrdersPage() {
   const [pickupDates, setPickupDates] = useState({}); // Track pickup dates per item
   const [pickupTimes, setPickupTimes] = useState({}); // Track pickup times per item
   const [activeTab, setActiveTab] = useState("inProgress"); // "inProgress" or "delivered"
+  
+  // Account balance state
+  const [accountBalance, setAccountBalance] = useState(0);
+  const [cancellingItem, setCancellingItem] = useState(null); // Track which item is being cancelled
+  const { getUserBalance, addToBalance } = useUserAccount();
+
+  // Fetch account balance on mount
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (currentUser?.id) {
+        const balance = await getUserBalance(currentUser.id);
+        setAccountBalance(balance);
+      }
+    };
+    fetchBalance();
+  }, [currentUser?.id, getUserBalance]);
 
   /**
    * Format date header based on relative date (Today, Yesterday, or formatted date)
@@ -121,10 +138,12 @@ export default function MyOrdersPage() {
     orders.forEach((order) => {
       order.orderedFoodItems?.forEach((item, index) => {
         const isDelivered = item.orderStatus === "delivered";
+        const isCancelled = item.orderStatus === "cancelled";
+        const isCompleted = isDelivered || isCancelled; // Both delivered and cancelled go to "Delivered" tab
         
-        if (activeTab === "delivered" && isDelivered) {
+        if (activeTab === "delivered" && isCompleted) {
           filteredItems.push({ order, item, index });
-        } else if (activeTab === "inProgress" && !isDelivered) {
+        } else if (activeTab === "inProgress" && !isCompleted) {
           filteredItems.push({ order, item, index });
         }
       });
@@ -408,6 +427,105 @@ export default function MyOrdersPage() {
     return !!editingItems[key];
   }, [editingItems]);
 
+  /**
+   * Handle cancellation of category 8 order items
+   * Refunds the prepaid amount to user's account balance
+   * Reverts the food quantity in the kitchen
+   */
+  const handleCancelOrder = useCallback(async (order, item, itemIndex) => {
+    const key = `${order.id}-${itemIndex}`;
+    
+    // Confirm cancellation
+    const confirmed = window.confirm(
+      `Are you sure you want to cancel your order for "${item.name}"?\n\n` +
+      `You will receive a credit of $${(item.price * (item.quantity || 1)).toFixed(2)} to your account balance.`
+    );
+    
+    if (!confirmed) return;
+    
+    setCancellingItem(key);
+    
+    try {
+      // Calculate refund amount
+      const refundAmount = item.price * (item.quantity || 1);
+      const cancelledQuantity = item.quantity || 1;
+      
+      // Update order item status in Firestore
+      const orderRef = doc(db, "orders", order.id);
+      const orderSnap = await getDoc(orderRef);
+      
+      if (!orderSnap.exists()) {
+        throw new Error("Order not found");
+      }
+      
+      const orderData = orderSnap.data();
+      const updatedItems = [...(orderData.orderedFoodItems || [])];
+      
+      if (updatedItems[itemIndex]) {
+        updatedItems[itemIndex] = {
+          ...updatedItems[itemIndex],
+          orderStatus: "cancelled",
+          cancelledAt: new Date(),
+          refundAmount: refundAmount,
+        };
+      }
+      
+      await updateDoc(orderRef, { orderedFoodItems: updatedItems });
+      
+      // Revert food quantity in the kitchen
+      const foodItemId = item.foodItemId;
+      const kitchenId = item.kitchenId || order.kitchenId;
+      
+      if (foodItemId && kitchenId) {
+        // Try kitchen-specific path first, then global path
+        let foodRef = doc(db, "kitchens", kitchenId, "foodItems", foodItemId);
+        let foodSnap = await getDoc(foodRef);
+        
+        if (!foodSnap.exists()) {
+          // Fallback to global foodItems collection
+          foodRef = doc(db, "foodItems", foodItemId);
+          foodSnap = await getDoc(foodRef);
+        }
+        
+        if (foodSnap.exists()) {
+          const currentNumAvailable = foodSnap.data().numAvailable || 0;
+          const newNumAvailable = currentNumAvailable + cancelledQuantity;
+          
+          await updateDoc(foodRef, { numAvailable: newNumAvailable });
+          console.log("✅ Reverted food quantity:", { 
+            foodItemId, 
+            previousAvailable: currentNumAvailable, 
+            cancelledQuantity, 
+            newAvailable: newNumAvailable 
+          });
+        } else {
+          console.warn("⚠️ Could not find food item to revert quantity:", foodItemId);
+        }
+      }
+      
+      // Add refund to user's account balance
+      const balanceResult = await addToBalance(currentUser.id, refundAmount);
+      
+      if (balanceResult.success) {
+        setAccountBalance(balanceResult.newBalance);
+      }
+      
+      // Update local state
+      setOrders((prevOrders) =>
+        prevOrders.map((o) =>
+          o.id === order.id ? { ...o, orderedFoodItems: updatedItems } : o
+        )
+      );
+      
+      alert(`Order cancelled successfully!\n$${refundAmount.toFixed(2)} has been added to your account balance.`);
+    } catch (err) {
+      console.error("Error cancelling order:", err);
+      alert("Failed to cancel order. Please try again.");
+    } finally {
+      setCancellingItem(null);
+    }
+  }, [currentUser?.id, addToBalance]);
+
   if (loading) {
     return (
       <div className="container">
@@ -453,6 +571,14 @@ export default function MyOrdersPage() {
             <h1 className="page-title">My Orders</h1>
             <div style={{ width: "24px" }}></div>
           </div>
+
+          {/* Account Balance Card */}
+          {currentUser && (
+            <div className="account-balance-card">
+              <div className="balance-label">Account Balance</div>
+              <div className="balance-amount">${accountBalance.toFixed(2)}</div>
+            </div>
+          )}
 
           {/* Tabs - only show when logged in */}
           {currentUser && (
@@ -653,8 +779,8 @@ export default function MyOrdersPage() {
                                     Need more orders to meet wholesale volume
                                   </span>
                                 )}
-                                {/* Show editable date/time when chef has set a pickup date (non-default) */}
-                                {item.pickupDateString && !["01,01,2000", "01/01/2000"].includes(item.pickupDateString) && (
+                                {/* Show editable date/time when chef has set a pickup date (non-default) AND not cancelled */}
+                                {item.pickupDateString && !["01,01,2000", "01/01/2000"].includes(item.pickupDateString) && item.orderStatus !== "cancelled" && (
                                   <div className="ready-pickup-section" style={{ marginTop: "8px" }}>
                                     <span style={{ fontSize: "12px", color: "#3fc045", fontWeight: "500", display: "block", marginBottom: "8px" }}>
                                       Ready for pick up on:
@@ -669,6 +795,7 @@ export default function MyOrdersPage() {
                                           style={{ width: "100%" }}
                                           value={pickupDates[`${order.id}-${index}`] || (item.pickupDateString.includes("/") ? dayjs(item.pickupDateString, "MM/DD/YYYY").format("YYYY-MM-DD") : dayjs(item.pickupDateString, "MM,DD,YYYY").format("YYYY-MM-DD"))}
                                           onChange={(e) => handlePickupDateChange(order.id, index, e.target.value)}
+                                          disabled={item.orderStatus === "cancelled"}
                                         >
                                           {/* Only chef date + next day (within 24 hours) - use CHEF's original date */}
                                           {(() => {
@@ -696,6 +823,7 @@ export default function MyOrdersPage() {
                                           style={{ width: "100%" }}
                                           value={pickupTimes[`${order.id}-${index}`] || item.pickupTime || ""}
                                           onChange={(e) => handlePickupTimeChange(order.id, index, e.target.value)}
+                                          disabled={item.orderStatus === "cancelled"}
                                         >
                                           <option value="" disabled>Select time</option>
                                           {(() => {
@@ -778,6 +906,23 @@ export default function MyOrdersPage() {
                                         {savingItems[`${order.id}-${index}`] ? "Saving..." : "Save Changes"}
                                       </button>
                                     )}
+                                  </div>
+                                )}
+                                {/* Cancel Order Button for category 8 items - show for ALL category 8 items */}
+                                {item.orderStatus !== "cancelled" && item.orderStatus !== "delivered" && (
+                                  <button
+                                    className="cancel-order-btn"
+                                    style={{ marginTop: "8px" }}
+                                    onClick={() => handleCancelOrder(order, item, index)}
+                                    disabled={cancellingItem === `${order.id}-${index}`}
+                                  >
+                                    {cancellingItem === `${order.id}-${index}` ? "Cancelling..." : "Cancel Order"}
+                                  </button>
+                                )}
+                                {/* Cancelled Status */}
+                                {item.orderStatus === "cancelled" && (
+                                  <div className="status-tag cancelled-tag" style={{ marginTop: "8px" }}>
+                                    Order Cancelled - Refunded ${(item.refundAmount || item.price * (item.quantity || 1)).toFixed(2)}
                                   </div>
                                 )}
                               </div>

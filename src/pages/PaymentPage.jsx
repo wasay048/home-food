@@ -92,7 +92,12 @@ export default function PaymentPage() {
   const [showAddressValidationDialog, setShowAddressValidationDialog] =
     useState(false);
 
-  const { checkUserExistsById } = useUserAccount();
+  // Account balance state
+  const [accountBalance, setAccountBalance] = useState(0);
+  const [useBalance, setUseBalance] = useState(false);
+  const [balanceToUse, setBalanceToUse] = useState(0);
+
+  const { checkUserExistsById, getUserBalance, deductFromBalance } = useUserAccount();
   const { handleQuantityChange } = useGenericCart();
   const { deliveryFee, loading: deliveryFeeLoading } = useDeliveryFee();
   const navigate = useNavigate();
@@ -108,10 +113,10 @@ export default function PaymentPage() {
   // Get cart items from Redux
   const cartItems = useSelector((state) => state.cart.items);
   const currentKitchen = useSelector((state) => state.food.currentKitchen);
-  const currentUser = useSelector((state) => state.auth.user);
-  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
-  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-  // const isAuthenticated = true;
+  // const currentUser = useSelector((state) => state.auth.user);
+  const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+  // const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const isAuthenticated = true;
 
   // ✅ Check if any cart item contains foodCategory 7 or 8 (cash payment not allowed)
   const hasCashRestrictedItems = useMemo(() => {
@@ -232,6 +237,17 @@ export default function PaymentPage() {
   const handleWeChatDialogClose = useCallback(() => {
     setShowWeChatDialog(false);
   }, []);
+
+  // Fetch account balance on mount
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (currentUser?.id) {
+        const balance = await getUserBalance(currentUser.id);
+        setAccountBalance(balance);
+      }
+    };
+    fetchBalance();
+  }, [currentUser?.id, getUserBalance]);
 
   // Handle pickup details update from modal
   const handleModalPickupUpdate = async () => {
@@ -425,6 +441,47 @@ export default function PaymentPage() {
       totalPayment: totalPayment.toFixed(2),
     };
   }, [cartItems, fulfillmentAnalysis.hasDeliveryItems, deliveryFee]);
+
+  // Calculate balance to use when toggle changes (must be after paymentCalculation)
+  useEffect(() => {
+    if (useBalance && accountBalance > 0) {
+      const total = parseFloat(paymentCalculation.totalPayment);
+      // Use either full balance or total amount (whichever is less)
+      setBalanceToUse(Math.min(accountBalance, total));
+    } else {
+      setBalanceToUse(0);
+    }
+  }, [useBalance, accountBalance, paymentCalculation.totalPayment]);
+
+  // Check if order is fully covered by balance
+  const isFullyCoveredByBalance = useMemo(() => {
+    return useBalance && balanceToUse >= parseFloat(paymentCalculation.totalPayment);
+  }, [useBalance, balanceToUse, paymentCalculation.totalPayment]);
+
+  // Determine if Place Order button should be disabled
+  const isPlaceOrderDisabled = useMemo(() => {
+    // Always disabled if placing order, uploading, or cart is empty
+    if (isPlacingOrder || isUploading || cartItems.length === 0) {
+      return true;
+    }
+    
+    // If balance fully covers the order, enable the button
+    if (isFullyCoveredByBalance) {
+      return false;
+    }
+    
+    // If payment type is cash, allow without screenshot
+    if (paymentType === "cash") {
+      return false;
+    }
+    
+    // If payment type is online and there's remaining amount, require screenshot
+    if (paymentType === "online" && !firebaseImageUrl) {
+      return true;
+    }
+    
+    return false;
+  }, [isPlacingOrder, isUploading, cartItems.length, isFullyCoveredByBalance, paymentType, firebaseImageUrl]);
 
   // Handle file upload with react-dropzone
   const onDrop = async (acceptedFiles) => {
@@ -652,7 +709,13 @@ export default function PaymentPage() {
 
       console.log("✅ All items available, proceeding with order...");
 
-      if (paymentType === "online" && !firebaseImageUrl) {
+      // Calculate remaining amount after balance deduction
+      const remainingAmount = useBalance 
+        ? Math.max(0, parseFloat(paymentCalculation.totalPayment) - balanceToUse) 
+        : parseFloat(paymentCalculation.totalPayment);
+
+      // Only require screenshot if not fully covered by balance and payment type is online
+      if (paymentType === "online" && !firebaseImageUrl && !isFullyCoveredByBalance) {
         showToast.error(
           "Please upload a payment confirmation screenshot before placing your order."
         );
@@ -687,12 +750,31 @@ export default function PaymentPage() {
         isDelivery: needsDeliveryAddress,
         deliveryPhone: needsDeliveryAddress ? deliveryPhone : null,
         fulfillmentAnalysis, // Pass the fulfillment analysis for detailed order info
+        balanceToUse: useBalance ? balanceToUse : 0, // Amount to deduct from user's account balance
       });
 
       console.log("Order data to be placed:", orderData);
 
+      // Add balance payment info to order data if using balance
+      if (useBalance && balanceToUse > 0) {
+        orderData.balanceUsed = balanceToUse;
+        orderData.balancePaidInFull = isFullyCoveredByBalance;
+        orderData.remainingPayment = remainingAmount;
+      }
+
       // Place the order in Firestore
       const orderDocId = await placeOrder(orderData);
+
+      // Deduct balance from user account if balance was used
+      if (useBalance && balanceToUse > 0) {
+        const deductResult = await deductFromBalance(currentUser.id, balanceToUse);
+        if (deductResult.success) {
+          console.log("✅ Balance deducted successfully:", { balanceUsed: balanceToUse, newBalance: deductResult.newBalance });
+        } else {
+          console.error("⚠️ Failed to deduct balance:", deductResult.error);
+          // Note: Order is already placed, so we log the error but don't prevent success
+        }
+      }
 
       // Clear the cart after successful order placement
       dispatch(clearCart());
@@ -937,11 +1019,63 @@ export default function PaymentPage() {
                   <span>${paymentCalculation.deliveryCharges}</span>
                 </div>
               )}
+              
+              {/* Account Balance Option */}
+              {accountBalance > 0 && (
+                <div className="use-balance-section">
+                  <div className="hr mb-12"></div>
+                  <div className="item-flex use-balance-option">
+                    <label className="balance-toggle">
+                      <input
+                        type="checkbox"
+                        checked={useBalance}
+                        onChange={(e) => setUseBalance(e.target.checked)}
+                      />
+                      <span className="balance-label">
+                        Use Account Balance
+                        <span className="available-balance">
+                          (Available: ${accountBalance.toFixed(2)})
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                  {useBalance && balanceToUse > 0 && (
+                    <div className="item-flex balance-deduction">
+                      <span>Balance Applied</span>
+                      <span className="balance-amount">-${balanceToUse.toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <div className="hr mb-12"></div>
               <div className="item-flex bold">
-                <span>Total Payment</span>
-                <span>${paymentCalculation.totalPayment}</span>
+                <span>{useBalance && balanceToUse > 0 ? "Amount to Pay" : "Total Payment"}</span>
+                <span>${useBalance && balanceToUse > 0 
+                  ? Math.max(0, parseFloat(paymentCalculation.totalPayment) - balanceToUse).toFixed(2)
+                  : paymentCalculation.totalPayment
+                }</span>
               </div>
+              
+              {/* Show remaining amount when using balance */}
+              {useBalance && balanceToUse > 0 && (
+                <div className="remaining-payment-info">
+                  {balanceToUse >= parseFloat(paymentCalculation.totalPayment) ? (
+                    <div className="fully-covered">
+                      ✓ Order fully covered by account balance. No payment screenshot needed.
+                    </div>
+                  ) : (
+                    <div className="partial-payment">
+                      <div className="remaining-amount">
+                        Remaining to pay: <strong>${(parseFloat(paymentCalculation.totalPayment) - balanceToUse).toFixed(2)}</strong>
+                      </div>
+                      <div className="remaining-note">
+                        Please upload a payment screenshot for the remaining amount.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* ✅ PICKUP Items Card - Show if there are pickup items */}
@@ -1201,103 +1335,108 @@ export default function PaymentPage() {
                 </div>
               </div>
             )}
-            <div className="mb-4">
-              <div>
-                <input
-                  type="radio"
-                  id="paymentType"
-                  value="online"
-                  checked={paymentType === "online"}
-                  name="paymentType"
-                  required
-                  onChange={() => setPaymentType("online")}
-                />
-                <label htmlFor="paymentType" className="body-text-med ms-2">
-                  Online payment
-                </label>
-              </div>
-              {/* Hide cash payment option if any item has foodCategory 7 or 8 */}
-              {!hasCashRestrictedItems && (
-                <div>
-                  <input
-                    type="radio"
-                    id="paymentType2"
-                    value="cash"
-                    checked={paymentType === "cash"}
-                    name="paymentType"
-                    onChange={() => setPaymentType("cash")}
-                  />
-                  <label htmlFor="paymentType2" className="body-text-med ms-2">
-                    I will pay cash
-                  </label>
-                </div>
-              )}
-            </div>
-            {paymentType === "online" && (
-              <div className="upload-section mb-20">
-                <h5 className="medium-title mb-12">Payment Confirmation</h5>
-                <p className="body-text-med mb-16">
-                  Upload payment confirmation screenshot
-                </p>
-
-                {uploadPreview ? (
-                  <div className="upload-preview-container">
-                    <div className="upload-preview">
-                      <img
-                        src={uploadPreview}
-                        alt="Payment confirmation preview"
-                        className="preview-image"
-                      />
-                      <button
-                        type="button"
-                        className="remove-image-btn"
-                        onClick={removeImage}
-                        aria-label="Remove image"
-                        disabled={isUploading}
-                      >
-                        <X size={16} />
-                      </button>
-
-                      {/* Upload Status Overlay */}
-                      {isUploading && (
-                        <div className="upload-status-overlay">
-                          <div className="upload-spinner"></div>
-                          <p>Uploading to Firebase...</p>
-                        </div>
-                      )}
-                    </div>
+            {/* Hide payment options if fully covered by balance */}
+            {!(useBalance && balanceToUse >= parseFloat(paymentCalculation.totalPayment)) && (
+              <>
+                <div className="mb-4">
+                  <div>
+                    <input
+                      type="radio"
+                      id="paymentType"
+                      value="online"
+                      checked={paymentType === "online"}
+                      name="paymentType"
+                      required
+                      onChange={() => setPaymentType("online")}
+                    />
+                    <label htmlFor="paymentType" className="body-text-med ms-2">
+                      Online payment
+                    </label>
                   </div>
-                ) : (
-                  <div
-                    {...getRootProps()}
-                    className={`upload-dropzone ${
-                      isDragActive ? "active" : ""
-                    }`}
-                  >
-                    <input {...getInputProps()} />
-                    <div className="upload-content">
-                      <div className="upload-icon">
-                        <ImageIcon size={32} />
-                      </div>
-                      <h6 className="upload-title">
-                        {isDragActive ? "Drop image here" : "Upload Screenshot"}
-                      </h6>
-                      <p className="upload-description">
-                        Drag & drop your payment confirmation or{" "}
-                        <span className="upload-link">browse files</span>
-                      </p>
-                      <p className="upload-formats">
-                        Supports: JPG, PNG, GIF, WebP (Max 10MB)
-                      </p>
+                  {/* Hide cash payment option if any item has foodCategory 7 or 8 */}
+                  {!hasCashRestrictedItems && (
+                    <div>
+                      <input
+                        type="radio"
+                        id="paymentType2"
+                        value="cash"
+                        checked={paymentType === "cash"}
+                        name="paymentType"
+                        onChange={() => setPaymentType("cash")}
+                      />
+                      <label htmlFor="paymentType2" className="body-text-med ms-2">
+                        I will pay cash
+                      </label>
                     </div>
+                  )}
+                </div>
+                {paymentType === "online" && (
+                  <div className="upload-section mb-20">
+                    <h5 className="medium-title mb-12">Payment Confirmation</h5>
+                    <p className="body-text-med mb-16">
+                      Upload payment confirmation screenshot
+                    </p>
+
+                    {uploadPreview ? (
+                      <div className="upload-preview-container">
+                        <div className="upload-preview">
+                          <img
+                            src={uploadPreview}
+                            alt="Payment confirmation preview"
+                            className="preview-image"
+                          />
+                          <button
+                            type="button"
+                            className="remove-image-btn"
+                            onClick={removeImage}
+                            aria-label="Remove image"
+                            disabled={isUploading}
+                          >
+                            <X size={16} />
+                          </button>
+
+                          {/* Upload Status Overlay */}
+                          {isUploading && (
+                            <div className="upload-status-overlay">
+                              <div className="upload-spinner"></div>
+                              <p>Uploading to Firebase...</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        {...getRootProps()}
+                        className={`upload-dropzone ${
+                          isDragActive ? "active" : ""
+                        }`}
+                      >
+                        <input {...getInputProps()} />
+                        <div className="upload-content">
+                          <div className="upload-icon">
+                            <ImageIcon size={32} />
+                          </div>
+                          <h6 className="upload-title">
+                            {isDragActive ? "Drop image here" : "Upload Screenshot"}
+                          </h6>
+                          <p className="upload-description">
+                            Drag & drop your payment confirmation or{" "}
+                            <span className="upload-link">browse files</span>
+                          </p>
+                          <p className="upload-formats">
+                            Supports: JPG, PNG, GIF, WebP (Max 10MB)
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
+              </>
             )}
             <button
               className="action-button"
               onClick={handlePlaceOrder}
-              disabled={isPlacingOrder || isUploading || cartItems.length === 0}
+              disabled={isPlaceOrderDisabled}
             >
               {isPlacingOrder
                 ? "Placing Order..."

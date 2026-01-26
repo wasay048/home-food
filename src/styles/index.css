@@ -2693,4 +2693,65 @@ body,
   color: #3fc045;
 }
 
+/* Account Balance Card */
+.account-balance-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 16px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #3fc045 0%, #2ca834 100%);
+  border-radius: 12px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(63, 192, 69, 0.25);
+}
+
+.account-balance-card .balance-label {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.95;
+}
+
+.account-balance-card .balance-amount {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+/* Cancel Order Button */
+.cancel-order-btn {
+  margin-top: 8px;
+  padding: 6px 8px;
+  font-size: 14px;
+  background-color: #fff;
+  color: #e74c3c;
+  border: 1px solid #e74c3c;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.cancel-order-btn:hover:not(:disabled) {
+  background-color: #e74c3c;
+  color: #fff;
+}
+
+.cancel-order-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Cancelled Status Tag */
+.status-tag.cancelled-tag {
+  background-color: #fdf2f2;
+  color: #e74c3c;
+  border: 1px solid #fecaca;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+}
 

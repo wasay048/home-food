@@ -111,3 +111,94 @@
   color: #666;
   font-weight: 400;
 }
+
+/* Account Balance Section */
+.use-balance-section {
+  margin-top: 12px;
+}
+
+.use-balance-option {
+  display: flex;
+  align-items: center;
+}
+
+.balance-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.balance-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #3fc045;
+  cursor: pointer;
+}
+
+.balance-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.available-balance {
+  font-size: 12px;
+  color: #3fc045;
+  font-weight: 600;
+}
+
+.balance-deduction {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #ecf9ed;
+  border-radius: 8px;
+}
+
+.balance-deduction .balance-amount {
+  color: #3fc045;
+  font-weight: 600;
+}
+
+.remaining-payment-info {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.remaining-payment-info .fully-covered {
+  background: #ecf9ed;
+  color: #2ca834;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.remaining-payment-info .partial-payment {
+  background: #fff9e6;
+  border: 1px solid #ffd54f;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.remaining-payment-info .remaining-amount {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.remaining-payment-info .remaining-amount strong {
+  color: #e65100;
+  font-weight: 700;
+}
+
+.remaining-payment-info .remaining-note {
+  font-size: 12px;
+  color: #666;
+}
