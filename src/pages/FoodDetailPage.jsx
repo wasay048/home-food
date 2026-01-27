@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 // import { showToast } from "../utils/toast";
 import ProductImage from "../assets/images/product.png";
@@ -520,7 +520,67 @@ export default function FoodDetailPage() {
     error,
     isLiked,
     toggleLike,
+    loadFoodDetail,
   } = useFoodDetailRedux(foodId, kitchenId);
+
+  // Pull-to-refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const touchStartY = useRef(0);
+  const containerRef = useRef(null);
+  const PULL_THRESHOLD = 80; // Minimum pull distance to trigger refresh
+
+  // Handle pull-to-refresh
+  const handleRefresh = useCallback(async () => {
+    if (isRefreshing) return;
+    
+    setIsRefreshing(true);
+    console.log("🔄 [FoodDetailPage] Refreshing page data...");
+    
+    try {
+      await loadFoodDetail();
+      console.log("✅ [FoodDetailPage] Page refreshed successfully");
+    } catch (error) {
+      console.error("❌ [FoodDetailPage] Refresh failed:", error);
+    } finally {
+      // Small delay to show the refresh animation
+      setTimeout(() => {
+        setIsRefreshing(false);
+        setPullDistance(0);
+      }, 500);
+    }
+  }, [isRefreshing, loadFoodDetail]);
+
+  // Touch event handlers for pull-to-refresh
+  const handleTouchStart = useCallback((e) => {
+    // Only enable pull-to-refresh when at top of page
+    if (containerRef.current && containerRef.current.scrollTop === 0) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!touchStartY.current || isRefreshing) return;
+    
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - touchStartY.current;
+    
+    // Only pull down, not up
+    if (diff > 0 && containerRef.current && containerRef.current.scrollTop === 0) {
+      // Apply resistance to make it feel more natural
+      const resistance = 0.4;
+      setPullDistance(Math.min(diff * resistance, PULL_THRESHOLD * 1.5));
+    }
+  }, [isRefreshing]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (pullDistance >= PULL_THRESHOLD && !isRefreshing) {
+      handleRefresh();
+    } else {
+      setPullDistance(0);
+    }
+    touchStartY.current = 0;
+  }, [pullDistance, isRefreshing, handleRefresh]);
 
   // Determine order type based on availability and selected date
   const orderType = React.useMemo(() => {
@@ -1059,8 +1119,72 @@ export default function FoodDetailPage() {
 
   return (
     <div className="container">
-      <div className="mobile-container">
-        <div className="product-detail">
+      <div 
+        className="mobile-container" 
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ position: 'relative', overflowY: 'auto' }}
+      >
+        {/* Pull-to-refresh indicator */}
+        <div 
+          className="pull-to-refresh-indicator"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: `${Math.max(pullDistance, isRefreshing ? 50 : 0)}px`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#f5f5f5',
+            transition: isRefreshing ? 'height 0.3s ease' : 'none',
+            overflow: 'hidden',
+            zIndex: 10,
+          }}
+        >
+          {(pullDistance > 0 || isRefreshing) && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              color: '#666',
+              fontSize: '14px',
+            }}>
+              <svg 
+                className={isRefreshing ? 'spin-animation' : ''}
+                width="20" 
+                height="20" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2"
+                style={{
+                  transform: isRefreshing ? 'rotate(0deg)' : `rotate(${pullDistance * 3}deg)`,
+                  transition: isRefreshing ? 'none' : 'transform 0.1s',
+                }}
+              >
+                <path d="M21 12a9 9 0 11-6.219-8.56" />
+              </svg>
+              <span>
+                {isRefreshing 
+                  ? 'Refreshing...' 
+                  : pullDistance >= PULL_THRESHOLD 
+                    ? 'Release to refresh' 
+                    : 'Pull to refresh'}
+              </span>
+            </div>
+          )}
+        </div>
+        <div 
+          className="product-detail"
+          style={{
+            transform: `translateY(${Math.max(pullDistance, isRefreshing ? 50 : 0)}px)`,
+            transition: isRefreshing ? 'transform 0.3s ease' : 'none',
+          }}
+        >
           <div className="padding-20">
             <h2 className="title text-center">{food?.name}</h2>
             <h2 className="text text-center">By {food?.kitchenName}</h2>
@@ -1611,6 +1735,17 @@ export default function FoodDetailPage() {
       {showWeChatDialog && (
         <WeChatAuthDialog onClose={() => handleWeChatDialog(false)} />
       )}
+
+      {/* CSS for spin animation */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .spin-animation {
+          animation: spin 1s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }

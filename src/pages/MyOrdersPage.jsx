@@ -82,8 +82,8 @@ const getOrderDisplayCase = (order, item) => {
 
 export default function MyOrdersPage() {
   const navigate = useNavigate();
-  //  const currentUser = useSelector((state) => state.auth.user);
-  const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+   const currentUser = useSelector((state) => state.auth.user);
+  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -95,7 +95,7 @@ export default function MyOrdersPage() {
   
   // Account balance state
   const [accountBalance, setAccountBalance] = useState(0);
-  const [cancellingItem, setCancellingItem] = useState(null); // Track which item is being cancelled
+  const [cancellingItem, setCancellingItem] = useState(null); // Track which item is being canceled
   const { getUserBalance, addToBalance } = useUserAccount();
 
   // Fetch account balance on mount
@@ -138,8 +138,8 @@ export default function MyOrdersPage() {
     orders.forEach((order) => {
       order.orderedFoodItems?.forEach((item, index) => {
         const isDelivered = item.orderStatus === "delivered";
-        const isCancelled = item.orderStatus === "cancelled";
-        const isCompleted = isDelivered || isCancelled; // Both delivered and cancelled go to "Delivered" tab
+        const isCancelled = item.orderStatus === "canceled";
+        const isCompleted = isDelivered || isCancelled; // Both delivered and canceled go to "Delivered" tab
         
         if (activeTab === "delivered" && isCompleted) {
           filteredItems.push({ order, item, index });
@@ -464,7 +464,7 @@ export default function MyOrdersPage() {
       if (updatedItems[itemIndex]) {
         updatedItems[itemIndex] = {
           ...updatedItems[itemIndex],
-          orderStatus: "cancelled",
+          orderStatus: "canceled",
           cancelledAt: new Date(),
           refundAmount: refundAmount,
         };
@@ -517,7 +517,7 @@ export default function MyOrdersPage() {
         )
       );
       
-      alert(`Order cancelled successfully!\n$${refundAmount.toFixed(2)} has been added to your account balance.`);
+      alert(`Order canceled successfully!\n$${refundAmount.toFixed(2)} has been added to your account balance.`);
     } catch (err) {
       console.error("Error cancelling order:", err);
       alert("Failed to cancel order. Please try again.");
@@ -779,8 +779,8 @@ export default function MyOrdersPage() {
                                     Need more orders to meet wholesale volume
                                   </span>
                                 )}
-                                {/* Show editable date/time when chef has set a pickup date (non-default) AND not cancelled */}
-                                {item.pickupDateString && !["01,01,2000", "01/01/2000"].includes(item.pickupDateString) && item.orderStatus !== "cancelled" && (
+                                {/* Show editable date/time when chef has set a pickup date (non-default) AND not canceled */}
+                                {item.pickupDateString && !["01,01,2000", "01/01/2000"].includes(item.pickupDateString) && item.orderStatus !== "canceled" && (
                                   <div className="ready-pickup-section" style={{ marginTop: "8px" }}>
                                     <span style={{ fontSize: "12px", color: "#3fc045", fontWeight: "500", display: "block", marginBottom: "8px" }}>
                                       Ready for pick up on:
@@ -795,7 +795,7 @@ export default function MyOrdersPage() {
                                           style={{ width: "100%" }}
                                           value={pickupDates[`${order.id}-${index}`] || (item.pickupDateString.includes("/") ? dayjs(item.pickupDateString, "MM/DD/YYYY").format("YYYY-MM-DD") : dayjs(item.pickupDateString, "MM,DD,YYYY").format("YYYY-MM-DD"))}
                                           onChange={(e) => handlePickupDateChange(order.id, index, e.target.value)}
-                                          disabled={item.orderStatus === "cancelled"}
+                                          disabled={item.orderStatus === "canceled"}
                                         >
                                           {/* Only chef date + next day (within 24 hours) - use CHEF's original date */}
                                           {(() => {
@@ -823,7 +823,7 @@ export default function MyOrdersPage() {
                                           style={{ width: "100%" }}
                                           value={pickupTimes[`${order.id}-${index}`] || item.pickupTime || ""}
                                           onChange={(e) => handlePickupTimeChange(order.id, index, e.target.value)}
-                                          disabled={item.orderStatus === "cancelled"}
+                                          disabled={item.orderStatus === "canceled"}
                                         >
                                           <option value="" disabled>Select time</option>
                                           {(() => {
@@ -909,7 +909,7 @@ export default function MyOrdersPage() {
                                   </div>
                                 )}
                                 {/* Cancel Order Button for category 8 items - show for ALL category 8 items */}
-                                {item.orderStatus !== "cancelled" && item.orderStatus !== "delivered" && (
+                                {item.orderStatus !== "canceled" && item.orderStatus !== "delivered" && (
                                   <button
                                     className="cancel-order-btn"
                                     style={{ marginTop: "8px" }}
@@ -920,8 +920,8 @@ export default function MyOrdersPage() {
                                   </button>
                                 )}
                                 {/* Cancelled Status */}
-                                {item.orderStatus === "cancelled" && (
-                                  <div className="status-tag cancelled-tag" style={{ marginTop: "8px" }}>
+                                {item.orderStatus === "canceled" && (
+                                  <div className="status-tag canceled-tag" style={{ marginTop: "8px" }}>
                                     Order Cancelled - Refunded ${(item.refundAmount || item.price * (item.quantity || 1)).toFixed(2)}
                                   </div>
                                 )}

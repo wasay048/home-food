@@ -2744,7 +2744,7 @@ body,
 }
 
 /* Cancelled Status Tag */
-.status-tag.cancelled-tag {
+.status-tag.canceled-tag {
   background-color: #fdf2f2;
   color: #e74c3c;
   border: 1px solid #fecaca;
