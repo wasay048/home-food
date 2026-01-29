@@ -55,6 +55,7 @@ const calculateGroupOrderPercentage = (foodData) => {
 /**
  * Determine the display case for an order item
  * orderType1: 1 = delivery, 2 = pickup
+ * Priority: delivered > category 8 (group_progress) > delivery > editable_pickup
  */
 const getOrderDisplayCase = (order, item) => {
   // CASE 1: Delivered items (check item-level orderStatus)
@@ -62,21 +63,21 @@ const getOrderDisplayCase = (order, item) => {
     return "delivered";
   }
 
-  // CASE 2: Delivery orders (orderType1 === 1 means delivery)
-  if (item?.orderType1 === 1 || order.orderType === "delivery" || order.isDeliverydSelected) {
-    return "delivery";
-  }
-
-  // For pickup orders (orderType1 === 2 or not 1)
+  // CASE 2: Category 8 → ALWAYS show group progress (HIGHEST PRIORITY after delivered)
+  // This takes precedence over delivery type to ensure proper display
   const foodCategory = item?.foodCategory;
   const maxCategoryId = getMaxCategoryId(foodCategory);
-
-  // CASE 4: Category 8 → ALWAYS show group progress (with percentage and date/time picker when chef sets date)
+  
   if (maxCategoryId === 8) {
     return "group_progress";
   }
 
-  // CASE 3: Non-category 8 pickup orders → Show editable date/time
+  // CASE 3: Delivery orders (orderType1 === 1 means delivery)
+  if (item?.orderType1 === 1 || order.orderType === "delivery" || order.isDeliverydSelected) {
+    return "delivery";
+  }
+
+  // CASE 4: Non-category 8 pickup orders → Show editable date/time
   return "editable_pickup";
 };
 
