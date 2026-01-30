@@ -485,6 +485,13 @@ export default function PaymentPage() {
 
   // Handle file upload with react-dropzone
   const onDrop = async (acceptedFiles) => {
+    // Check if user is authenticated before allowing upload
+    if (!isAuthenticated || !currentUser) {
+      console.log("📸 [Upload] User not authenticated, showing login dialog");
+      setShowWeChatDialog(true);
+      return;
+    }
+
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
       setUploadedFile(file);
@@ -503,8 +510,8 @@ export default function PaymentPage() {
       try {
         setIsUploading(true);
 
-        // Get user ID from auth or use anonymous
-        const userId = currentUser?.uid || "anonymous";
+        // Get user ID from auth
+        const userId = currentUser?.uid || currentUser?.id || "anonymous";
 
         // Upload to Firebase Storage
         const downloadURL = await uploadImageToStorage(
@@ -1405,29 +1412,53 @@ export default function PaymentPage() {
                         </div>
                       </div>
                     ) : (
-                      <div
-                        {...getRootProps()}
-                        className={`upload-dropzone ${
-                          isDragActive ? "active" : ""
-                        }`}
-                      >
-                        <input {...getInputProps()} />
-                        <div className="upload-content">
-                          <div className="upload-icon">
-                            <ImageIcon size={32} />
+                      /* Show login prompt if not authenticated, otherwise show upload dropzone */
+                      !isAuthenticated || !currentUser ? (
+                        <div
+                          className="upload-dropzone login-required"
+                          onClick={() => setShowWeChatDialog(true)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div className="upload-content">
+                            <div className="upload-icon">
+                              <ImageIcon size={32} />
+                            </div>
+                            <h6 className="upload-title">
+                              Login Required
+                            </h6>
+                            <p className="upload-description">
+                              Please <span className="upload-link">login</span> to upload payment screenshot
+                            </p>
+                            <p className="upload-formats" style={{ color: '#ff9800' }}>
+                              You will be redirected back here after login
+                            </p>
                           </div>
-                          <h6 className="upload-title">
-                            {isDragActive ? "Drop image here" : "Upload Screenshot"}
-                          </h6>
-                          <p className="upload-description">
-                            Drag & drop your payment confirmation or{" "}
-                            <span className="upload-link">browse files</span>
-                          </p>
-                          <p className="upload-formats">
-                            Supports: JPG, PNG, GIF, WebP (Max 10MB)
-                          </p>
                         </div>
-                      </div>
+                      ) : (
+                        <div
+                          {...getRootProps()}
+                          className={`upload-dropzone ${
+                            isDragActive ? "active" : ""
+                          }`}
+                        >
+                          <input {...getInputProps()} />
+                          <div className="upload-content">
+                            <div className="upload-icon">
+                              <ImageIcon size={32} />
+                            </div>
+                            <h6 className="upload-title">
+                              {isDragActive ? "Drop image here" : "Upload Screenshot"}
+                            </h6>
+                            <p className="upload-description">
+                              Drag & drop your payment confirmation or{" "}
+                              <span className="upload-link">browse files</span>
+                            </p>
+                            <p className="upload-formats">
+                              Supports: JPG, PNG, GIF, WebP (Max 10MB)
+                            </p>
+                          </div>
+                        </div>
+                      )
                     )}
                   </div>
                 )}

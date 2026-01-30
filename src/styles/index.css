@@ -1479,6 +1479,29 @@ body,
   box-shadow: 0 0 0 3px rgba(63, 192, 69, 0.1);
 }
 
+/* Login required state for upload dropzone */
+.upload-dropzone.login-required {
+  border-color: #ff9800;
+  background-color: #fff8e1;
+}
+
+.upload-dropzone.login-required:hover {
+  border-color: #f57c00;
+  background-color: #fff3e0;
+}
+
+.upload-dropzone.login-required .upload-icon {
+  color: #ff9800;
+}
+
+.upload-dropzone.login-required .upload-title {
+  color: #e65100;
+}
+
+.upload-dropzone.login-required .upload-link {
+  color: #f57c00;
+}
+
 .upload-content {
   display: flex;
   flex-direction: column;
