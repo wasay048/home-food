@@ -253,11 +253,20 @@ export default function PaymentPage() {
   useEffect(() => {
     // If we have a preview but no file or firebase URL, the state is invalid
     if (uploadPreview && !uploadedFile && !firebaseImageUrl) {
-      console.log("📸 [PaymentPage] Clearing stale upload preview state");
-      if (uploadPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(uploadPreview);
+      console.log("📸 [PaymentPage] Clearing stale upload preview state on mount");
+      // Safely revoke blob URL if it's a valid blob string
+      if (typeof uploadPreview === 'string' && uploadPreview.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(uploadPreview);
+        } catch (e) {
+          console.log("📸 [PaymentPage] Error revoking URL:", e);
+        }
       }
+      // Clear all upload-related states
       setUploadPreview(null);
+      setUploadedFile(null);
+      setFirebaseImageUrl(null);
+      setUploadError(null);
     }
   }, []); // Run only on mount
 
@@ -1405,9 +1414,13 @@ export default function PaymentPage() {
                             alt="Payment confirmation preview"
                             className="preview-image"
                             onError={(e) => {
-                              // If image fails to load, clear the invalid preview
-                              console.log("📸 [Preview] Image failed to load, clearing preview");
-                              e.target.style.display = 'none';
+                              // If image fails to load, clear all upload state to show dropzone
+                              console.log("📸 [Preview] Image failed to load, clearing all upload state");
+                              // Clear all upload-related states
+                              setUploadPreview(null);
+                              setUploadedFile(null);
+                              setFirebaseImageUrl(null);
+                              setUploadError(null);
                             }}
                           />
                           <button
