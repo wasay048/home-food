@@ -249,6 +249,18 @@ export default function PaymentPage() {
     fetchBalance();
   }, [currentUser?.id, getUserBalance]);
 
+  // Clear any stale upload state on mount (prevents broken previews after login redirect)
+  useEffect(() => {
+    // If we have a preview but no file or firebase URL, the state is invalid
+    if (uploadPreview && !uploadedFile && !firebaseImageUrl) {
+      console.log("📸 [PaymentPage] Clearing stale upload preview state");
+      if (uploadPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(uploadPreview);
+      }
+      setUploadPreview(null);
+    }
+  }, []); // Run only on mount
+
   // Handle pickup details update from modal
   const handleModalPickupUpdate = async () => {
     if (editingItem && modalSelectedDate && modalSelectedTime) {
@@ -1384,13 +1396,19 @@ export default function PaymentPage() {
                       Upload payment confirmation screenshot
                     </p>
 
-                    {uploadPreview ? (
+                    {/* Only show preview if we have valid preview URL AND (file or firebase URL) */}
+                    {uploadPreview && (uploadedFile || firebaseImageUrl) ? (
                       <div className="upload-preview-container">
                         <div className="upload-preview">
                           <img
                             src={uploadPreview}
                             alt="Payment confirmation preview"
                             className="preview-image"
+                            onError={(e) => {
+                              // If image fails to load, clear the invalid preview
+                              console.log("📸 [Preview] Image failed to load, clearing preview");
+                              e.target.style.display = 'none';
+                            }}
                           />
                           <button
                             type="button"
