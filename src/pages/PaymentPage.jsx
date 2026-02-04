@@ -172,18 +172,18 @@ export default function PaymentPage() {
   // ✅ UPDATED: Determine if we need delivery address based on fulfillmentType
   const needsDeliveryAddress = fulfillmentAnalysis.hasDeliveryItems;
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const value = params.get("firebaseImageUrl");
-    console.log("firebaseImageUrl from URL params:", value);
-    if (value) {
-      setFirebaseImageUrl(value);
-      setUploadPreview(value);
+  // useEffect(() => {
+  //   const params = new URLSearchParams(window.location.search);
+  //   const value = params.get("firebaseImageUrl");
+  //   console.log("firebaseImageUrl from URL params:", value);
+  //   if (value) {
+  //     setFirebaseImageUrl(value);
+  //     setUploadPreview(value);
 
-      // remove query string without reloading
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
+  //     // remove query string without reloading
+  //     window.history.replaceState({}, document.title, window.location.pathname);
+  //   }
+  // }, []);
   // Get kitchen information from cart items
   const kitchenInfo = useMemo(() => {
     if (currentKitchen) {
