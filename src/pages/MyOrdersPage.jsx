@@ -575,9 +575,17 @@ export default function MyOrdersPage() {
 
           {/* Account Balance Card */}
           {currentUser && (
-            <div className="account-balance-card">
-              <div className="balance-label">Account Balance</div>
-              <div className="balance-amount">${accountBalance.toFixed(2)}</div>
+            <div>
+              <div className="account-balance-card">
+                <div className="balance-label">Account Balance</div>
+                <div className="balance-amount">${accountBalance.toFixed(2)}</div>
+              </div>
+              <button
+                className="transaction-history-btn"
+                onClick={() => navigate("/transactions")}
+              >
+                Transaction History →
+              </button>
             </div>
           )}
 
