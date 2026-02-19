@@ -1,8 +1,7 @@
 import {onRequest} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import {defineSecret} from "firebase-functions/params";
-import { ref } from "firebase/storage";
-// import {admin} from "./admin"; // when you’re ready to mint a Firebase custom token
+// import {admin} from "./admin"; // when you're ready to mint a Firebase custom token
 
 const WECHAT_APPID = defineSecret("WECHAT_APPID");
 const WECHAT_SECRET = defineSecret("WECHAT_SECRET");
@@ -135,3 +134,7 @@ export const exchangeWeChatCode = onRequest(
     }
   }
 );
+
+// Re-export sharing functions from separate file (ogShare.js)
+// These are completely independent — remove this line to disable them
+export {ogMetaProxy, wechatJssdkSignature} from "./ogShare.js";

@@ -30,6 +30,7 @@ import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import { setWeChatUser } from "../store/slices/authSlice";
 import { db } from "../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
+import { configureWeChatShare } from "../utils/wechatShare";
 
 // ✅ Helper function to get max category ID from comma-separated string (e.g., "5, 7" -> 7)
 const getMaxCategoryId = (foodCategory) => {
@@ -792,6 +793,54 @@ export default function FoodDetailPage() {
       setPickupDate(parsedDate);
     }
   }, [selectedDate, pickupDate]);
+
+  // Dynamic document.title and OG meta tags for sharing
+  useEffect(() => {
+    if (food && kitchen) {
+      const kitchenName = kitchen?.kitchenName || kitchen?.name || "HomeFresh";
+      const foodName = food?.name || "Home Fresh";
+      const shareDesc = `Check out on HomeFresh from ${kitchenName}`;
+      const foodImage = food?.imageUrl || food?.imageUrls?.[0] || "https://www.homefreshfoods.ai/favicon.svg";
+      const pageUrl = window.location.href;
+
+      // Update document title
+      document.title = `${foodName} | Home Fresh`;
+
+      // Helper to update or create a meta tag
+      const setMeta = (attr, key, content) => {
+        let el = document.querySelector(`meta[${attr}="${key}"]`);
+        if (!el) {
+          el = document.createElement("meta");
+          el.setAttribute(attr, key);
+          document.head.appendChild(el);
+        }
+        el.setAttribute("content", content);
+      };
+
+      setMeta("property", "og:title", foodName);
+      setMeta("property", "og:description", shareDesc);
+      setMeta("property", "og:image", foodImage);
+      setMeta("property", "og:url", pageUrl);
+      setMeta("property", "og:type", "product");
+      setMeta("name", "twitter:title", foodName);
+      setMeta("name", "twitter:description", shareDesc);
+      setMeta("name", "twitter:image", foodImage);
+      // Configure WeChat JS-SDK share data (only runs inside WeChat browser)
+      configureWeChatShare({
+        title: foodName,
+        description: shareDesc,
+        imageUrl: foodImage,
+        kitchenId,
+        foodId,
+        date: selectedDate,
+      });
+    }
+
+    return () => {
+      // Restore default title on unmount
+      document.title = "Home Fresh - 美味鲜到家";
+    };
+  }, [food, kitchen]);
   // Use dynamic review stats or fallback to static data
   const displayRating = reviewStats?.averageRating || 0;
   const totalReviewCount = reviewStats?.totalReviews || 0;
