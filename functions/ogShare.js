@@ -1,15 +1,16 @@
 // ============================================================
 // OG Share Functions — completely independent from exchangeWeChatCode
 //
-// This file exports two Firebase Cloud Functions:
+// This file exports three Firebase Cloud Functions:
 //
 // 1. ogMetaProxy     — Serves dynamic Open Graph meta tags for social
 //                       media crawlers (WeChat, Facebook, Twitter, etc.)
-//                       so shared links show rich previews.
 //
 // 2. wechatJssdkSignature — Generates WeChat JS-SDK config signatures
-//                           so the frontend can call wx.updateAppMessageShareData()
-//                           to customize the share card inside WeChat's in-app browser.
+//                           for in-app share customization
+//
+// 3. ogImageProxy    — Proxies Firebase Storage images so WeChat's
+//                       crawler (in China) can access them
 // ============================================================
 
 import {onRequest} from "firebase-functions/v2/https";
@@ -31,6 +32,24 @@ const WECHAT_SECRET = defineSecret("WECHAT_SECRET");
 
 const ALLOW_ORIGIN = "https://www.homefreshfoods.ai";
 const APP_URL = "https://www.homefreshfoods.ai";
+const FUNCTION_BASE = "https://us-central1-homefoods-16e56.cloudfunctions.net";
+
+// ============================================================
+// Helper: build a proxied image URL
+// Firebase Storage URLs (firebasestorage.googleapis.com) are blocked
+// by China's Great Firewall. WeChat crawlers can't fetch them.
+// Route them through ogImageProxy which IS accessible from China.
+// ============================================================
+function getProxiedImageUrl(originalUrl) {
+  if (!originalUrl) return `${APP_URL}/favicon.svg`;
+  // Only proxy Firebase Storage URLs
+  if (originalUrl.includes("firebasestorage.googleapis.com") ||
+      originalUrl.includes("firebasestorage.app")) {
+    return `${FUNCTION_BASE}/ogImageProxy?url=${encodeURIComponent(originalUrl)}`;
+  }
+  // Non-Firebase URLs (CDNs, etc.) can be used directly
+  return originalUrl;
+}
 
 // ============================================================
 // 1. ogMetaProxy
@@ -111,6 +130,10 @@ export const ogMetaProxy = onRequest(
           const fd = foodDoc.data();
           foodName = fd.name || fd.foodName || foodName;
           foodImage = fd.imageUrl || (fd.imageUrls && fd.imageUrls[0]) || foodImage;
+          // Also try imageURL (capital) field variant
+          if (foodImage === `${APP_URL}/favicon.svg`) {
+            foodImage = fd.imageURL || (fd.imageURLs && fd.imageURLs[0]) || foodImage;
+          }
         }
       }
     } catch (err) {
@@ -121,6 +144,8 @@ export const ogMetaProxy = onRequest(
     // Title = food name, Description = "Check out on HomeFresh from {kitchen}"
     const ogTitle = escapeHtml(foodName);
     const ogDesc = `Check out on HomeFresh from ${escapeHtml(kitchenName)}`;
+    // Proxy the image URL so WeChat's crawler can access it from China
+    const proxiedImage = getProxiedImageUrl(foodImage);
 
     // Serve minimal HTML with OG meta tags
     const html = `<!DOCTYPE html>
@@ -133,7 +158,7 @@ export const ogMetaProxy = onRequest(
   <!-- Open Graph -->
   <meta property="og:title" content="${ogTitle}" />
   <meta property="og:description" content="${ogDesc}" />
-  <meta property="og:image" content="${escapeHtml(foodImage)}" />
+  <meta property="og:image" content="${escapeHtml(proxiedImage)}" />
   <meta property="og:url" content="${escapeHtml(spaUrl)}" />
   <meta property="og:type" content="product" />
   <meta property="og:site_name" content="Home Fresh - 美味鲜到家" />
@@ -141,7 +166,7 @@ export const ogMetaProxy = onRequest(
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${ogTitle}" />
   <meta name="twitter:description" content="${ogDesc}" />
-  <meta name="twitter:image" content="${escapeHtml(foodImage)}" />
+  <meta name="twitter:image" content="${escapeHtml(proxiedImage)}" />
   <!-- Redirect real visitors to the SPA -->
   <meta http-equiv="refresh" content="0;url=${escapeHtml(spaUrl)}" />
 </head>
@@ -255,6 +280,50 @@ export const wechatJssdkSignature = onRequest(
     } catch (err) {
       logger.error("JSSDK signature error", {error: err?.message});
       res.status(500).json({error: "signature_failed", message: err?.message});
+    }
+  }
+);
+
+// ============================================================
+// 3. ogImageProxy — proxies Firebase Storage images for China access
+// ============================================================
+export const ogImageProxy = onRequest(
+  {region: "us-central1"},
+  async (req, res) => {
+    const imageUrl = req.query.url;
+
+    if (!imageUrl) {
+      res.status(400).send("Missing url parameter");
+      return;
+    }
+
+    try {
+      logger.info("ogImageProxy fetching", {url: imageUrl.substring(0, 100)});
+
+      // Fetch the image from Firebase Storage
+      const imageRes = await fetch(imageUrl);
+
+      if (!imageRes.ok) {
+        logger.error("ogImageProxy fetch failed", {status: imageRes.status});
+        res.redirect(302, `${APP_URL}/favicon.svg`);
+        return;
+      }
+
+      // Determine content type from response or URL
+      const contentType = imageRes.headers.get("content-type") || "image/jpeg";
+
+      // Stream the image to the response with caching
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Cache-Control", "public, max-age=86400, s-maxage=604800"); // 1 day client, 7 days CDN
+      res.setHeader("Access-Control-Allow-Origin", "*");
+
+      // Convert response body to buffer and send
+      const buffer = Buffer.from(await imageRes.arrayBuffer());
+      res.status(200).send(buffer);
+    } catch (err) {
+      logger.error("ogImageProxy error", {error: err?.message});
+      // Fallback to favicon on error
+      res.redirect(302, `${APP_URL}/favicon.svg`);
     }
   }
 );
