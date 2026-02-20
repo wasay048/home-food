@@ -137,4 +137,4 @@ export const exchangeWeChatCode = onRequest(
 
 // Re-export sharing functions from separate file (ogShare.js)
 // These are completely independent — remove this line to disable them
-export {ogMetaProxy, wechatJssdkSignature, ogImageProxy} from "./ogShare.js";
+export {ogMetaProxy, wechatJssdkSignature, ogFoodImage} from "./ogShare.js";

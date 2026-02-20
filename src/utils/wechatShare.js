@@ -3,7 +3,8 @@ import { buildShareUrl } from "./shareUrl";
 
 const FIREBASE_PROJECT_ID = "homefoods-16e56";
 const FIREBASE_REGION = "us-central1";
-const JSSDK_ENDPOINT = `https://${FIREBASE_REGION}-${FIREBASE_PROJECT_ID}.cloudfunctions.net/wechatJssdkSignature`;
+const FUNCTION_BASE = `https://${FIREBASE_REGION}-${FIREBASE_PROJECT_ID}.cloudfunctions.net`;
+const JSSDK_ENDPOINT = `${FUNCTION_BASE}/wechatJssdkSignature`;
 
 // Track whether the JSSDK script has been loaded
 let jssdkLoaded = false;
@@ -119,12 +120,17 @@ export async function configureWeChatShare({
     wx.ready(() => {
       console.log("[WeChatShare] JSSDK ready, configuring share data");
 
+      // Use ogFoodImage proxy for the image (Firebase Storage blocked in China)
+      const proxiedImgUrl = kitchenId && foodId
+        ? `${FUNCTION_BASE}/ogFoodImage?kitchenId=${kitchenId}&foodId=${foodId}`
+        : imageUrl || "https://www.homefreshfoods.ai/favicon.svg";
+
       // "Send to Friend" / "Forward"
       wx.updateAppMessageShareData({
         title: title || "Home Fresh",
         desc: description || "Check out on HomeFresh",
         link: shareLink,
-        imgUrl: imageUrl || "https://www.homefreshfoods.ai/favicon.svg",
+        imgUrl: proxiedImgUrl,
         success: () => {
           console.log("[WeChatShare] updateAppMessageShareData configured");
         },
@@ -134,7 +140,7 @@ export async function configureWeChatShare({
       wx.updateTimelineShareData({
         title: title || "Home Fresh",
         link: shareLink,
-        imgUrl: imageUrl || "https://www.homefreshfoods.ai/favicon.svg",
+        imgUrl: proxiedImgUrl,
         success: () => {
           console.log("[WeChatShare] updateTimelineShareData configured");
         },
