@@ -761,7 +761,7 @@ export const createOrderObject = ({
     appOrderStatus: "Web App Order",
     datePickedUp: datePickedUp,
     deliveryAddress: isDelivery ? deliveryAddress : "",
-    deliveryPhone: isDelivery ? deliveryPhone : "",
+    deliveryPhone: deliveryPhone || "",  // Always save phone (required for SMS notifications)
     isDeliverydSelected: isDelivery || false,
     datePlaced: now,
     kitchenId:

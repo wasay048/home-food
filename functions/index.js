@@ -138,3 +138,6 @@ export const exchangeWeChatCode = onRequest(
 // Re-export sharing functions from separate file (ogShare.js)
 // These are completely independent — remove this line to disable them
 export {ogMetaProxy, wechatJssdkSignature, ogFoodImage} from "./ogShare.js";
+
+// Re-export order SMS notification (standalone, sends SMS on new order)
+export {onNewOrderSendSms} from "./orderSmsNotification.js";

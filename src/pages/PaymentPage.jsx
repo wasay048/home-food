@@ -19,6 +19,8 @@ import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import { useGenericCart } from "../hooks/useGenericCart";
 import { useUserAccount } from "../hooks/useUserAccount";
 import useDeliveryFee from "../hooks/useDeliveryFee";
+import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 import "./PaymentPage.css";
 
 // ✅ Helper function to get max category ID from comma-separated string (e.g., "5, 7" -> 7)
@@ -39,34 +41,6 @@ const isCategory8Item = (item) => {
 // ✅ Default date/time for category 8 items
 const CATEGORY_8_DEFAULT_DATE = "January 1, 2000";
 const CATEGORY_8_DEFAULT_TIME = "12:00 AM";
-
-// Phone number formatting function - formats as (XXX) XXX-XXXX
-const formatPhoneNumber = (value) => {
-  // Remove all non-digit characters
-  const phoneNumber = value.replace(/\D/g, "");
-
-  // Limit to 10 digits
-  const limitedNumber = phoneNumber.slice(0, 10);
-
-  // Format based on length
-  if (limitedNumber.length === 0) {
-    return "";
-  } else if (limitedNumber.length <= 3) {
-    return `(${limitedNumber}`;
-  } else if (limitedNumber.length <= 6) {
-    return `(${limitedNumber.slice(0, 3)}) ${limitedNumber.slice(3)}`;
-  } else {
-    return `(${limitedNumber.slice(0, 3)}) ${limitedNumber.slice(
-      3,
-      6
-    )}-${limitedNumber.slice(6)}`;
-  }
-};
-
-// Get raw phone number (digits only) for validation
-const getRawPhoneNumber = (formattedNumber) => {
-  return (formattedNumber || "").replace(/\D/g, "");
-};
 
 export default function PaymentPage() {
   const [uploadPreview, setUploadPreview] = useState(null);
@@ -103,12 +77,6 @@ export default function PaymentPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
-
-  // Handle phone number input with auto-formatting
-  const handlePhoneChange = (e) => {
-    const formattedNumber = formatPhoneNumber(e.target.value);
-    setDeliveryPhone(formattedNumber);
-  };
 
   // Get cart items from Redux
   const cartItems = useSelector((state) => state.cart.items);
@@ -485,6 +453,11 @@ export default function PaymentPage() {
     if (isPlacingOrder || isUploading || cartItems.length === 0) {
       return true;
     }
+
+    // Phone number is always required and must be valid
+    if (!deliveryPhone || !isValidPhoneNumber(deliveryPhone)) {
+      return true;
+    }
     
     // If balance fully covers the order, enable the button
     if (isFullyCoveredByBalance) {
@@ -502,7 +475,7 @@ export default function PaymentPage() {
     }
     
     return false;
-  }, [isPlacingOrder, isUploading, cartItems.length, isFullyCoveredByBalance, paymentType, firebaseImageUrl]);
+  }, [isPlacingOrder, isUploading, cartItems.length, isFullyCoveredByBalance, paymentType, firebaseImageUrl, deliveryPhone]);
 
   // Handle file upload with react-dropzone
   const onDrop = async (acceptedFiles) => {
@@ -696,19 +669,17 @@ export default function PaymentPage() {
         return;
       }
 
-      if (needsDeliveryAddress && !deliveryPhone.trim()) {
-        console.log("❌ Phone number is required for delivery");
-        setShowAddressValidationDialog(true);
+      // ✅ Phone number is ALWAYS required (for SMS order confirmation)
+      if (!deliveryPhone || !deliveryPhone.trim()) {
+        console.log("❌ Phone number is required");
+        showToast.error("Please enter your phone number");
         return;
       }
 
-      // Validate phone number has 10 digits
-      if (
-        needsDeliveryAddress &&
-        getRawPhoneNumber(deliveryPhone).length < 10
-      ) {
-        console.log("❌ Phone number must be 10 digits");
-        showToast.error("Please enter a valid 10-digit phone number");
+      // Validate phone number format using libphonenumber-js
+      if (!isValidPhoneNumber(deliveryPhone)) {
+        console.log("❌ Invalid phone number");
+        showToast.error("Please enter a valid phone number");
         return;
       }
 
@@ -776,7 +747,7 @@ export default function PaymentPage() {
         paymentType,
         deliveryAddress: needsDeliveryAddress ? deliveryAddress : null,
         isDelivery: needsDeliveryAddress,
-        deliveryPhone: needsDeliveryAddress ? deliveryPhone : null,
+        deliveryPhone: deliveryPhone || null, // Always save phone (required for SMS)
         fulfillmentAnalysis, // Pass the fulfillment analysis for detailed order info
         balanceToUse: useBalance ? balanceToUse : 0, // Amount to deduct from user's account balance
       });
@@ -830,7 +801,7 @@ export default function PaymentPage() {
             hasPickupItems: fulfillmentAnalysis.hasPickupItems,
             hasBothTypes: fulfillmentAnalysis.hasBothTypes,
             deliveryAddress: needsDeliveryAddress ? deliveryAddress : null,
-            deliveryPhone: needsDeliveryAddress ? deliveryPhone : null,
+            deliveryPhone: deliveryPhone || null,
             deliveryCharges: paymentCalculation?.deliveryCharges,
             uniqueDatesCount: paymentCalculation?.uniqueDatesCount,
             orderedItems: cartItems.map((item) => {
@@ -927,29 +898,24 @@ export default function PaymentPage() {
                     minHeight: "80px",
                   }}
                 />
-                <div style={{ marginTop: "12px" }}>
-                  <h4 className="medium-title mb-12">Phone Number</h4>
-                  <input
-                    type="tel"
-                    className="delivery-phone-input"
-                    placeholder="(XXX) XXX-XXXX"
-                    value={deliveryPhone}
-                    onChange={handlePhoneChange}
-                    maxLength={14}
-                    style={{
-                      width: "100%",
-                      padding: "12px 16px",
-                      fontSize: "16px",
-                      border: "1px solid #ddd",
-                      borderRadius: "8px",
-                      outline: "none",
-                      boxSizing: "border-box",
-                      fontFamily: "inherit",
-                    }}
-                  />
-                </div>
               </div>
             )}
+
+            {/* ✅ Phone Number — always required for order SMS confirmation */}
+            <div className="phone-section mb-20">
+              <h4 className="medium-title mb-12">Phone Number *</h4>
+              <PhoneInput
+                international
+                defaultCountry="US"
+                countryCallingCodeEditable={false}
+                value={deliveryPhone}
+                onChange={setDeliveryPhone}
+                className="phone-input-intl"
+              />
+              {deliveryPhone && !isValidPhoneNumber(deliveryPhone) && (
+                <p className="phone-error">Please enter a valid phone number</p>
+              )}
+            </div>
 
             {/* ✅ Show Pickup Address if there are pickup items */}
             {fulfillmentAnalysis.hasPickupItems && (
@@ -1754,23 +1720,13 @@ export default function PaymentPage() {
                 >
                   Phone Number
                 </label>
-                <input
-                  type="tel"
-                  className="delivery-phone-input"
-                  placeholder="(XXX) XXX-XXXX"
+                <PhoneInput
+                  international
+                  defaultCountry="US"
+                  countryCallingCodeEditable={false}
                   value={deliveryPhone}
-                  onChange={handlePhoneChange}
-                  maxLength={14}
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px",
-                    fontSize: "16px",
-                    border: "1px solid #ddd",
-                    borderRadius: "8px",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    fontFamily: "inherit",
-                  }}
+                  onChange={setDeliveryPhone}
+                  className="phone-input-intl"
                 />
               </div>
             </div>
@@ -1786,22 +1742,21 @@ export default function PaymentPage() {
                 onClick={() => {
                   if (
                     deliveryAddress.trim() &&
-                    getRawPhoneNumber(deliveryPhone).length === 10
+                    deliveryPhone &&
+                    isValidPhoneNumber(deliveryPhone)
                   ) {
                     setShowAddressValidationDialog(false);
-                    // Optionally trigger order placement again
                     handlePlaceOrder();
                   } else if (!deliveryAddress.trim()) {
                     showToast.error("Please enter a valid delivery address");
                   } else {
-                    showToast.error(
-                      "Please enter a valid 10-digit phone number"
-                    );
+                    showToast.error("Please enter a valid phone number");
                   }
                 }}
                 disabled={
                   !deliveryAddress.trim() ||
-                  getRawPhoneNumber(deliveryPhone).length < 10
+                  !deliveryPhone ||
+                  !isValidPhoneNumber(deliveryPhone)
                 }
               >
                 Continue

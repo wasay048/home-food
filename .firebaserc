@@ -1,5 +1,13 @@
 {
   "projects": {
     "default": "homefoods-16e56"
+  },
+  "targets": {},
+  "etags": {
+    "homefoods-16e56": {
+      "extensionInstances": {
+        "send-message": "91e7959a479a63bd233e5fb2565bbb1fb53e92888441550358910b6168b8761c"
+      }
+    }
   }
 }

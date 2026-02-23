@@ -202,3 +202,62 @@
   font-size: 12px;
   color: #666;
 }
+
+/* ===== International Phone Input ===== */
+.phone-section {
+  margin-bottom: 20px;
+}
+
+.phone-input-intl {
+  width: 100%;
+}
+
+/* The outer wrapper */
+.phone-input-intl .PhoneInputInput {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px; /* 16px prevents iOS zoom-on-focus */
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+  box-sizing: border-box;
+  font-family: inherit;
+  min-height: 44px; /* iOS-friendly touch target */
+  -webkit-appearance: none; /* Remove iOS default styles */
+  appearance: none;
+}
+
+.phone-input-intl .PhoneInputInput:focus {
+  border-color: #3fc045;
+  box-shadow: 0 0 0 2px rgba(63, 192, 69, 0.15);
+}
+
+/* Country select dropdown */
+.phone-input-intl .PhoneInputCountry {
+  margin-right: 8px;
+}
+
+.phone-input-intl .PhoneInputCountrySelect {
+  font-size: 16px;
+  min-height: 44px; /* iOS tap target */
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.phone-input-intl .PhoneInputCountryIcon {
+  width: 24px;
+  height: 18px;
+}
+
+.phone-input-intl .PhoneInputCountryIcon--border {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+}
+
+/* Validation error text */
+.phone-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 4px;
+  margin-bottom: 0;
+}
