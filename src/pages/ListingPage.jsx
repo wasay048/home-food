@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
-import qrCode from "../assets/images/home-food-qr.svg";
+import { QRCodeSVG } from "qrcode.react";
 import scooterRider from "../assets/scooter-rider.png";
 import { useGenericCart } from "../hooks/useGenericCart";
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
@@ -27,6 +27,14 @@ export default function ListingPage() {
   } = useSelector((state) => state.listing);
 
   const dispatch = useDispatch();
+
+  // ✅ Redirect to home if no kitchenId
+  useEffect(() => {
+    if (!kitchenId) {
+      console.log("❌ [ListingPage] No kitchenId found, redirecting to home");
+      navigate("/", { replace: true });
+    }
+  }, [kitchenId, navigate]);
 
   // ✅ Fetch fresh data from Firebase when mounting/refreshing
   const {
@@ -910,7 +918,7 @@ export default function ListingPage() {
               HomeFresh app, available in the iOS App Store.
             </div>
             <div className="qr">
-              <img src={qrCode} alt="QR Code" />
+              <QRCodeSVG value="https://www.homefreshfoods.ai" size={50} />
             </div>
           </div>
         </div>

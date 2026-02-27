@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
 import Success from "../assets/images/success.svg";
-import qrCode from "../assets/images/home-food-qr.svg";
+import { QRCodeSVG } from "qrcode.react";
 import scooterRider from "../assets/scooter-rider.png";
 
 export default function SuccessPage() {
@@ -516,7 +516,7 @@ export default function SuccessPage() {
               the morning of each scheduled pickup.
             </div>
             <div className="qr">
-              <img src={qrCode} alt="QR Code" />
+              <QRCodeSVG value="https://www.homefreshfoods.ai" size={80} />
             </div>
           </div>
         </div>
