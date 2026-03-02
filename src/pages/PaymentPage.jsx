@@ -56,6 +56,7 @@ export default function PaymentPage() {
   const [showDateValidationDialog, setShowDateValidationDialog] =
     useState(false);
   const [invalidDateItems, setInvalidDateItems] = useState([]);
+  const [showPhoneErrorDialog, setShowPhoneErrorDialog] = useState(false);
 
   const [showWeChatDialog, setShowWeChatDialog] = useState(false);
   const [paymentType, setPaymentType] = useState("online"); // "online" or "cash"
@@ -454,10 +455,6 @@ export default function PaymentPage() {
       return true;
     }
 
-    // Phone number is always required and must be valid
-    if (!deliveryPhone || !isValidPhoneNumber(deliveryPhone)) {
-      return true;
-    }
     
     // If balance fully covers the order, enable the button
     if (isFullyCoveredByBalance) {
@@ -670,16 +667,9 @@ export default function PaymentPage() {
       }
 
       // ✅ Phone number is ALWAYS required (for SMS order confirmation)
-      if (!deliveryPhone || !deliveryPhone.trim()) {
-        console.log("❌ Phone number is required");
-        showToast.error("Please enter your phone number");
-        return;
-      }
-
-      // Validate phone number format using libphonenumber-js
-      if (!isValidPhoneNumber(deliveryPhone)) {
-        console.log("❌ Invalid phone number");
-        showToast.error("Please enter a valid phone number");
+      if (!deliveryPhone || !deliveryPhone.trim() || !isValidPhoneNumber(deliveryPhone)) {
+        console.log("❌ Invalid or missing phone number");
+        setShowPhoneErrorDialog(true);
         return;
       }
 
@@ -1552,6 +1542,83 @@ export default function PaymentPage() {
           onClose={handleWeChatDialogClose}
         />
       )}
+
+      {/* Phone validation error dialog */}
+      {showPhoneErrorDialog && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowPhoneErrorDialog(false)}
+        >
+          <div
+            className="modal-container validation-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3 className="modal-title">⚠️ Phone Number Required</h3>
+              <button
+                className="modal-close-btn"
+                onClick={() => setShowPhoneErrorDialog(false)}
+                aria-label="Close modal"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="modal-content">
+              <p className="validation-message">
+                Please enter a valid phone number to continue with your order.
+              </p>
+              <div
+                className="phone-input-container"
+                style={{ marginTop: "16px" }}
+              >
+                <label
+                  style={{
+                    fontWeight: "500",
+                    marginBottom: "8px",
+                    display: "block",
+                  }}
+                >
+                  Phone Number
+                </label>
+                <PhoneInput
+                  international
+                  defaultCountry="US"
+                  countryCallingCodeEditable={false}
+                  value={deliveryPhone}
+                  onChange={setDeliveryPhone}
+                  className="phone-input-intl"
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn-secondary"
+                onClick={() => setShowPhoneErrorDialog(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  if (deliveryPhone && isValidPhoneNumber(deliveryPhone)) {
+                    setShowPhoneErrorDialog(false);
+                    handlePlaceOrder();
+                  } else {
+                    showToast.error("Please enter a valid phone number");
+                  }
+                }}
+                disabled={
+                  !deliveryPhone ||
+                  !isValidPhoneNumber(deliveryPhone)
+                }
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showDateValidationDialog && (
         <div
           className="modal-overlay"
