@@ -19,6 +19,25 @@ if (getApps().length === 0) {
 const db = getFirestore();
 
 // ============================================================
+// Check if an item is category 8 (skip date/time for these)
+// ============================================================
+function isCategory8(item) {
+  try {
+    const raw = item.foodCategory;
+    if (!raw) return false;
+    // Handle both string ("5, 8") and number (8) formats
+    const str = String(raw);
+    const maxId = Math.max(
+      ...str.split(",").map((c) => parseInt(c.trim(), 10)).filter((c) => !isNaN(c)),
+      0,
+    );
+    return maxId === 8;
+  } catch {
+    return false;
+  }
+}
+
+// ============================================================
 // Build the order summary (same format as kitchen notification)
 // ============================================================
 function buildOrderSummary(orderData, kitchenName) {
@@ -33,6 +52,12 @@ function buildOrderSummary(orderData, kitchenName) {
     .map((item, idx) => {
       const name = item.name ?? "Unnamed";
       const qty = item.quantity ?? 0;
+
+      // Skip date/time for category 8 items
+      if (isCategory8(item)) {
+        return `${idx + 1}. ${name} x${qty}`;
+      }
+
       const dateStr = item.pickupDateString ?? "";
       const timeStr = item.pickupTime ?? "";
       return `${idx + 1}. ${name} x${qty} (${deliveryLabel}: ${dateStr} ${timeStr})`;
@@ -74,10 +99,16 @@ async function sendSms(toPhone, messageBody, orderId) {
     toPhone :
     `+1${toPhone.replace(/\D/g, "")}`;
 
+  // Truncate SMS body if too long (Twilio max ~1600 chars, keep safe margin)
+  const MAX_SMS_LENGTH = 1500;
+  const finalBody = messageBody.length > MAX_SMS_LENGTH ?
+    messageBody.substring(0, MAX_SMS_LENGTH - 30) + "\n\n...see app for full order" :
+    messageBody;
+
   const client = twilio(accountSid, authToken);
 
   const message = await client.messages.create({
-    body: messageBody,
+    body: finalBody,
     from: fromPhone,
     to: formatted,
   });
@@ -86,6 +117,7 @@ async function sendSms(toPhone, messageBody, orderId) {
     orderId,
     sid: message.sid,
     to: formatted.substring(0, 6) + "****",
+    bodyLength: finalBody.length,
   });
 
   // Log to Firestore for tracking
@@ -95,6 +127,7 @@ async function sendSms(toPhone, messageBody, orderId) {
     messageSid: message.sid,
     status: message.status,
     type: "order_confirmation",
+    bodyLength: finalBody.length,
     createdAt: new Date(),
   });
 }
@@ -148,8 +181,19 @@ export const onNewOrderSendSms = onDocumentCreated(
       });
     }
 
-    // Build the order summary (same format as the kitchen notification)
-    const orderSummary = buildOrderSummary(orderData, kitchenName);
+    // Build the order summary — wrapped in try/catch so crashes don't kill SMS
+    let orderSummary;
+    try {
+      orderSummary = buildOrderSummary(orderData, kitchenName);
+    } catch (err) {
+      logger.error("order.summary_build_failed", {
+        orderId,
+        error: err?.message,
+        stack: err?.stack,
+      });
+      // Fallback: send a simple confirmation without item details
+      orderSummary = `Order from ${kitchenName}\n\nYour order has been received.`;
+    }
 
     // Build the full SMS body
     const smsBody = [
@@ -160,6 +204,12 @@ export const onNewOrderSendSms = onDocumentCreated(
       ``,
       `Thank you for your order!`,
     ].join("\n");
+
+    logger.info("order.sms_body_built", {
+      orderId,
+      bodyLength: smsBody.length,
+      itemsCount: orderData.orderedFoodItems?.length ?? 0,
+    });
 
     // Send SMS to customer
     try {
