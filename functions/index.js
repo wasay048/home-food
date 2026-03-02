@@ -141,3 +141,6 @@ export {ogMetaProxy, wechatJssdkSignature, ogFoodImage} from "./ogShare.js";
 
 // Re-export order SMS notification (standalone, sends SMS on new order)
 export {onNewOrderSendSms} from "./orderSmsNotification.js";
+
+// Re-export chef bulk SMS (callable from iOS app — chef sends SMS to customers)
+export {chefSendBulkSms} from "./chefBulkSms.js";
