@@ -250,9 +250,81 @@ export default function ListingPage() {
       });
     }
 
+    // Sort items ALPHABETICALLY within each non-8 category
+    Object.keys(groups).forEach((catId) => {
+      if (Number(catId) !== 8) {
+        groups[catId].items.sort((a, b) =>
+          (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+        );
+      }
+    });
+
     // Convert to array and sort by category ID (ascending)
     return Object.values(groups).sort((a, b) => a.categoryId - b.categoryId);
   }, [sortedGoGrabItems, foodCategories, getMaxCategoryId]);
+
+  // ✅ Build alphabet-grouped items per category (for letter headers)
+  const alphabetGroupedItems = useMemo(() => {
+    const result = {};
+    groupedGoGrabItems.forEach((group) => {
+      const letterGroups = {};
+      group.items.forEach((food) => {
+        // Find the first English letter in the name (skip Chinese chars, brackets, etc.)
+        const match = (food.name || "").match(/[A-Za-z]/);
+        const letter = match ? match[0].toUpperCase() : "#";
+        if (!letterGroups[letter]) letterGroups[letter] = [];
+        letterGroups[letter].push(food);
+      });
+      // Sort letters alphabetically, # at end
+      const sortedLetters = Object.keys(letterGroups).sort((a, b) => {
+        if (a === "#") return 1;
+        if (b === "#") return -1;
+        return a.localeCompare(b);
+      });
+      result[group.categoryId] = sortedLetters.map((letter) => ({
+        letter,
+        items: letterGroups[letter],
+      }));
+    });
+    return result;
+  }, [groupedGoGrabItems]);
+
+  // ✅ Collect all active letters across all categories for the sidebar
+  const activeAlphabetLetters = useMemo(() => {
+    const letters = new Set();
+    groupedGoGrabItems.forEach((group) => {
+      group.items.forEach((food) => {
+        const match = (food.name || "").match(/[A-Za-z]/);
+        const letter = match ? match[0].toUpperCase() : "#";
+        letters.add(letter);
+      });
+    });
+    const sorted = [...letters].sort((a, b) => {
+      if (a === "#") return 1;
+      if (b === "#") return -1;
+      return a.localeCompare(b);
+    });
+    return sorted;
+  }, [groupedGoGrabItems]);
+
+  // ✅ Alphabet sidebar scroll handler (iOS-style)
+  const handleAlphabetClick = useCallback((letter) => {
+    const el = document.getElementById(`letter-header-${letter}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
+
+  // ✅ Alphabet sidebar touch-slide handler for iOS-style drag scrolling
+  const alphabetSidebarRef = useRef(null);
+  const handleAlphabetTouch = useCallback((e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (el && el.dataset.letter) {
+      handleAlphabetClick(el.dataset.letter);
+    }
+  }, [handleAlphabetClick]);
 
   // State for managing pickup dates and times for each food item
   const [pickupDates, setPickupDates] = useState({});
@@ -558,7 +630,50 @@ export default function ListingPage() {
           )}
         </div>
       )}
-      <div className="mobile-container">
+      <div className="mobile-container" style={{ position: "relative" }}>
+        {/* iOS-style Alphabet Sidebar */}
+        {activeAlphabetLetters.length > 1 && (
+          <div
+            ref={alphabetSidebarRef}
+            onTouchMove={handleAlphabetTouch}
+            style={{
+              position: "fixed",
+              right: 2,
+              top: "50%",
+              transform: "translateY(-50%)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 0,
+              zIndex: 100,
+              padding: "6px 3px",
+              borderRadius: "12px",
+              background: "rgba(0,0,0,0.04)",
+              WebkitTapHighlightColor: "transparent",
+              touchAction: "none",
+              userSelect: "none",
+            }}
+          >
+            {activeAlphabetLetters.map((letter) => (
+              <div
+                key={letter}
+                data-letter={letter}
+                onClick={() => handleAlphabetClick(letter)}
+                style={{
+                  fontSize: "10px",
+                  fontWeight: "600",
+                  color: "#198754",
+                  padding: "2px 5px",
+                  cursor: "pointer",
+                  lineHeight: "1.4",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                {letter}
+              </div>
+            ))}
+          </div>
+        )}
         <div className="padding-20">
           <div className="back-link-title">
             <button
@@ -595,7 +710,18 @@ export default function ListingPage() {
                 <div key={group.categoryId} className="category-group">
                   <h3 className="category-title">{group.categoryName}</h3>
                   <div className="menu-listing">
-                    {group.items.map((food) => {
+                    {(alphabetGroupedItems[group.categoryId] || []).map(({ letter, items: letterItems }) => (
+                      <div key={letter}>
+                        <div
+                          id={`letter-header-${letter}`}
+                          style={{
+                            height: 0,
+                            overflow: "hidden",
+                            margin: 0,
+                            padding: 0,
+                          }}
+                        />
+                        {letterItems.map((food) => {
                       const cartQty = getMemoizedCartQuantity(food.id);
                       const currentPickupDate = getPickupDate(food.id, false);
                       const currentPickupTime = getPickupTime(food.id, false);
@@ -728,6 +854,8 @@ export default function ListingPage() {
                         </div>
                       );
                     })}
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}

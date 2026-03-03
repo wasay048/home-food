@@ -15,6 +15,7 @@ import {
   validateItemAvailability,
 } from "../services/orderService";
 import { clearCart } from "../store/slices/cartSlice";
+import { updateUserProfile as updateUserProfileRedux } from "../store/slices/authSlice";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import { useGenericCart } from "../hooks/useGenericCart";
 import { useUserAccount } from "../hooks/useUserAccount";
@@ -63,6 +64,7 @@ export default function PaymentPage() {
 
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryPhone, setDeliveryPhone] = useState("");
+
   const [deliveryTime, setDeliveryTime] = useState(null);
   const [showAddressValidationDialog, setShowAddressValidationDialog] =
     useState(false);
@@ -72,7 +74,7 @@ export default function PaymentPage() {
   const [useBalance, setUseBalance] = useState(false);
   const [balanceToUse, setBalanceToUse] = useState(0);
 
-  const { checkUserExistsById, getUserBalance, deductFromBalance } = useUserAccount();
+  const { checkUserExistsById, getUserBalance, deductFromBalance, updateUserProfile } = useUserAccount();
   const { handleQuantityChange } = useGenericCart();
   const { deliveryFee, loading: deliveryFeeLoading } = useDeliveryFee();
   const navigate = useNavigate();
@@ -86,6 +88,14 @@ export default function PaymentPage() {
   // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   // const isAuthenticated = true;
+
+  // ✅ Pre-populate phone number from saved cellPhone in user account
+  useEffect(() => {
+    if (currentUser?.cellPhone && !deliveryPhone) {
+      setDeliveryPhone(currentUser.cellPhone);
+      console.log("☎️ [PaymentPage] Pre-populated phone from account:", currentUser.cellPhone);
+    }
+  }, [currentUser?.cellPhone]);
 
   // ✅ Check if any cart item contains foodCategory 7 or 8 (cash payment not allowed)
   const hasCashRestrictedItems = useMemo(() => {
@@ -763,6 +773,17 @@ export default function PaymentPage() {
           console.error("⚠️ Failed to deduct balance:", deductResult.error);
           // Note: Order is already placed, so we log the error but don't prevent success
         }
+      }
+
+      // ✅ Save cellPhone to accounts collection for future pre-population
+      if (deliveryPhone && currentUser?.id) {
+        updateUserProfile(currentUser.id, { cellPhone: deliveryPhone }).then((res) => {
+          if (res.success) {
+            console.log("☎️ cellPhone saved to account:", deliveryPhone);
+            // Also update Redux so it persists in-session
+            dispatch(updateUserProfileRedux({ cellPhone: deliveryPhone }));
+          }
+        }).catch((err) => console.warn("Failed to save cellPhone:", err));
       }
 
       // Clear the cart after successful order placement

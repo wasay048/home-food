@@ -145,6 +145,7 @@ export function AuthProvider({ children }) {
           refreshToken: userInfo.refresh_token,
           expireAt: Date.now() + (userInfo.expires_in || 7200) * 1000, // usually 7200 seconds
           scope: userInfo.scope,
+          cellPhone: accountResult.account?.cellPhone || null, // Saved phone from accounts collection
           createdAt: new Date().toISOString(),
         };
 
