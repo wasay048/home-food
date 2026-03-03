@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
@@ -50,6 +50,7 @@ export default function PaymentPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const orderLockRef = useRef(false); // Synchronous mutex to prevent double-tap
   const [isDateTimePickerOpen, setIsDateTimePickerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [modalSelectedDate, setModalSelectedDate] = useState(null);
@@ -637,24 +638,72 @@ export default function PaymentPage() {
 
   // Handle order placement
   const handlePlaceOrder = async () => {
-    try {
-      // Validation checks
-      if (cartItems.length === 0) {
-        showToast.error(
-          "Your cart is empty. Please add items before placing an order."
-        );
-        return;
-      }
-      console.log("Placing order for user:", currentUser);
-      // alert("Placing order for user: " + JSON.stringify(currentUser));
-      console.log("Placing order for isAuthenticated:", isAuthenticated);
-      // Check authentication FIRST before other validations
-      if (!isAuthenticated || !currentUser) {
-        console.log("🔒 Authentication required for placing order");
-        setShowWeChatDialog(true);
-        return;
-      }
+    // ── Pre-lock validation (these can fail without locking the user out) ──
 
+    if (cartItems.length === 0) {
+      showToast.error(
+        "Your cart is empty. Please add items before placing an order."
+      );
+      return;
+    }
+    console.log("Placing order for user:", currentUser);
+    console.log("Placing order for isAuthenticated:", isAuthenticated);
+
+    // Check authentication FIRST before other validations
+    if (!isAuthenticated || !currentUser) {
+      console.log("🔒 Authentication required for placing order");
+      setShowWeChatDialog(true);
+      return;
+    }
+
+    // ✅ Phone number is ALWAYS required (for SMS order confirmation)
+    if (!deliveryPhone || !deliveryPhone.trim() || !isValidPhoneNumber(deliveryPhone)) {
+      console.log("❌ Invalid or missing phone number");
+      setShowPhoneErrorDialog(true);
+      return;
+    }
+
+    // ✅ Check delivery address
+    if (needsDeliveryAddress && !deliveryAddress.trim()) {
+      console.log("❌ Delivery address is required");
+      setShowAddressValidationDialog(true);
+      return;
+    }
+
+    // ✅ Validate pickup dates
+    const invalidItems = validatePickupDates();
+    if (invalidItems.length > 0) {
+      console.log("❌ Invalid pickup dates found:", invalidItems);
+      setInvalidDateItems(invalidItems);
+      setShowDateValidationDialog(true);
+      return;
+    }
+
+    // Only require screenshot if not fully covered by balance and payment type is online
+    if (paymentType === "online" && !firebaseImageUrl && !isFullyCoveredByBalance) {
+      showToast.error(
+        "Please upload a payment confirmation screenshot before placing your order."
+      );
+      return;
+    }
+
+    if (!kitchenInfo || !kitchenInfo.id || !cartItems[0]?.kitchenId) {
+      showToast.error(
+        "Kitchen information is missing. Please return to the listing page and try again."
+      );
+      return;
+    }
+
+    // ── DUPLICATE ORDER GUARD: acquire lock AFTER validation passes ──
+    if (orderLockRef.current || isPlacingOrder) {
+      console.warn("⛔ Order already in progress — ignoring duplicate tap");
+      return;
+    }
+    orderLockRef.current = true;
+    setIsPlacingOrder(true);
+
+    try {
+      // Verify user exists in accounts (async check)
       const userId = currentUser?.id || currentUser?.uid;
       const userCheck = await checkUserExistsById(userId);
 
@@ -666,33 +715,12 @@ export default function PaymentPage() {
           "Your session has expired. Please login again to place your order."
         );
         setShowWeChatDialog(true);
+        orderLockRef.current = false;
+        setIsPlacingOrder(false);
         return;
       }
 
-      // ✅ UPDATED: Check delivery validation based on fulfillmentType
-      if (needsDeliveryAddress && !deliveryAddress.trim()) {
-        console.log("❌ Delivery address is required");
-        setShowAddressValidationDialog(true);
-        return;
-      }
-
-      // ✅ Phone number is ALWAYS required (for SMS order confirmation)
-      if (!deliveryPhone || !deliveryPhone.trim() || !isValidPhoneNumber(deliveryPhone)) {
-        console.log("❌ Invalid or missing phone number");
-        setShowPhoneErrorDialog(true);
-        return;
-      }
-
-      // ✅ NEW: Validate pickup dates
-      const invalidItems = validatePickupDates();
-      if (invalidItems.length > 0) {
-        console.log("❌ Invalid pickup dates found:", invalidItems);
-        setInvalidDateItems(invalidItems);
-        setShowDateValidationDialog(true);
-        return;
-      }
-
-      // ✅ NEW: Validate item availability using imported function
+      // ✅ Validate item availability (async check)
       console.log("📦 Starting availability validation...");
       const unavailableItems = await validateItemAvailability(
         cartItems,
@@ -701,32 +729,20 @@ export default function PaymentPage() {
 
       if (unavailableItems.length > 0) {
         console.log("❌ Unavailable items found:", unavailableItems);
-        setInvalidDateItems(unavailableItems); // Reuse the same state
+        setInvalidDateItems(unavailableItems);
         setShowDateValidationDialog(true);
+        orderLockRef.current = false;
+        setIsPlacingOrder(false);
         return;
       }
 
-      console.log("✅ All items available, proceeding with order...");
+      console.log("✅ All validations passed, proceeding with order...");
 
       // Calculate remaining amount after balance deduction
       const remainingAmount = useBalance 
         ? Math.max(0, parseFloat(paymentCalculation.totalPayment) - balanceToUse) 
         : parseFloat(paymentCalculation.totalPayment);
-
-      // Only require screenshot if not fully covered by balance and payment type is online
-      if (paymentType === "online" && !firebaseImageUrl && !isFullyCoveredByBalance) {
-        showToast.error(
-          "Please upload a payment confirmation screenshot before placing your order."
-        );
-        return;
-      }
-      if (!kitchenInfo || !kitchenInfo.id || !cartItems[0]?.kitchenId) {
-        showToast.error(
-          "Kitchen information is missing. Please return to the listing page and try again."
-        );
-        return;
-      }
-      setIsPlacingOrder(true);
+      console.log("✅ All items available, proceeding with order...");
       console.log(
         "placeOrder --hasDeliveryItems",
         fulfillmentAnalysis.hasDeliveryItems
@@ -860,8 +876,9 @@ export default function PaymentPage() {
     } catch (error) {
       console.error("Error placing order:", error);
       showToast.error(`Failed to place order: ${error.message}`);
-    } finally {
+      // Only unlock on error so user can retry; on success we navigate away
       setIsPlacingOrder(false);
+      orderLockRef.current = false;
     }
   };
 
