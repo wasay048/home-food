@@ -15,6 +15,8 @@ import TransactionHistoryPage from "../pages/TransactionHistoryPage";
 import ProtectedRoute from "./ProtectedRoute";
 import ErrorBoundary from "../components/ErrorBoundary/ErrorBoundary.jsx";
 import ErrorTest from "../components/ErrorBoundary/ErrorTest.jsx";
+import PrivacyPolicyPage from "../pages/PrivacyPolicyPage";
+import TermsAndConditionsPage from "../pages/TermsAndConditionsPage";
 
 export default function AppRoutes() {
   return (
@@ -37,6 +39,8 @@ export default function AppRoutes() {
         <Route path="/wechat/callback" element={<WeChatCallbackPage />} />
         <Route path="/wechat/debug" element={<WeChatDebugPage />} />
         <Route path="/test-error" element={<ErrorTest />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsAndConditionsPage />} />
 
         {/* Future protected routes */}
         <Route element={<ProtectedRoute />}>
