@@ -241,22 +241,15 @@ export default function ListingPage() {
       groups[maxCatId].items.push(food);
     });
 
-    // Sort category 8 items by group order percentage (high to low)
-    if (groups[8]) {
-      groups[8].items.sort((a, b) => {
+    // Sort ALL categories by group order percentage (high to low), then alphabetically
+    Object.keys(groups).forEach((catId) => {
+      groups[catId].items.sort((a, b) => {
         const percentA = getGroupOrderPercentage(a);
         const percentB = getGroupOrderPercentage(b);
-        return percentB - percentA; // Descending order (high to low)
+        if (percentB !== percentA) return percentB - percentA; // Descending by percentage
+        // If same percentage, sort alphabetically by name
+        return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
       });
-    }
-
-    // Sort items ALPHABETICALLY within each non-8 category
-    Object.keys(groups).forEach((catId) => {
-      if (Number(catId) !== 8) {
-        groups[catId].items.sort((a, b) =>
-          (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
-        );
-      }
     });
 
     // Convert to array and sort by category ID (ascending)
@@ -308,8 +301,9 @@ export default function ListingPage() {
   }, [groupedGoGrabItems]);
 
   // ✅ Alphabet sidebar scroll handler (iOS-style)
+  // Scrolls to the FIRST food item in the list whose name starts with the given letter
   const handleAlphabetClick = useCallback((letter) => {
-    const el = document.getElementById(`letter-header-${letter}`);
+    const el = document.querySelector(`[data-food-letter="${letter}"]`);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
@@ -710,23 +704,15 @@ export default function ListingPage() {
                 <div key={group.categoryId} className="category-group">
                   <h3 className="category-title">{group.categoryName}</h3>
                   <div className="menu-listing">
-                    {(alphabetGroupedItems[group.categoryId] || []).map(({ letter, items: letterItems }) => (
-                      <div key={letter}>
-                        <div
-                          id={`letter-header-${letter}`}
-                          style={{
-                            height: 0,
-                            overflow: "hidden",
-                            margin: 0,
-                            padding: 0,
-                          }}
-                        />
-                        {letterItems.map((food) => {
+                    {group.items.map((food) => {
+                      // Compute the letter for this food item (for sidebar scroll targeting)
+                      const foodLetterMatch = (food.name || "").match(/[A-Za-z]/);
+                      const foodLetter = foodLetterMatch ? foodLetterMatch[0].toUpperCase() : "#";
                       const cartQty = getMemoizedCartQuantity(food.id);
                       const currentPickupDate = getPickupDate(food.id, false);
                       const currentPickupTime = getPickupTime(food.id, false);
                       return (
-                        <div key={food.id} className="menu-list">
+                        <div key={food.id} className="menu-list" data-food-letter={foodLetter}>
                           <div
                             className="left"
                             onClick={() =>
@@ -854,8 +840,6 @@ export default function ListingPage() {
                         </div>
                       );
                     })}
-                      </div>
-                    ))}
                   </div>
                 </div>
               ))}
