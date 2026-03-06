@@ -1,11 +1,20 @@
-import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
 import { QRCodeSVG } from "qrcode.react";
 import scooterRider from "../assets/scooter-rider.png";
 import { useGenericCart } from "../hooks/useGenericCart";
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
-import { setListingData, setListingLoading } from "../store/slices/listingSlice";
+import {
+  setListingData,
+  setListingLoading,
+} from "../store/slices/listingSlice";
 // import Edit from "../assets/images/edit.svg";
 import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
@@ -59,33 +68,36 @@ export default function ListingPage() {
   }, []);
 
   // Handle touch move for pull-to-refresh
-  const handleTouchMove = useCallback((e) => {
-    if (isRefreshing) return;
-    if (window.scrollY > 0) {
-      setPullDistance(0);
-      return;
-    }
-    
-    const touchY = e.touches[0].clientY;
-    const diff = touchY - touchStartY.current;
-    
-    if (diff > 0) {
-      // Pulling down - apply resistance
-      setPullDistance(Math.min(diff * 0.5, PULL_THRESHOLD + 20));
-    }
-  }, [isRefreshing]);
+  const handleTouchMove = useCallback(
+    (e) => {
+      if (isRefreshing) return;
+      if (window.scrollY > 0) {
+        setPullDistance(0);
+        return;
+      }
+
+      const touchY = e.touches[0].clientY;
+      const diff = touchY - touchStartY.current;
+
+      if (diff > 0) {
+        // Pulling down - apply resistance
+        setPullDistance(Math.min(diff * 0.5, PULL_THRESHOLD + 20));
+      }
+    },
+    [isRefreshing],
+  );
 
   // Handle touch end for pull-to-refresh
   const handleTouchEnd = useCallback(async () => {
     if (pullDistance >= PULL_THRESHOLD && !isRefreshing) {
       setIsRefreshing(true);
       console.log("🔄 [ListingPage] Pull-to-refresh triggered");
-      
+
       try {
         // Trigger refetch
         refetch();
         // Wait a bit to show the refresh animation
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       } finally {
         setIsRefreshing(false);
       }
@@ -96,12 +108,7 @@ export default function ListingPage() {
   // ✅ Update Redux with fresh data when it arrives
   useEffect(() => {
     // Only proceed if we have fresh data and a valid kitchenId
-    if (
-      !fullKitchen ||
-      !allFoods ||
-      allFoods.length === 0 ||
-      !kitchenId
-    ) {
+    if (!fullKitchen || !allFoods || allFoods.length === 0 || !kitchenId) {
       return;
     }
 
@@ -112,6 +119,7 @@ export default function ListingPage() {
     try {
       // Process Go & Grab items
       const goGrabItems = allFoods.filter((food) => {
+        if (food.deActiveItem) return false;
         const numAvailable =
           food.availability?.numAvailable || food.numAvailable || 0;
         return numAvailable > 0 && food.kitchenId === kitchenId;
@@ -161,7 +169,11 @@ export default function ListingPage() {
         // Filter foods that are in any of the week's preorder schedules
         if (preorderFoodIds.size > 0) {
           preOrderItems = allFoods.filter((food) => {
-            return preorderFoodIds.has(food.id) && food.kitchenId === kitchenId;
+            return (
+              !food.deActiveItem &&
+              preorderFoodIds.has(food.id) &&
+              food.kitchenId === kitchenId
+            );
           });
         } else {
           preOrderItems = [];
@@ -185,7 +197,9 @@ export default function ListingPage() {
   }, [fullKitchen, allFoods, kitchenId, dispatch]);
 
   // ✅ Get food categories from Redux store
-  const foodCategories = useSelector((state) => state.foodCategories?.categories || []);
+  const foodCategories = useSelector(
+    (state) => state.foodCategories?.categories || [],
+  );
 
   // Use the generic cart hook for all cart operations
   const { cartItems, getCartQuantity, getCartItem } = useGenericCart();
@@ -223,7 +237,8 @@ export default function ListingPage() {
     const getGroupOrderPercentage = (food) => {
       if (!food?.minByGroup || food.minByGroup <= 0) return 0;
       const maxByGroup = food.maxByGroup || food.minByGroup;
-      const percentage = ((maxByGroup - (food.numAvailable || 0)) / food.minByGroup) * 100;
+      const percentage =
+        ((maxByGroup - (food.numAvailable || 0)) / food.minByGroup) * 100;
       return Math.max(0, percentage); // Floor at 0, no cap
     };
 
@@ -234,7 +249,8 @@ export default function ListingPage() {
       if (!groups[maxCatId]) {
         groups[maxCatId] = {
           categoryId: maxCatId,
-          categoryName: categoryNameMap[String(maxCatId)] || `Category ${maxCatId}`,
+          categoryName:
+            categoryNameMap[String(maxCatId)] || `Category ${maxCatId}`,
           items: [],
         };
       }
@@ -248,7 +264,9 @@ export default function ListingPage() {
         const percentB = getGroupOrderPercentage(b);
         if (percentB !== percentA) return percentB - percentA; // Descending by percentage
         // If same percentage, sort alphabetically by name
-        return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+        return (a.name || "").localeCompare(b.name || "", undefined, {
+          sensitivity: "base",
+        });
       });
     });
 
@@ -311,14 +329,17 @@ export default function ListingPage() {
 
   // ✅ Alphabet sidebar touch-slide handler for iOS-style drag scrolling
   const alphabetSidebarRef = useRef(null);
-  const handleAlphabetTouch = useCallback((e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const el = document.elementFromPoint(touch.clientX, touch.clientY);
-    if (el && el.dataset.letter) {
-      handleAlphabetClick(el.dataset.letter);
-    }
-  }, [handleAlphabetClick]);
+  const handleAlphabetTouch = useCallback(
+    (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (el && el.dataset.letter) {
+        handleAlphabetClick(el.dataset.letter);
+      }
+    },
+    [handleAlphabetClick],
+  );
 
   // State for managing pickup dates and times for each food item
   const [pickupDates, setPickupDates] = useState({});
@@ -334,13 +355,13 @@ export default function ListingPage() {
       return scheduleItems
         .map((scheduleItem) => {
           const food = preOrderItems.find(
-            (f) => f.id === scheduleItem.foodItemId
+            (f) => f.id === scheduleItem.foodItemId,
           );
           return food ? { ...food, scheduleItem } : null;
         })
         .filter(Boolean);
     },
-    [kitchen, preOrderItems]
+    [kitchen, preOrderItems],
   );
 
   const initializePickupDataFromCart = useCallback(() => {
@@ -371,7 +392,7 @@ export default function ListingPage() {
           const cartItem = cartItems.find(
             (item) =>
               item.foodId === food.id &&
-              item.selectedDate === dateInfo.dateString
+              item.selectedDate === dateInfo.dateString,
           );
 
           if (cartItem) {
@@ -431,7 +452,7 @@ export default function ListingPage() {
       goGrabItems?.length > 0
     ) {
       console.log(
-        "[ListingPage] iOS device detected - using pre-loaded Redux data"
+        "[ListingPage] iOS device detected - using pre-loaded Redux data",
       );
     }
   }, [
@@ -455,7 +476,7 @@ export default function ListingPage() {
     if (location.state?.from?.fullUrl) {
       console.log(
         "Going back to FoodDetailPage with params:",
-        location.state.from.fullUrl
+        location.state.from.fullUrl,
       );
       navigate(location.state.from.fullUrl);
       return;
@@ -465,10 +486,10 @@ export default function ListingPage() {
     if (location.state?.from?.pathname) {
       console.log(
         "Going back to:",
-        location.state.from.pathname + (location.state.from.search || "")
+        location.state.from.pathname + (location.state.from.search || ""),
       );
       navigate(
-        location.state.from.pathname + (location.state.from.search || "")
+        location.state.from.pathname + (location.state.from.search || ""),
       );
       return;
     }
@@ -495,7 +516,7 @@ export default function ListingPage() {
         [timeKey]: null,
       }));
     },
-    []
+    [],
   );
 
   const handleTimeChange = useCallback(
@@ -507,7 +528,7 @@ export default function ListingPage() {
       }));
       console.log(`[ListingPage] Time changed for ${key}:`, newTime);
     },
-    []
+    [],
   );
 
   // ✅ Memoize cart quantities to prevent infinite recalculations
@@ -528,7 +549,7 @@ export default function ListingPage() {
         itemsForDate.forEach((food) => {
           quantities.set(
             `${food.id}-${dateInfo.dateString}`,
-            getCartQuantity(food.id, dateInfo.dateString)
+            getCartQuantity(food.id, dateInfo.dateString),
           );
         });
       });
@@ -549,7 +570,7 @@ export default function ListingPage() {
       const key = selectedDate ? `${foodId}-${selectedDate}` : `${foodId}`;
       return cartQuantities.get(key) || 0;
     },
-    [cartQuantities]
+    [cartQuantities],
   );
 
   useEffect(() => {
@@ -559,7 +580,7 @@ export default function ListingPage() {
 
   console.log(
     "Rendering ListingPage with state:",
-    cartItems.map((item) => item.foodId)
+    cartItems.map((item) => item.foodId),
   );
 
   const getPickupDate = useCallback(
@@ -567,7 +588,7 @@ export default function ListingPage() {
       const key = isPreOrder ? `${foodId}_preorder` : foodId;
       return pickupDates[key] || fallbackDate;
     },
-    [pickupDates]
+    [pickupDates],
   );
 
   // ✅ ENHANCED: Helper function to get pickup time
@@ -576,7 +597,7 @@ export default function ListingPage() {
       const key = isPreOrder ? `${foodId}_preorder` : foodId;
       return pickupTimes[key] || null;
     },
-    [pickupTimes]
+    [pickupTimes],
   );
 
   useEffect(() => {
@@ -586,32 +607,32 @@ export default function ListingPage() {
 
   console.log(
     "Rendering ListingPage with state:",
-    cartItems.map((item) => item.foodId)
+    cartItems.map((item) => item.foodId),
   );
   return (
-    <div 
+    <div
       className="container"
       ref={containerRef}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      style={{ 
-        transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : 'none',
-        transition: pullDistance === 0 ? 'transform 0.2s ease-out' : 'none'
+      style={{
+        transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : "none",
+        transition: pullDistance === 0 ? "transform 0.2s ease-out" : "none",
       }}
     >
       {/* Pull-to-refresh indicator */}
       {(pullDistance > 0 || isRefreshing) && (
-        <div 
+        <div
           style={{
-            position: 'absolute',
+            position: "absolute",
             top: pullDistance > 0 ? -40 + pullDistance : 10,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            textAlign: 'center',
-            color: '#3fc045',
-            fontSize: '14px',
-            fontWeight: '500',
+            left: "50%",
+            transform: "translateX(-50%)",
+            textAlign: "center",
+            color: "#3fc045",
+            fontSize: "14px",
+            fontWeight: "500",
             zIndex: 1000,
           }}
         >
@@ -706,19 +727,27 @@ export default function ListingPage() {
                   <div className="menu-listing">
                     {group.items.map((food) => {
                       // Compute the letter for this food item (for sidebar scroll targeting)
-                      const foodLetterMatch = (food.name || "").match(/[A-Za-z]/);
-                      const foodLetter = foodLetterMatch ? foodLetterMatch[0].toUpperCase() : "#";
+                      const foodLetterMatch = (food.name || "").match(
+                        /[A-Za-z]/,
+                      );
+                      const foodLetter = foodLetterMatch
+                        ? foodLetterMatch[0].toUpperCase()
+                        : "#";
                       const cartQty = getMemoizedCartQuantity(food.id);
                       const currentPickupDate = getPickupDate(food.id, false);
                       const currentPickupTime = getPickupTime(food.id, false);
                       return (
-                        <div key={food.id} className="menu-list" data-food-letter={foodLetter}>
+                        <div
+                          key={food.id}
+                          className="menu-list"
+                          data-food-letter={foodLetter}
+                        >
                           <div
                             className="left"
                             onClick={() =>
                               window.open(
                                 `/share?kitchenId=${kitchen?.id}&foodId=${food.id}`,
-                                "_blank"
+                                "_blank",
                               )
                             }
                             style={{ cursor: "pointer" }}
@@ -726,11 +755,13 @@ export default function ListingPage() {
                             <div className="image">
                               <img
                                 src={
-                                  food.imageUrl || "/src/assets/images/product.png"
+                                  food.imageUrl ||
+                                  "/src/assets/images/product.png"
                                 }
                                 alt={food.name}
                                 onError={(e) => {
-                                  e.target.src = "/src/assets/images/product.png";
+                                  e.target.src =
+                                    "/src/assets/images/product.png";
                                 }}
                               />
                             </div>
@@ -791,50 +822,61 @@ export default function ListingPage() {
                               />
                             </div>
                             {/* Show group order percentage for category 8 items - on its own line */}
-                            {getMaxCategoryId(food.foodCategory) === 8 && food.minByGroup > 0 && (
-                              <div
-                                style={{
-                                  color: "#e74c3c",
-                                  fontSize: "14px",
-                                  fontWeight: "700",
-                                  marginTop: "4px",
-                                  width: "100%",
-                                }}
-                              >
-                                Group order filled: {Math.max(0, Math.round(((food.maxByGroup || food.minByGroup) - (food.numAvailable || 0)) / food.minByGroup * 100))}%
-                              </div>
-                            )}
+                            {getMaxCategoryId(food.foodCategory) === 8 &&
+                              food.minByGroup > 0 && (
+                                <div
+                                  style={{
+                                    color: "#e74c3c",
+                                    fontSize: "14px",
+                                    fontWeight: "700",
+                                    marginTop: "4px",
+                                    width: "100%",
+                                  }}
+                                >
+                                  Group order filled:{" "}
+                                  {Math.max(
+                                    0,
+                                    Math.round(
+                                      (((food.maxByGroup || food.minByGroup) -
+                                        (food.numAvailable || 0)) /
+                                        food.minByGroup) *
+                                        100,
+                                    ),
+                                  )}
+                                  %
+                                </div>
+                              )}
                             {/* Hide DateTimePicker for category 8 items */}
                             {getMaxCategoryId(food.foodCategory) !== 8 && (
-                            <div className="pickup-time-section">
-                              <DateTimePicker
-                                food={food}
-                                kitchen={kitchen}
-                                orderType="GO_GRAB"
-                                selectedDate={currentPickupDate}
-                                selectedTime={currentPickupTime}
-                                onDateChange={(newDate) => {
-                                  handleDateChange(food.id, newDate, false);
-                                }}
-                                onTimeChange={(newTime) => {
-                                  handleTimeChange(food.id, newTime, false);
-                                }}
-                                disabled={!food || !kitchen}
-                                className="listing-page-picker"
-                                dateLabel={
-                                  food.orderType === 1
-                                    ? "Delivery Date"
-                                    : "Pickup Date"
-                                }
-                                timeLabel={
-                                  food.orderType === 1
-                                    ? "Deliver Time"
-                                    : "Pickup Time"
-                                }
-                                isDeliveryMode={food.orderType === 1}
-                                fulfillmentType={food.orderType}
-                              />
-                            </div>
+                              <div className="pickup-time-section">
+                                <DateTimePicker
+                                  food={food}
+                                  kitchen={kitchen}
+                                  orderType="GO_GRAB"
+                                  selectedDate={currentPickupDate}
+                                  selectedTime={currentPickupTime}
+                                  onDateChange={(newDate) => {
+                                    handleDateChange(food.id, newDate, false);
+                                  }}
+                                  onTimeChange={(newTime) => {
+                                    handleTimeChange(food.id, newTime, false);
+                                  }}
+                                  disabled={!food || !kitchen}
+                                  className="listing-page-picker"
+                                  dateLabel={
+                                    food.orderType === 1
+                                      ? "Delivery Date"
+                                      : "Pickup Date"
+                                  }
+                                  timeLabel={
+                                    food.orderType === 1
+                                      ? "Deliver Time"
+                                      : "Pickup Time"
+                                  }
+                                  isDeliveryMode={food.orderType === 1}
+                                  fulfillmentType={food.orderType}
+                                />
+                              </div>
                             )}
                           </div>
                         </div>
@@ -849,7 +891,7 @@ export default function ListingPage() {
           {/* Pre-order Sections */}
           {availablePreorderDates.map((dateInfo) => {
             const preOrderItemsForDate = getPreOrderItemsForDate(
-              dateInfo.dateString
+              dateInfo.dateString,
             );
             console.log("preOrderItemsForDate", preOrderItemsForDate);
             if (preOrderItemsForDate.length === 0) return null;
@@ -863,12 +905,12 @@ export default function ListingPage() {
                   {preOrderItemsForDate.map((food) => {
                     const cartQty = getMemoizedCartQuantity(
                       food.id,
-                      dateInfo.dateString
+                      dateInfo.dateString,
                     );
                     const currentPickupDate = getPickupDate(
                       food.id,
                       true,
-                      dateInfo.dateString
+                      dateInfo.dateString,
                     );
                     const currentPickupTime = getPickupTime(food.id, true);
                     // const availableTimes = food.scheduleItem
@@ -886,9 +928,9 @@ export default function ListingPage() {
                               `/share?kitchenId=${kitchen?.id}&foodId=${
                                 food.id
                               }&date=${dayjs(dateInfo.dateString).format(
-                                "M/D/YYYY"
+                                "M/D/YYYY",
                               )}`,
-                              "_blank"
+                              "_blank",
                             )
                           }
                           style={{ cursor: "pointer" }}
@@ -907,10 +949,7 @@ export default function ListingPage() {
                           </div>
                           <div className="data">
                             <div className="title">{food.name}</div>
-                            <div className="text">
-                              {food.description ||
-                                ""}
-                            </div>
+                            <div className="text">{food.description || ""}</div>
                             <div
                               className="price"
                               style={{
@@ -935,7 +974,7 @@ export default function ListingPage() {
                               const cartItem = cartItems.find(
                                 (item) =>
                                   item.foodId === food.id &&
-                                  item.selectedDate === dateInfo.dateString
+                                  item.selectedDate === dateInfo.dateString,
                               );
                               return cartItem?.specialInstructions ? (
                                 <div
@@ -1013,7 +1052,7 @@ export default function ListingPage() {
             onClick={() => {
               if (cartItems.length === 0) {
                 alert(
-                  "Oops! Your cart is empty. Add something delicious to get started."
+                  "Oops! Your cart is empty. Add something delicious to get started.",
                 );
               } else {
                 navigate("/order");

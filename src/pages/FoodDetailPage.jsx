@@ -1028,6 +1028,7 @@ export default function FoodDetailPage() {
     try {
       // Process Go & Grab items
       const goGrabItems = allFoods.filter((food) => {
+        if (food.deActiveItem) return false;
         const numAvailable =
           food.availability?.numAvailable || food.numAvailable || 0;
         return numAvailable > 0 && food.kitchenId === kitchenId;
@@ -1123,7 +1124,7 @@ export default function FoodDetailPage() {
         // Filter foods that are in any of the week's preorder schedules
         if (preorderFoodIds.size > 0) {
           preOrderItems = allFoods.filter((food) => {
-            return preorderFoodIds.has(food.id) && food.kitchenId === kitchenId;
+            return !food.deActiveItem && preorderFoodIds.has(food.id) && food.kitchenId === kitchenId;
           });
         } else {
           preOrderItems = [];
