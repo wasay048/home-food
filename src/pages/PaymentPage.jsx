@@ -943,6 +943,14 @@ export default function PaymentPage() {
               {deliveryPhone && !isValidPhoneNumber(deliveryPhone) && (
                 <p className="phone-error">Please enter a valid phone number</p>
               )}
+              <p style={{
+                fontSize: "10px",
+                color: "#888",
+                marginTop: "6px",
+                lineHeight: "1.4",
+              }}>
+                By providing your phone number, you consent to receive order confirmation &amp; status update SMS from HomeFresh. Msg &amp; data rates may apply. Reply STOP to opt out.
+              </p>
             </div>
 
             {/* ✅ Show Pickup Address if there are pickup items */}
