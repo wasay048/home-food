@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchAggregatedOrderQuantities } from "../store/slices/orderAggregationSlice";
 import { getUserOrders } from "../services/orderService";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
@@ -39,16 +40,17 @@ const isDefaultDate = (date) => {
 
 /**
  * Calculate group order percentage for category 8 items using live food data
- * Formula: ((maxByGroup - numAvailable) / minByGroup) * 100
+ * Formula: (orderedQuantity / minByGroup) * 100
  */
-const calculateGroupOrderPercentage = (foodData) => {
+/**
+ * Calculate group order percentage for category 8 items using live food data
+ * Formula: (orderedQuantity / 100) * 100
+ */
+const calculateGroupOrderPercentage = (foodData, quantitiesByItemName) => {
   if (!foodData) return null;
-  const minByGroup = foodData.minByGroup || 0;
-  const maxByGroup = foodData.maxByGroup || minByGroup;
-  const numAvailable = foodData.numAvailable || 0;
-
-  if (minByGroup <= 0) return null;
-  const percentage = ((maxByGroup - numAvailable) / minByGroup) * 100;
+  
+  const orderedQuantity = quantitiesByItemName[foodData.name] || 0;
+  const percentage = (orderedQuantity / 100) * 100;
   return Math.round(Math.max(0, percentage)); // Floor at 0, no cap (can exceed 100%)
 };
 
@@ -83,7 +85,9 @@ const getOrderDisplayCase = (order, item) => {
 
 export default function MyOrdersPage() {
   const navigate = useNavigate();
-   const currentUser = useSelector((state) => state.auth.user);
+  const dispatch = useDispatch();
+  const currentUser = useSelector((state) => state.auth.user);
+  const { quantitiesByItemName } = useSelector((state) => state.orderAggregation);
   // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -264,6 +268,9 @@ export default function MyOrdersPage() {
           }
         }
         setKitchenData(kitchens);
+
+        // Fetch aggregated order quantities globally
+        dispatch(fetchAggregatedOrderQuantities());
 
         // Initialize pickup dates and times from order items
         const initialDates = {};
@@ -780,7 +787,7 @@ export default function MyOrdersPage() {
                               <div className="group-progress">
                                 <span className="progress-label">Group Order</span>
                                 <span className="progress-value">
-                                Filled {calculateGroupOrderPercentage(foodItemsData[item.foodItemId]) || 0}%
+                                Filled {calculateGroupOrderPercentage(foodItemsData[item.foodItemId], quantitiesByItemName) || 0}%
                                 </span>
                                 {/* Show wholesale message only for default date - placed below the percentage */}
                                 {item.pickupDateString && ["01,01,2000", "01/01/2000"].includes(item.pickupDateString) && (

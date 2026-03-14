@@ -771,7 +771,7 @@ export const createOrderObject = ({
     orderID: orderID,
     orderIDKey: "", // Will be set after document creation
     orderPaymentImage: firebaseImageUrl || "",
-    orderStatus: "inProgress",
+    orderStatus: "pendingApproval",
     orderTotalCoast: parseFloat(paymentCalculation.totalPayment),
     orderType: orderType,
     orderedFoodItems: orderedFoodItems,
@@ -835,5 +835,47 @@ export const getUserOrders = async (userId) => {
   } catch (error) {
     console.error("❌ [ORDER SERVICE] Error fetching user orders:", error);
     throw error;
+  }
+};
+
+/**
+ * Fetch and aggregate ordered quantities for all active orders globally
+ * @returns {Promise<Object>} - Dictionary mapping item names to their total aggregated quantity
+ */
+export const getAggregatedOrderQuantities = async () => {
+  try {
+    console.log("📊 [ORDER SERVICE] Aggregating all global order quantities based on item-level status");
+
+    const ordersRef = collection(db, "orders");
+    // We fetch all non-canceled orders to check item-level statuses
+    const q = query(
+      ordersRef,
+      where("orderStatus", "!=", "canceled")
+    );
+    
+    const snapshot = await getDocs(q);
+    const quantitiesByItemName = {};
+
+    snapshot.docs.forEach((doc) => {
+      const orderData = doc.data();
+      if (orderData.orderedFoodItems && Array.isArray(orderData.orderedFoodItems)) {
+        orderData.orderedFoodItems.forEach((item) => {
+          // ✅ Check orderStatus at the ITEM level
+          const itemStatus = item.orderStatus || orderData.orderStatus; // Fallback to root if missing
+          const isActive = ["inProgress", "pending"].includes(itemStatus);
+
+          if (isActive && item.name && item.quantity) {
+            const qty = parseInt(item.quantity, 10) || 0;
+            quantitiesByItemName[item.name] = (quantitiesByItemName[item.name] || 0) + qty;
+          }
+        });
+      }
+    });
+
+    console.log("✅ [ORDER SERVICE] Aggregated quantities:", quantitiesByItemName);
+    return quantitiesByItemName;
+  } catch (error) {
+    console.error("❌ [ORDER SERVICE] Error aggregating order quantities:", error);
+    return {};
   }
 };

@@ -27,6 +27,8 @@ import { getFoodCategories } from "../services/foodService";
 import dayjs from "dayjs";
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
 import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
+import { toggleFoodLike, clearCurrentFood } from "../store/slices/foodSlice";
+import { fetchAggregatedOrderQuantities } from "../store/slices/orderAggregationSlice";
 import { setWeChatUser } from "../store/slices/authSlice";
 import { db } from "../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -41,11 +43,11 @@ const getMaxCategoryId = (foodCategory) => {
   return Math.max(...categories.filter((c) => !isNaN(c)), 0);
 };
 
-// ✅ Calculate group order percentage: ((maxByGroup - numAvailable) / minByGroup) * 100
-const calculateGroupOrderPercentage = (food) => {
-  if (!food?.minByGroup || food.minByGroup <= 0) return null;
-  const maxByGroup = food.maxByGroup || food.minByGroup; // fallback to minByGroup if maxByGroup not set
-  const percentage = ((maxByGroup - (food.numAvailable || 0)) / food.minByGroup) * 100;
+// ✅ Calculate group order percentage using Redux aggregated orders
+const calculateGroupOrderPercentage = (food, quantitiesByItemName) => {
+  if (!food) return null;
+  const orderedQuantity = quantitiesByItemName[food.name] || 0;
+  const percentage = (orderedQuantity / 100) * 100;
   return Math.round(Math.max(0, percentage)); // Floor at 0, no cap (can exceed 100%)
 };
 
@@ -413,7 +415,7 @@ export default function FoodDetailPage() {
         selectedDate: searchParams.get("date"),
         toggle: searchParams.get("toggle"),
       };
-      console.log("� [Params] Extracted from URL:", params);
+      console.log(" [Params] Extracted from URL:", params);
       return params;
     }
 
@@ -477,7 +479,7 @@ export default function FoodDetailPage() {
     // Priority 1: Existing cart item date
     if (existingCartItem?.selectedDate) {
       console.log(
-        "� [Init] Pickup date from cart:",
+        " [Init] Pickup date from cart:",
         existingCartItem.selectedDate
       );
       return existingCartItem.selectedDate;
@@ -486,7 +488,7 @@ export default function FoodDetailPage() {
     if (selectedDate) {
       const formattedDate = parseUrlDateToString(selectedDate);
       if (formattedDate) {
-        console.log("� [Init] Pickup date from URL:", {
+        console.log(" [Init] Pickup date from URL:", {
           urlParam: selectedDate,
           formatted: formattedDate,
         });
@@ -582,6 +584,21 @@ export default function FoodDetailPage() {
     }
     touchStartY.current = 0;
   }, [pullDistance, isRefreshing, handleRefresh]);
+
+  // Clear current food when id or kitchenId changes
+  useEffect(() => {
+    if (foodId && kitchenId) {
+      dispatch(clearCurrentFood());
+    }
+  }, [dispatch, foodId, kitchenId]);
+
+  // ✅ Fetch aggregated order quantities globally
+  useEffect(() => {
+    dispatch(fetchAggregatedOrderQuantities());
+  }, [dispatch]);
+
+  // ✅ NEW: Get aggregated order quantities from Redux
+  const { quantitiesByItemName } = useSelector((state) => state.orderAggregation);
 
   // Determine order type based on availability and selected date
   const orderType = React.useMemo(() => {
@@ -1411,7 +1428,7 @@ export default function FoodDetailPage() {
             </div>
 
             {/* Show group order percentage for category 8 items - on its own line */}
-            {getMaxCategoryId(food?.foodCategory) === 8 && calculateGroupOrderPercentage(food) !== null && (
+            {getMaxCategoryId(food?.foodCategory) === 8 && calculateGroupOrderPercentage(food, quantitiesByItemName) !== null && (
               <div
                 style={{
                   color: "#e74c3c",
@@ -1421,7 +1438,7 @@ export default function FoodDetailPage() {
                   marginBottom: "8px",
                 }}
               >
-                Group Order Filled: {calculateGroupOrderPercentage(food)}%
+                Group Order Filled: {calculateGroupOrderPercentage(food, quantitiesByItemName)}%
               </div>
             )}
 

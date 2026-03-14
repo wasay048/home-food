@@ -9,6 +9,7 @@ import kitchenReducer from "./slices/kitchenSlice";
 import reviewsReducer from "./slices/reviewsSlice";
 import listingSlice from "./slices/listingSlice";
 import foodCategoriesReducer from "./slices/foodCategoriesSlice";
+import orderAggregationReducer from "./slices/orderAggregationSlice";
 
 // Persist configuration
 const persistConfig = {
@@ -78,6 +79,7 @@ const rootReducer = combineReducers({
   reviews: reviewsReducer,
   listing: persistReducer(listingPersistConfig, listingSlice),
   foodCategories: persistReducer(foodCategoriesPersistConfig, foodCategoriesReducer),
+  orderAggregation: orderAggregationReducer, // Not persisted, fetched fresh per session
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

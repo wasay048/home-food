@@ -15,10 +15,19 @@ import {
   setListingData,
   setListingLoading,
 } from "../store/slices/listingSlice";
+import { fetchAggregatedOrderQuantities } from "../store/slices/orderAggregationSlice";
 // import Edit from "../assets/images/edit.svg";
 import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import { useSelector, useDispatch } from "react-redux";
+
+// ✅ Calculate group order percentage using Redux aggregated orders
+const calculateGroupOrderPercentage = (food, quantitiesByItemName) => {
+  if (!food) return 0;
+  const orderedQuantity = quantitiesByItemName[food.name] || 0;
+  const percentage = (orderedQuantity / 100) * 100;
+  return Math.max(0, percentage);
+};
 
 export default function ListingPage() {
   const navigate = useNavigate();
@@ -36,6 +45,9 @@ export default function ListingPage() {
   } = useSelector((state) => state.listing);
 
   const dispatch = useDispatch();
+
+  // ✅ NEW: Get aggregated order quantities from Redux
+  const { quantitiesByItemName } = useSelector((state) => state.orderAggregation);
 
   // ✅ Redirect to home if no kitchenId
   useEffect(() => {
@@ -196,6 +208,11 @@ export default function ListingPage() {
     }
   }, [fullKitchen, allFoods, kitchenId, dispatch]);
 
+  // ✅ Fetch aggregated order quantities globally for the group buy progress calculation
+  useEffect(() => {
+    dispatch(fetchAggregatedOrderQuantities());
+  }, [dispatch]);
+
   // ✅ Get food categories from Redux store
   const foodCategories = useSelector(
     (state) => state.foodCategories?.categories || [],
@@ -233,15 +250,6 @@ export default function ListingPage() {
       categoryNameMap[cat.id] = cat.name;
     });
 
-    // Helper function to calculate group order percentage
-    const getGroupOrderPercentage = (food) => {
-      if (!food?.minByGroup || food.minByGroup <= 0) return 0;
-      const maxByGroup = food.maxByGroup || food.minByGroup;
-      const percentage =
-        ((maxByGroup - (food.numAvailable || 0)) / food.minByGroup) * 100;
-      return Math.max(0, percentage); // Floor at 0, no cap
-    };
-
     // Group items by their max category ID
     const groups = {};
     sortedGoGrabItems.forEach((food) => {
@@ -260,8 +268,8 @@ export default function ListingPage() {
     // Sort ALL categories by group order percentage (high to low), then alphabetically
     Object.keys(groups).forEach((catId) => {
       groups[catId].items.sort((a, b) => {
-        const percentA = getGroupOrderPercentage(a);
-        const percentB = getGroupOrderPercentage(b);
+        const percentA = calculateGroupOrderPercentage(a, quantitiesByItemName);
+        const percentB = calculateGroupOrderPercentage(b, quantitiesByItemName);
         if (percentB !== percentA) return percentB - percentA; // Descending by percentage
         // If same percentage, sort alphabetically by name
         return (a.name || "").localeCompare(b.name || "", undefined, {
@@ -270,9 +278,8 @@ export default function ListingPage() {
       });
     });
 
-    // Convert to array and sort by category ID (ascending)
     return Object.values(groups).sort((a, b) => a.categoryId - b.categoryId);
-  }, [sortedGoGrabItems, foodCategories, getMaxCategoryId]);
+  }, [sortedGoGrabItems, foodCategories, getMaxCategoryId, quantitiesByItemName]);
 
   // ✅ Build alphabet-grouped items per category (for letter headers)
   const alphabetGroupedItems = useMemo(() => {
@@ -834,16 +841,7 @@ export default function ListingPage() {
                                   }}
                                 >
                                   Group order filled:{" "}
-                                  {Math.max(
-                                    0,
-                                    Math.round(
-                                      (((food.maxByGroup || food.minByGroup) -
-                                        (food.numAvailable || 0)) /
-                                        food.minByGroup) *
-                                        100,
-                                    ),
-                                  )}
-                                  %
+                                  {Math.round(calculateGroupOrderPercentage(food, quantitiesByItemName))}%
                                 </div>
                               )}
                             {/* Hide DateTimePicker for category 8 items */}
