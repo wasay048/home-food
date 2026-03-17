@@ -11,6 +11,7 @@ import OrderPage from "../pages/OrderPage";
 import PaymentPage from "../pages/PaymentPage";
 import SuccessPage from "../pages/SuccessPage";
 import MyOrdersPage from "../pages/MyOrdersPage";
+import MyBalancePage from "../pages/MyBalancePage";
 import TransactionHistoryPage from "../pages/TransactionHistoryPage";
 import ProtectedRoute from "./ProtectedRoute";
 import ErrorBoundary from "../components/ErrorBoundary/ErrorBoundary.jsx";
@@ -34,6 +35,7 @@ export default function AppRoutes() {
         <Route path="/checkout" element={<PaymentPage />} />
         <Route path="/success" element={<SuccessPage />} />
         <Route path="/my-orders" element={<MyOrdersPage />} />
+        <Route path="/my-balance" element={<MyBalancePage />} />
         <Route path="/transactions" element={<TransactionHistoryPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/wechat/callback" element={<WeChatCallbackPage />} />

@@ -1659,7 +1659,20 @@ export default function FoodDetailPage() {
                   color: "#ffffff",
                 }}
               >
-                Manage My Orders
+                My Orders
+              </button>
+              <button
+                className="button text-bold font-size-18"
+                onClick={() => navigate("/my-balance")}
+                style={{
+                  pointerEvents: "auto",
+                  fontSize: "18px",
+                  width: "240px",
+                  background: "#2196F3",
+                  color: "#ffffff",
+                }}
+              >
+                My Balance
               </button>
               {/* <div className="icon">
                 <svg

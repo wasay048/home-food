@@ -9,6 +9,8 @@ import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import { Copy, X, Image as ImageIcon } from "lucide-react";
 import { uploadImageToStorage } from "../services/storageService";
 import { showToast } from "../utils/toast";
+import { db } from "../services/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import {
   placeOrder,
   createOrderObject,
@@ -785,6 +787,20 @@ export default function PaymentPage() {
         const deductResult = await deductFromBalance(currentUser.id, balanceToUse);
         if (deductResult.success) {
           console.log("✅ Balance deducted successfully:", { balanceUsed: balanceToUse, newBalance: deductResult.newBalance });
+
+          // Add entry to balanceAdjustment collection
+          try {
+            await addDoc(collection(db, "balanceAdjustment"), {
+              balanceSent: -balanceToUse,
+              senderUserID: currentUser.id,
+              receiverUserID: "system",
+              timestamp: serverTimestamp(),
+            });
+            console.log("✅ Balance adjustment recorded successfully");
+          } catch (adjError) {
+            console.error("⚠️ Failed to record balance adjustment:", adjError);
+            // Non-blocking: order and deduction already succeeded
+          }
         } else {
           console.error("⚠️ Failed to deduct balance:", deductResult.error);
           // Note: Order is already placed, so we log the error but don't prevent success

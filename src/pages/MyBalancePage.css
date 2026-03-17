@@ -1,0 +1,329 @@
+/* ============================================
+   My Balance Page Styles
+   ============================================ */
+
+.my-balance-page {
+  padding: 16px 20px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.my-balance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.my-balance-header .page-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #212226;
+  margin: 0;
+}
+
+.my-balance-header .back-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Balance Card */
+.balance-display-card {
+  background: linear-gradient(135deg, #3fc045, #2e9e33);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  color: white;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(63, 192, 69, 0.3);
+}
+
+.balance-display-card .balance-label {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.9;
+  margin-bottom: 8px;
+}
+
+.balance-display-card .balance-amount {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+/* Amount Input Section */
+.credit-amount-section {
+  margin-bottom: 20px;
+}
+
+.credit-amount-section .section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #212226;
+  margin-bottom: 12px;
+}
+
+.credit-amount-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.credit-amount-input-wrapper .dollar-sign {
+  position: absolute;
+  left: 16px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #333;
+}
+
+.credit-amount-input {
+  width: 100%;
+  padding: 14px 16px 14px 36px;
+  font-size: 20px;
+  font-weight: 700;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.2s;
+  background: #fafafa;
+  color: #212226;
+}
+
+.credit-amount-input:focus {
+  border-color: #3fc045;
+  background: #fff;
+}
+
+/* Payment Info Section */
+.payment-info-section {
+  margin-bottom: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #eaedf3;
+}
+
+.payment-info-section .section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #212226;
+  margin-bottom: 12px;
+}
+
+.payment-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.payment-info-row:last-child {
+  border-bottom: none;
+}
+
+.payment-info-row .payment-label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.payment-info-row .payment-value {
+  font-size: 14px;
+  color: #333;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.payment-info-row .copy-btn {
+  background: none;
+  border: none;
+  color: #3fc045;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.payment-info-row .copy-btn:hover {
+  background-color: rgba(63, 192, 69, 0.1);
+}
+
+/* Screenshot Upload Section */
+.screenshot-upload-section {
+  margin-bottom: 24px;
+}
+
+.screenshot-upload-section .section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #212226;
+  margin-bottom: 12px;
+}
+
+.upload-dropzone {
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  padding: 32px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fafafa;
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.drag-active {
+  border-color: #3fc045;
+  background: rgba(63, 192, 69, 0.05);
+}
+
+.upload-dropzone .upload-icon {
+  font-size: 40px;
+  margin-bottom: 8px;
+  color: #999;
+}
+
+.upload-dropzone .upload-text {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.upload-dropzone .upload-hint {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+
+/* Upload Preview */
+.upload-preview-container {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #eee;
+}
+
+.upload-preview-container img {
+  width: 100%;
+  max-height: 250px;
+  object-fit: cover;
+  display: block;
+}
+
+.upload-preview-container .remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+}
+
+.upload-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.upload-status.uploading {
+  color: #3fc045;
+}
+
+.upload-status.success {
+  color: #4caf50;
+}
+
+.upload-status.error {
+  color: #f44336;
+}
+
+/* Add Credit Button */
+.add-credit-btn {
+  width: 100%;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #3fc045, #2e9e33);
+  border: none;
+  border-radius: 67px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(63, 192, 69, 0.3);
+}
+
+.add-credit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(63, 192, 69, 0.4);
+}
+
+.add-credit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Success Message */
+.credit-success-message {
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  margin-bottom: 20px;
+  animation: slideIn 0.3s ease-out;
+}
+
+.credit-success-message .success-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.credit-success-message .success-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.credit-success-message .success-subtext {
+  font-size: 13px;
+  color: #666;
+  margin-top: 4px;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
