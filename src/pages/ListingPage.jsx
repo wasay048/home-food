@@ -271,7 +271,12 @@ export default function ListingPage() {
         const percentA = calculateGroupOrderPercentage(a, quantitiesByItemName);
         const percentB = calculateGroupOrderPercentage(b, quantitiesByItemName);
         if (percentB !== percentA) return percentB - percentA; // Descending by percentage
-        // If same percentage, sort alphabetically by name
+        // If same percentage, sort alphabetically by first English letter, then full name
+        const matchA = (a.name || "").match(/[A-Za-z]/);
+        const matchB = (b.name || "").match(/[A-Za-z]/);
+        const letterA = matchA ? matchA[0].toUpperCase() : "~"; // ~ sorts after Z
+        const letterB = matchB ? matchB[0].toUpperCase() : "~";
+        if (letterA !== letterB) return letterA.localeCompare(letterB);
         return (a.name || "").localeCompare(b.name || "", undefined, {
           sensitivity: "base",
         });

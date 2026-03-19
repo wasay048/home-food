@@ -266,7 +266,7 @@ export default function MyBalancePage() {
         <>
           {/* Credit Amount Input */}
           <div className="credit-amount-section">
-            <div className="section-title">Credit Amount</div>
+            <div className="section-title">I want to add credit:</div>
             <div className="credit-amount-input-wrapper">
               <span className="dollar-sign">$</span>
               <input
@@ -327,7 +327,7 @@ export default function MyBalancePage() {
 
           {/* Screenshot Upload */}
           <div className="screenshot-upload-section">
-            <div className="section-title">Upload Payment Screenshot</div>
+            <div className="section-title">After making credit payment, please upload payment screenshot by clicking the box below:</div>
 
             {!uploadPreview ? (
               <div
