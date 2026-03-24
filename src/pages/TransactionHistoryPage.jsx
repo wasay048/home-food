@@ -18,7 +18,8 @@ import "../styles/index.css";
 export default function TransactionHistoryPage() {
   const navigate = useNavigate();
    const currentUser = useSelector((state) => state.auth.user);
-  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" }; // Husnain
+  // const currentUser = { id: "ao5qvI8dSjZI52Wf2hrR8vWL37s1" }; // James
 
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -132,6 +133,11 @@ export default function TransactionHistoryPage() {
 
         const nameCache = {};
         for (const uid of uniqueUserIds) {
+          // Hardcoded overrides matching iOS logic
+          if (uid === "admin" || uid === "system") {
+            nameCache[uid] = "Admin (Credit)";
+            continue;
+          }
           try {
             const accountRef = doc(db, "accounts", uid);
             const accountSnap = await getDoc(accountRef);
@@ -234,8 +240,26 @@ export default function TransactionHistoryPage() {
             <div className="transactions-list">
               {transactions.map((transaction) => {
                 const isIncoming = transaction.type === "incoming";
-                const otherUserName =
-                  userNames[transaction.otherUserId] || "Unknown User";
+                const otherPartyId = transaction.otherUserId;
+                // Resolve the other party's name with hardcoded overrides
+                let otherUserName;
+                if (otherPartyId === "admin" || otherPartyId === "system") {
+                  otherUserName = "Admin (Credit)";
+                } else {
+                  otherUserName = userNames[otherPartyId] || "Unknown User";
+                }
+
+                // Special case: "system" as receiverUserID from order payment
+                // means this is the user paying for an order
+                const isSystemOrder =
+                  otherPartyId === "system" && !isIncoming;
+
+                // Construct direction label matching iOS Swift logic
+                const directionLabel = isSystemOrder
+                  ? "Paid for order payment."
+                  : isIncoming
+                    ? `Received from ${otherUserName}`
+                    : `Sent to ${otherUserName}`;
 
                 return (
                   <div key={transaction.id} className="transaction-row">
@@ -297,9 +321,7 @@ export default function TransactionHistoryPage() {
                     {/* Details */}
                     <div className="transaction-details">
                       <div className="transaction-label">
-                        {isIncoming
-                          ? `Received from ${otherUserName}`
-                          : `Sent to ${otherUserName}`}
+                        {directionLabel}
                       </div>
                       <div className="transaction-date">
                         {formatTimestamp(transaction.timestamp)}
@@ -312,7 +334,7 @@ export default function TransactionHistoryPage() {
                         isIncoming ? "incoming" : "outgoing"
                       }`}
                     >
-                      {isIncoming ? "+" : "-"}${transaction.amount.toFixed(2)}
+                      {isIncoming ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
                     </div>
                   </div>
                 );

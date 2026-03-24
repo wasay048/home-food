@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchAggregatedOrderQuantities } from "../store/slices/orderAggregationSlice";
 import { getUserOrders } from "../services/orderService";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../services/firebase";
 import MobileLoader from "../components/Loader/MobileLoader";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
@@ -88,7 +88,8 @@ export default function MyOrdersPage() {
   const dispatch = useDispatch();
   const currentUser = useSelector((state) => state.auth.user);
   const { quantitiesByItemName } = useSelector((state) => state.orderAggregation);
-  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" }; // Husnain
+  // const currentUser = { id: "ao5qvI8dSjZI52Wf2hrR8vWL37s1" }; // James
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -516,6 +517,19 @@ export default function MyOrdersPage() {
       
       if (balanceResult.success) {
         setAccountBalance(balanceResult.newBalance);
+
+        // Record refund in balanceAdjustment collection
+        try {
+          await addDoc(collection(db, "balanceAdjustment"), {
+            balanceSent: refundAmount,
+            senderUserID: "system",
+            receiverUserID: currentUser.id,
+            timestamp: serverTimestamp(),
+          });
+          console.log("✅ Refund balance adjustment recorded");
+        } catch (adjError) {
+          console.error("⚠️ Failed to record refund adjustment:", adjError);
+        }
       }
       
       // Update local state

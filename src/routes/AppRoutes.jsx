@@ -18,6 +18,9 @@ import ErrorBoundary from "../components/ErrorBoundary/ErrorBoundary.jsx";
 import ErrorTest from "../components/ErrorBoundary/ErrorTest.jsx";
 import PrivacyPolicyPage from "../pages/PrivacyPolicyPage";
 import TermsAndConditionsPage from "../pages/TermsAndConditionsPage";
+import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
+import AdminUserDetailPage from "../pages/admin/AdminUserDetailPage";
+import AdminAuthGate from "../pages/admin/AdminAuthGate";
 
 export default function AppRoutes() {
   return (
@@ -43,6 +46,10 @@ export default function AppRoutes() {
         <Route path="/test-error" element={<ErrorTest />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route path="/terms" element={<TermsAndConditionsPage />} />
+
+        {/* Admin debug routes — password protected */}
+        <Route path="/admin" element={<AdminAuthGate><AdminDashboardPage /></AdminAuthGate>} />
+        <Route path="/admin/users/:userId" element={<AdminAuthGate><AdminUserDetailPage /></AdminAuthGate>} />
 
         {/* Future protected routes */}
         <Route element={<ProtectedRoute />}>
