@@ -143,15 +143,16 @@ export default function PrivacyPolicyPage() {
             <li><a href="#what-information">1. WHAT INFORMATION DO WE COLLECT?</a></li>
             <li><a href="#how-do-we-process">2. HOW DO WE PROCESS YOUR INFORMATION?</a></li>
             <li><a href="#when-and-with-whom">3. WHEN AND WITH WHOM DO WE SHARE YOUR PERSONAL INFORMATION?</a></li>
-            <li><a href="#how-long-do-we-keep">4. HOW LONG DO WE KEEP YOUR INFORMATION?</a></li>
-            <li><a href="#how-do-we-keep-safe">5. HOW DO WE KEEP YOUR INFORMATION SAFE?</a></li>
-            <li><a href="#do-we-collect-from-minors">6. DO WE COLLECT INFORMATION FROM MINORS?</a></li>
-            <li><a href="#what-are-your-privacy-rights">7. WHAT ARE YOUR PRIVACY RIGHTS?</a></li>
-            <li><a href="#controls-for-do-not-track">8. CONTROLS FOR DO-NOT-TRACK FEATURES</a></li>
-            <li><a href="#do-us-residents-have-rights">9. DO UNITED STATES RESIDENTS HAVE SPECIFIC PRIVACY RIGHTS?</a></li>
-            <li><a href="#do-we-make-updates">10. DO WE MAKE UPDATES TO THIS NOTICE?</a></li>
-            <li><a href="#how-can-you-contact">11. HOW CAN YOU CONTACT US ABOUT THIS NOTICE?</a></li>
-            <li><a href="#how-can-you-review">12. HOW CAN YOU REVIEW, UPDATE, OR DELETE THE DATA WE COLLECT FROM YOU?</a></li>
+            <li><a href="#sms-communications">4. SMS COMMUNICATIONS</a></li>
+            <li><a href="#how-long-do-we-keep">5. HOW LONG DO WE KEEP YOUR INFORMATION?</a></li>
+            <li><a href="#how-do-we-keep-safe">6. HOW DO WE KEEP YOUR INFORMATION SAFE?</a></li>
+            <li><a href="#do-we-collect-from-minors">7. DO WE COLLECT INFORMATION FROM MINORS?</a></li>
+            <li><a href="#what-are-your-privacy-rights">8. WHAT ARE YOUR PRIVACY RIGHTS?</a></li>
+            <li><a href="#controls-for-do-not-track">9. CONTROLS FOR DO-NOT-TRACK FEATURES</a></li>
+            <li><a href="#do-us-residents-have-rights">10. DO UNITED STATES RESIDENTS HAVE SPECIFIC PRIVACY RIGHTS?</a></li>
+            <li><a href="#do-we-make-updates">11. DO WE MAKE UPDATES TO THIS NOTICE?</a></li>
+            <li><a href="#how-can-you-contact">12. HOW CAN YOU CONTACT US ABOUT THIS NOTICE?</a></li>
+            <li><a href="#how-can-you-review">13. HOW CAN YOU REVIEW, UPDATE, OR DELETE THE DATA WE COLLECT FROM YOU?</a></li>
           </ul>
         </section>
 
@@ -177,48 +178,54 @@ export default function PrivacyPolicyPage() {
           <p>We may need to share your personal information in specific situations, such as business transfers or with service providers.</p>
         </section>
 
+        <section id="sms-communications">
+          <h3>4. SMS COMMUNICATIONS</h3>
+          <p>No mobile information will be shared with third parties or affiliates for marketing or promotional purposes. Mobile opt-in data and consent will not be shared with any third parties. Information sharing to subcontractors in support services such as customer service is permitted.</p>
+          <p>By opting in to SMS communications from HomeFresh, you consent to receive order confirmation and delivery status text messages. Message frequency varies per order. Message and data rates may apply. Reply STOP to unsubscribe at any time. Reply HELP for help, or visit <a href="https://www.homefreshfoods.ai">homefreshfoods.ai</a>.</p>
+        </section>
+
         <section id="how-long-do-we-keep">
-          <h3>4. HOW LONG DO WE KEEP YOUR INFORMATION?</h3>
+          <h3>5. HOW LONG DO WE KEEP YOUR INFORMATION?</h3>
           <p>We will only keep your personal information for as long as it is necessary for the purposes set out in this Privacy Notice.</p>
         </section>
 
         <section id="how-do-we-keep-safe">
-          <h3>5. HOW DO WE KEEP YOUR INFORMATION SAFE?</h3>
+          <h3>6. HOW DO WE KEEP YOUR INFORMATION SAFE?</h3>
           <p>We have implemented reasonable technical and organizational security measures to protect your personal information, but no system can be completely secure.</p>
         </section>
 
         <section id="do-we-collect-from-minors">
-          <h3>6. DO WE COLLECT INFORMATION FROM MINORS?</h3>
+          <h3>7. DO WE COLLECT INFORMATION FROM MINORS?</h3>
           <p>We do not knowingly collect, solicit data from, or market to children under 18 years of age.</p>
         </section>
 
         <section id="what-are-your-privacy-rights">
-          <h3>7. WHAT ARE YOUR PRIVACY RIGHTS?</h3>
+          <h3>8. WHAT ARE YOUR PRIVACY RIGHTS?</h3>
           <p>You may review, change, or terminate your account at any time. You can also withdraw consent to process your personal information.</p>
         </section>
 
         <section id="controls-for-do-not-track">
-          <h3>8. CONTROLS FOR DO-NOT-TRACK FEATURES</h3>
+          <h3>9. CONTROLS FOR DO-NOT-TRACK FEATURES</h3>
           <p>We do not currently respond to "Do-Not-Track" signals, but this may change in the future.</p>
         </section>
 
         <section id="do-us-residents-have-rights">
-          <h3>9. DO UNITED STATES RESIDENTS HAVE SPECIFIC PRIVACY RIGHTS?</h3>
+          <h3>10. DO UNITED STATES RESIDENTS HAVE SPECIFIC PRIVACY RIGHTS?</h3>
           <p>If you are a resident of certain US states, you may have specific privacy rights, including the right to access, correct, or delete your personal information.</p>
         </section>
 
         <section id="do-we-make-updates">
-          <h3>10. DO WE MAKE UPDATES TO THIS NOTICE?</h3>
+          <h3>11. DO WE MAKE UPDATES TO THIS NOTICE?</h3>
           <p>Yes, we may update this Privacy Notice to stay compliant with relevant laws. The updated version will be indicated by a revised date at the top of the notice.</p>
         </section>
 
         <section id="how-can-you-contact">
-          <h3>11. HOW CAN YOU CONTACT US ABOUT THIS NOTICE?</h3>
+          <h3>12. HOW CAN YOU CONTACT US ABOUT THIS NOTICE?</h3>
           <p>If you have questions or comments about this notice, you can email us at <a href="mailto:HomeFreshcalifornia@gmail.com">HomeFreshcalifornia@gmail.com</a>.</p>
         </section>
 
         <section id="how-can-you-review">
-          <h3>12. HOW CAN YOU REVIEW, UPDATE, OR DELETE THE DATA WE COLLECT FROM YOU?</h3>
+          <h3>13. HOW CAN YOU REVIEW, UPDATE, OR DELETE THE DATA WE COLLECT FROM YOU?</h3>
           <p>You can request access to, or deletion of your personal data, by contacting us via the provided email.</p>
         </section>
       </div>
