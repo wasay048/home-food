@@ -144,3 +144,6 @@ export {onNewOrderSendSms} from "./orderSmsNotification.js";
 
 // Re-export chef bulk SMS (callable from iOS app — chef sends SMS to customers)
 export {chefSendBulkSms} from "./chefBulkSms.js";
+
+// Re-export SMS opt-in confirmation (sends confirmation SMS on user opt-in)
+export {smsOptinConfirmation} from "./smsOptinNotification.js";

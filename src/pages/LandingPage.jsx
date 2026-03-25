@@ -22,7 +22,7 @@ export default function LandingPage() {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [isVisible, setIsVisible] = useState({});
   const observerRef = useRef(null);
-  console.log("Deployed version 0.1.2");
+  console.log("Deployed version 0.1.3");
   const fullText = "Homemade meals from talented local chefs, delivered fresh to your door.";
 
   const { isAuthenticated } = useSelector((state) => state.auth);

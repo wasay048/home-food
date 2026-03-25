@@ -203,6 +203,7 @@ export const onNewOrderSendSms = onDocumentCreated(
       orderSummary,
       ``,
       `Thank you for your order!`,
+      `Reply STOP to unsubscribe.`,
     ].join("\n");
 
     logger.info("order.sms_body_built", {

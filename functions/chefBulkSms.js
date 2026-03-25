@@ -147,6 +147,9 @@ export const chefSendBulkSms = onCall(
           `Order #${recipientOrderId}`,
           ``,
           trimmedMessage,
+          ``,
+          `For help visit homefreshfoods.ai or reply HELP.`,
+          `Reply STOP to unsubscribe.`,
         ].join("\n");
 
         const result = await sendOneSms(recipient.phone, smsBody);
