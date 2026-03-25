@@ -835,7 +835,7 @@ export default function ListingPage() {
                             </div>
                             {/* Show group order percentage for category 8 items - on its own line */}
                             {getMaxCategoryId(food.foodCategory) === 8 &&
-                              food.minByGroup > 0 && (
+                              calculateGroupOrderPercentage(food, quantitiesByItemName) !== null && (
                                 <div
                                   style={{
                                     color: "#e74c3c",
