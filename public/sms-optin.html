@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeFresh SMS Updates — Opt In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.3.1/build/css/intlTelInput.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      background: linear-gradient(165deg, #0f1623 0%, #112a1e 50%, #0f1623 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Background orbs */
+    .bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+    .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.3; }
+    .orb--1 { width: 350px; height: 350px; background: #10b981; top: -8%; left: -8%; animation: f1 8s ease-in-out infinite; }
+    .orb--2 { width: 250px; height: 250px; background: #34d399; bottom: -5%; right: -5%; animation: f2 10s ease-in-out infinite; }
+    .orb--3 { width: 180px; height: 180px; background: #6ee7b7; top: 50%; left: 65%; animation: f3 7s ease-in-out infinite; }
+    @keyframes f1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(25px,20px) scale(1.08)} }
+    @keyframes f2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-18px,-25px) scale(1.05)} }
+    @keyframes f3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-12px,12px)} }
+
+    /* Card */
+    .card {
+      position: relative; z-index: 1; width: 100%; max-width: 460px;
+      background: rgba(20, 28, 46, 0.85);
+      backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px; padding: 44px 36px;
+      animation: fadeIn 0.7s ease-out;
+    }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+    /* Icon */
+    .icon {
+      width: 64px; height: 64px; border-radius: 18px;
+      background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(110,231,183,0.1));
+      border: 1px solid rgba(16,185,129,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem; margin: 0 auto 24px;
+    }
+
+    /* Typography */
+    .title { font-size: 1.65rem; font-weight: 800; color: #fff; text-align: center; margin: 0 0 10px; letter-spacing: -0.8px; }
+    .subtitle { font-size: 0.92rem; color: rgba(255,255,255,0.55); text-align: center; line-height: 1.55; margin: 0 0 32px; }
+
+    /* Phone field */
+    .field-label { display: block; font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+    .phone-wrap { margin-bottom: 24px; }
+
+    /* intl-tel-input overrides for dark theme */
+    .phone-wrap .iti { width: 100%; }
+    .phone-wrap .iti__tel-input {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 12px 16px 12px 52px;
+      color: #fff;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.25s ease;
+    }
+    .phone-wrap .iti__tel-input:focus {
+      border-color: rgba(16,185,129,0.5);
+      box-shadow: 0 0 0 3px rgba(16,185,129,0.1);
+    }
+    .phone-wrap .iti__tel-input::placeholder { color: rgba(255,255,255,0.3); }
+    .phone-wrap .iti__country-container { border-radius: 12px 0 0 12px; }
+    .phone-wrap .iti__selected-country { background: transparent; border-radius: 12px 0 0 12px; padding-left: 12px; }
+    .phone-wrap .iti__selected-dial-code { color: rgba(255,255,255,0.6); }
+    .phone-wrap .iti__arrow { border-top-color: rgba(255,255,255,0.5); }
+    .phone-wrap .iti__dropdown-content { background: #1a2540; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; }
+    .phone-wrap .iti__search-input { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 6px; padding: 8px 12px; font-family: inherit; }
+    .phone-wrap .iti__search-input::placeholder { color: rgba(255,255,255,0.3); }
+    .phone-wrap .iti__country { color: rgba(255,255,255,0.8); padding: 8px 12px; }
+    .phone-wrap .iti__country:hover, .phone-wrap .iti__highlight { background: rgba(16,185,129,0.15); }
+    .phone-wrap .iti__dial-code { color: rgba(255,255,255,0.5); }
+
+    /* Checkbox */
+    .consent { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 28px; cursor: pointer; }
+    .cb-wrap { position: relative; flex-shrink: 0; width: 22px; height: 22px; margin-top: 2px; }
+    .cb-input { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; z-index: 1; margin: 0; }
+    .cb-visual {
+      width: 22px; height: 22px; border-radius: 6px;
+      border: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.04);
+      display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
+    }
+    .cb-input:checked + .cb-visual { background: linear-gradient(135deg,#10b981,#34d399); border-color: #10b981; }
+    .cb-visual svg { width: 14px; height: 14px; opacity: 0; transform: scale(0.5); transition: all 0.2s ease; color: #fff; }
+    .cb-input:checked + .cb-visual svg { opacity: 1; transform: scale(1); }
+    .consent-text { font-size: 0.8rem; color: rgba(255,255,255,0.5); line-height: 1.55; }
+    .consent-text a { color: #34d399; text-decoration: none; font-weight: 500; }
+    .consent-text a:hover { color: #6ee7b7; text-decoration: underline; }
+
+    /* Button */
+    .submit {
+      width: 100%; padding: 15px 24px; border: none; border-radius: 14px;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-bottom: 24px;
+    }
+    .submit:not(:disabled) { background: linear-gradient(135deg,#10b981,#34d399); color: #fff; box-shadow: 0 8px 28px rgba(16,185,129,0.35); }
+    .submit:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(16,185,129,0.5); }
+    .submit:not(:disabled):active { transform: translateY(0); }
+    .submit:disabled { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.25); cursor: not-allowed; box-shadow: none; }
+
+    /* Spinner */
+    .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.65s linear infinite; display: none; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    /* Footer */
+    .footer { text-align: center; font-size: 0.75rem; color: rgba(255,255,255,0.35); line-height: 1.5; }
+
+    /* Error */
+    .error {
+      background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px; padding: 12px 16px; margin-bottom: 20px;
+      font-size: 0.82rem; color: #fca5a5; text-align: center; display: none;
+    }
+
+    /* Success */
+    .success { text-align: center; display: none; }
+    .success-icon { font-size: 3.5rem; margin-bottom: 20px; }
+    .success-title { font-size: 1.35rem; font-weight: 800; color: #fff; margin: 0 0 12px; }
+    .success-text { font-size: 0.9rem; color: rgba(255,255,255,0.55); line-height: 1.6; margin: 0; }
+
+    /* Responsive */
+    @media (max-width: 520px) {
+      body { padding: 24px 16px; align-items: flex-start; padding-top: 60px; }
+      .card { padding: 32px 24px; border-radius: 16px; }
+      .title { font-size: 1.4rem; }
+      .subtitle { font-size: 0.85rem; }
+      .consent-text { font-size: 0.75rem; }
+    }
+    @media (max-width: 360px) {
+      .card { padding: 28px 18px; }
+      .title { font-size: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg">
+    <div class="orb orb--1"></div>
+    <div class="orb orb--2"></div>
+    <div class="orb orb--3"></div>
+  </div>
+
+  <div class="card">
+    <!-- Success screen (hidden by default) -->
+    <div class="success" id="successScreen">
+      <div class="success-icon">&#x2705;</div>
+      <h2 class="success-title">You're subscribed!</h2>
+      <p class="success-text">You'll receive order updates from HomeFresh via SMS. Reply STOP anytime to unsubscribe.</p>
+    </div>
+
+    <!-- Form -->
+    <form id="optinForm" novalidate>
+      <div class="icon">&#x1F4F1;</div>
+      <h1 class="title">HomeFresh SMS Updates</h1>
+      <p class="subtitle">Get real-time order confirmation and delivery status updates directly on your phone.</p>
+
+      <div class="phone-wrap">
+        <label class="field-label" for="phone">PHONE NUMBER (OPTIONAL)</label>
+        <input type="tel" id="phone" placeholder="(201) 555-0123" autocomplete="tel" />
+      </div>
+
+      <!-- Checkbox 1: SMS Consent -->
+      <label class="consent">
+        <span class="cb-wrap">
+          <input type="checkbox" class="cb-input" id="smsConsent" />
+          <span class="cb-visual">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="2.5 7 5.5 10.5 11.5 3.5" />
+            </svg>
+          </span>
+        </span>
+        <span class="consent-text">
+          I agree to receive order confirmation and delivery status SMS messages from HomeFresh. This is not a condition of purchase. Msg &amp; Data rates may apply. Message frequency varies per order. Reply STOP to unsubscribe, HELP for help.
+        </span>
+      </label>
+
+      <!-- Checkbox 2: Terms & Conditions -->
+      <label class="consent">
+        <span class="cb-wrap">
+          <input type="checkbox" class="cb-input" id="termsConsent" />
+          <span class="cb-visual">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="2.5 7 5.5 10.5 11.5 3.5" />
+            </svg>
+          </span>
+        </span>
+        <span class="consent-text">
+          I agree to the <a href="/terms">Terms &amp; Conditions</a> and <a href="/privacy">Privacy Policy</a>.
+        </span>
+      </label>
+
+      <div class="error" id="errorMsg"></div>
+
+      <button type="submit" class="submit" id="submitBtn" disabled>Subscribe to SMS Updates</button>
+
+      <div class="footer">
+        No mobile information will be shared with third parties or affiliates for marketing or promotional purposes. Mobile opt-in data and consent will not be shared with any third parties.
+      </div>
+    </form>
+  </div>
+
+  <!-- Firebase SDK (same services the React app uses) -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
+
+    const firebaseConfig = {
+      apiKey: 'AIzaSyD1TjtSC-Mukd2EdNtiuQq-u3l3gdMP0dc',
+      authDomain: 'homefoods-16e56.firebaseapp.com',
+      projectId: 'homefoods-16e56',
+      storageBucket: 'homefoods-16e56.firebasestorage.app',
+      messagingSenderId: '495709118320',
+      appId: '1:495709118320:web:6fe3b7ec2b7c19d66cf9b5'
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const functions = getFunctions(app);
+    const sendOptinSms = httpsCallable(functions, 'smsOptinConfirmation');
+
+    // intl-tel-input init (loaded below via regular script tag)
+    window.addEventListener('load', function() {
+      var phoneInput = document.getElementById('phone');
+      var iti = window.intlTelInput(phoneInput, {
+        initialCountry: 'us',
+        preferredCountries: ['us', 'cn', 'ca', 'gb'],
+        separateDialCode: true
+      });
+
+      var smsCheckbox = document.getElementById('smsConsent');
+      var submitBtn   = document.getElementById('submitBtn');
+      var form        = document.getElementById('optinForm');
+      var errorEl     = document.getElementById('errorMsg');
+      var successScreen = document.getElementById('successScreen');
+
+      smsCheckbox.addEventListener('change', function() {
+        submitBtn.disabled = !smsCheckbox.checked;
+      });
+
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        errorEl.style.display = 'none';
+
+        // Build E.164: dial code from selector + digits from input
+        var dialCode  = iti.getSelectedCountryData().dialCode || '';
+        var rawDigits = phoneInput.value.replace(/\D/g, '');
+        if (!rawDigits || rawDigits.length < 5) {
+          errorEl.textContent = 'Please enter a valid phone number.';
+          errorEl.style.display = 'block';
+          return;
+        }
+        var phone = '+' + dialCode + rawDigits;
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner" style="display:inline-block"></span> Subscribing\u2026';
+
+        try {
+          // 1. Save consent record to Firestore (same collection as React app)
+          await addDoc(collection(db, 'sms_optin_consents'), {
+            phone,
+            consentTimestamp: serverTimestamp(),
+            consentSource: 'sms-optin-page',
+            createdAt: new Date().toISOString()
+          });
+
+          // 2. Trigger confirmation SMS via Cloud Function (non-blocking)
+          sendOptinSms({ phone }).catch(function(err) {
+            console.warn('[SmsOptin] SMS send failed (non-fatal):', err.message);
+          });
+
+          // 3. Show success
+          form.style.display = 'none';
+          successScreen.style.display = 'block';
+        } catch (err) {
+          console.error('[SmsOptin] Error:', err);
+          errorEl.textContent = 'Something went wrong. Please try again.';
+          errorEl.style.display = 'block';
+          submitBtn.disabled = !smsCheckbox.checked;
+          submitBtn.textContent = 'Subscribe to SMS Updates';
+        }
+      });
+    });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@25.3.1/build/js/intlTelInput.min.js"></script>
+</body>
+</html>

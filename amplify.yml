@@ -16,3 +16,10 @@ frontend:
   cache:
     paths:
       - node_modules/**/*
+  customRules:
+    - source: /sms-optin
+      target: /sms-optin.html
+      status: '200'
+    - source: '</^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json)$)([^.]+$)/>'
+      target: /index.html
+      status: '200'

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 import "react-phone-number-input/style.css";
@@ -8,6 +8,12 @@ import { getFunctions, httpsCallable } from "firebase/functions";
 import "./SmsOptinPage.css";
 
 export default function SmsOptinPage() {
+  useEffect(() => {
+    // If accessed directly (no React Router state), redirect to static file
+    if (!window.history.state?.usr) {
+      window.location.replace('/sms-optin.html');
+    }
+  }, []);
   const [phone, setPhone] = useState("");
   const [smsConsentChecked, setSmsConsentChecked] = useState(false);
   const [termsChecked, setTermsChecked] = useState(false);

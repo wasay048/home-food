@@ -1,10 +1,5 @@
 # Redirect www to non-www to match WeChat Console configuration
 https://www.homefreshfoods.ai/* https://homefreshfoods.ai/:splat 301!
 
-# Explicit SPA routes for TCR/crawler direct access
-/sms-optin    /index.html   200
-/privacy      /index.html   200
-/terms        /index.html   200
-
-# Handle SPA routing
-/*    /index.html   200
+/sms-optin    /sms-optin.html    200
+/*    /index.html    200
