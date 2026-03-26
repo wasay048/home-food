@@ -9,7 +9,8 @@ import "./SmsOptinPage.css";
 
 export default function SmsOptinPage() {
   const [phone, setPhone] = useState("");
-  const [consentChecked, setConsentChecked] = useState(false);
+  const [smsConsentChecked, setSmsConsentChecked] = useState(false);
+  const [termsChecked, setTermsChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState(null);
@@ -24,8 +25,8 @@ export default function SmsOptinPage() {
       return;
     }
 
-    if (!consentChecked) {
-      setError("Please check the consent checkbox to continue.");
+    if (!smsConsentChecked) {
+      setError("Please check the SMS consent checkbox to continue.");
       return;
     }
 
@@ -96,7 +97,7 @@ export default function SmsOptinPage() {
             {/* Phone Input */}
             <div className="sms-optin__phone-wrap">
               <label className="sms-optin__field-label" htmlFor="sms-phone">
-                Mobile Number
+                Phone Number (Optional)
               </label>
               <PhoneInput
                 id="sms-phone"
@@ -108,14 +109,14 @@ export default function SmsOptinPage() {
               />
             </div>
 
-            {/* Consent Checkbox */}
+            {/* Checkbox 1 — SMS Consent */}
             <label className="sms-optin__consent" id="sms-consent-label">
               <span className="sms-optin__checkbox-wrapper">
                 <input
                   type="checkbox"
                   className="sms-optin__checkbox-input"
-                  checked={consentChecked}
-                  onChange={(e) => setConsentChecked(e.target.checked)}
+                  checked={smsConsentChecked}
+                  onChange={(e) => setSmsConsentChecked(e.target.checked)}
                   id="sms-consent-checkbox"
                 />
                 <span className="sms-optin__checkbox-visual">
@@ -132,14 +133,43 @@ export default function SmsOptinPage() {
               </span>
             </label>
 
+            {/* Checkbox 2 — Terms & Conditions */}
+            <label className="sms-optin__consent" id="terms-consent-label">
+              <span className="sms-optin__checkbox-wrapper">
+                <input
+                  type="checkbox"
+                  className="sms-optin__checkbox-input"
+                  checked={termsChecked}
+                  onChange={(e) => setTermsChecked(e.target.checked)}
+                  id="terms-consent-checkbox"
+                />
+                <span className="sms-optin__checkbox-visual">
+                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="2.5 7 5.5 10.5 11.5 3.5" />
+                  </svg>
+                </span>
+              </span>
+              <span className="sms-optin__consent-text">
+                I agree to the{" "}
+                <Link to="/terms" onClick={(e) => e.stopPropagation()}>
+                  Terms &amp; Conditions
+                </Link>{" "}
+                and{" "}
+                <Link to="/privacy" onClick={(e) => e.stopPropagation()}>
+                  Privacy Policy
+                </Link>
+                .
+              </span>
+            </label>
+
             {/* Error message */}
             {error && <div className="sms-optin__error">{error}</div>}
 
-            {/* Submit */}
+            {/* Submit — enabled only when SMS consent (checkbox 1) is checked */}
             <button
               type="submit"
               className="sms-optin__submit"
-              disabled={!consentChecked || isSubmitting}
+              disabled={!smsConsentChecked || isSubmitting}
               id="sms-optin-submit"
             >
               {isSubmitting ? (
@@ -154,11 +184,9 @@ export default function SmsOptinPage() {
 
             {/* Footer */}
             <div className="sms-optin__footer">
-              Your mobile information will never be shared or sold to third parties.
-              <br />
-              <Link to="/privacy">Privacy Policy</Link>
-              {" · "}
-              <Link to="/terms">Terms & Conditions</Link>
+              No mobile information will be shared with third parties or
+              affiliates for marketing or promotional purposes. Mobile opt-in
+              data and consent will not be shared with any third parties.
             </div>
           </form>
         )}

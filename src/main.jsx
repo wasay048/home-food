@@ -7,7 +7,7 @@ import { Toaster } from "react-hot-toast";
 import { store, persistor } from "./store";
 import AppRoutes from "./routes/AppRoutes";
 import { AuthProvider } from "./context/AuthContext";
-import AuthDebugPanel from "./components/AuthDebugPanel";
+
 import "./styles/index.css";
 
 createRoot(document.getElementById("root")).render(
@@ -17,7 +17,6 @@ createRoot(document.getElementById("root")).render(
         <BrowserRouter>
           <AuthProvider>
             <AppRoutes />
-            <AuthDebugPanel />
             <Toaster
               position="top-center"
               reverseOrder={false}
