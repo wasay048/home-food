@@ -334,3 +334,24 @@ export const getUserSummaryStats = async (userId) => {
     throw error;
   }
 };
+
+/**
+ * Fetch ALL orders across all users, sorted by datePlaced desc.
+ * For "Orders by Kitchen" and other global admin views.
+ */
+export const getAllAdminOrders = async () => {
+  try {
+    const ordersRef = collection(db, "orders");
+    const q = query(
+      ordersRef,
+      orderBy("datePlaced", "desc")
+    );
+
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+    console.error("[AdminService] Error fetching all orders:", error);
+    throw error;
+  }
+};
