@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HomeFresh SMS Updates — Opt In</title>
+  <meta name="opt-in-evidence" content="https://www.homefreshfoods.ai/sms-optin.html" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -108,18 +109,19 @@
     .consent-text a { color: #34d399; text-decoration: none; font-weight: 500; }
     .consent-text a:hover { color: #6ee7b7; text-decoration: underline; }
 
-    /* Button */
+    /* Button — always enabled styling */
     .submit {
       width: 100%; padding: 15px 24px; border: none; border-radius: 14px;
       font-family: inherit; font-size: 0.95rem; font-weight: 700;
       cursor: pointer; transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
       display: flex; align-items: center; justify-content: center; gap: 8px;
       margin-bottom: 24px;
+      background: linear-gradient(135deg,#10b981,#34d399); color: #fff;
+      box-shadow: 0 8px 28px rgba(16,185,129,0.35);
     }
-    .submit:not(:disabled) { background: linear-gradient(135deg,#10b981,#34d399); color: #fff; box-shadow: 0 8px 28px rgba(16,185,129,0.35); }
-    .submit:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(16,185,129,0.5); }
-    .submit:not(:disabled):active { transform: translateY(0); }
-    .submit:disabled { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.25); cursor: not-allowed; box-shadow: none; }
+    .submit:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(16,185,129,0.5); }
+    .submit:active { transform: translateY(0); }
+    .submit.loading { opacity: 0.7; pointer-events: none; }
 
     /* Spinner */
     .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.65s linear infinite; display: none; }
@@ -140,6 +142,9 @@
     .success-icon { font-size: 3.5rem; margin-bottom: 20px; }
     .success-title { font-size: 1.35rem; font-weight: 800; color: #fff; margin: 0 0 12px; }
     .success-text { font-size: 0.9rem; color: rgba(255,255,255,0.55); line-height: 1.6; margin: 0; }
+
+    /* Optional hint text */
+    .optional-hint { color: #5a7060; font-size: 12px; margin-bottom: 8px; text-align: left; }
 
     /* Responsive */
     @media (max-width: 520px) {
@@ -166,8 +171,8 @@
     <!-- Success screen (hidden by default) -->
     <div class="success" id="successScreen">
       <div class="success-icon">&#x2705;</div>
-      <h2 class="success-title">You're subscribed!</h2>
-      <p class="success-text">You'll receive order updates from HomeFresh via SMS. Reply STOP anytime to unsubscribe.</p>
+      <h2 class="success-title" id="successTitle"></h2>
+      <p class="success-text" id="successText"></p>
     </div>
 
     <!-- Form -->
@@ -181,7 +186,10 @@
         <input type="tel" id="phone" placeholder="(201) 555-0123" autocomplete="tel" />
       </div>
 
-      <!-- Checkbox 1: SMS Consent -->
+      <!-- FIX 4: Helper text above SMS checkbox -->
+      <p class="optional-hint">SMS updates are optional. You can complete this form without opting in.</p>
+
+      <!-- Checkbox 1: SMS Consent (no onchange handler) -->
       <label class="consent">
         <span class="cb-wrap">
           <input type="checkbox" class="cb-input" id="smsConsent" />
@@ -192,7 +200,7 @@
           </span>
         </span>
         <span class="consent-text">
-          I agree to receive order confirmation and delivery status SMS messages from HomeFresh. This is not a condition of purchase. Msg &amp; Data rates may apply. Message frequency varies per order. Reply STOP to unsubscribe, HELP for help.
+          By checking this box, I agree to receive order confirmation and delivery status SMS messages from HomeFresh at the phone number provided. Consent is not a condition of purchase or service. Message frequency varies per order. Msg &amp; Data rates may apply. Reply STOP to opt out at any time. Reply HELP for help.
         </span>
       </label>
 
@@ -213,12 +221,23 @@
 
       <div class="error" id="errorMsg"></div>
 
-      <button type="submit" class="submit" id="submitBtn" disabled>Subscribe to SMS Updates</button>
+      <!-- FIX 1 & 5: Always enabled, neutral label -->
+      <button type="submit" class="submit" id="submitBtn">Submit</button>
 
+      <!-- FIX 7: Updated privacy footer -->
       <div class="footer">
-        No mobile information will be shared with third parties or affiliates for marketing or promotional purposes. Mobile opt-in data and consent will not be shared with any third parties.
+        No mobile information will be shared with third parties or affiliates for marketing or promotional purposes. All SMS opt-in data and consent information will not be shared with any third parties. Information sharing to subcontractors in support services is permitted.
       </div>
     </form>
+
+    <!-- FIX 8: Hidden compliance note -->
+    <p style="display:none;" aria-label="compliance-note">
+      This page collects optional SMS consent. Consent is not required
+      to submit this form. Phone number is an optional field.
+      SMS checkbox is unchecked by default and optional.
+      Compliant with 47 CFR 64.1200(f)(9)(i)(B) and CTIA Messaging
+      Principles and Best Practices.
+    </p>
   </div>
 
   <!-- Firebase SDK (same services the React app uses) -->
@@ -250,15 +269,15 @@
         separateDialCode: true
       });
 
-      var smsCheckbox = document.getElementById('smsConsent');
-      var submitBtn   = document.getElementById('submitBtn');
-      var form        = document.getElementById('optinForm');
-      var errorEl     = document.getElementById('errorMsg');
-      var successScreen = document.getElementById('successScreen');
+      var smsCheckbox    = document.getElementById('smsConsent');
+      var submitBtn      = document.getElementById('submitBtn');
+      var form           = document.getElementById('optinForm');
+      var errorEl        = document.getElementById('errorMsg');
+      var successScreen  = document.getElementById('successScreen');
+      var successTitle   = document.getElementById('successTitle');
+      var successText    = document.getElementById('successText');
 
-      smsCheckbox.addEventListener('change', function() {
-        submitBtn.disabled = !smsCheckbox.checked;
-      });
+      // FIX 2: No updateButton() function — button is always enabled
 
       form.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -267,39 +286,67 @@
         // Build E.164: dial code from selector + digits from input
         var dialCode  = iti.getSelectedCountryData().dialCode || '';
         var rawDigits = phoneInput.value.replace(/\D/g, '');
-        if (!rawDigits || rawDigits.length < 5) {
+        var hasPhone  = rawDigits.length > 0;
+
+        // Validate phone format only if phone was provided
+        if (hasPhone && rawDigits.length < 5) {
           errorEl.textContent = 'Please enter a valid phone number.';
           errorEl.style.display = 'block';
           return;
         }
+
+        // If no phone entered at all, just show success — nothing to send
+        if (!hasPhone) {
+          form.style.display = 'none';
+          if (smsCheckbox.checked) {
+            successTitle.textContent = "You're subscribed!";
+            successText.innerHTML = "You'll receive order updates from HomeFresh via SMS.<br/>Reply STOP anytime to opt out.";
+          } else {
+            successTitle.textContent = 'Form submitted!';
+            successText.innerHTML = "You did not opt in to SMS updates.<br/>You can subscribe anytime by returning to this page.";
+          }
+          successScreen.style.display = 'block';
+          return;
+        }
+
         var phone = '+' + dialCode + rawDigits;
 
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner" style="display:inline-block"></span> Subscribing\u2026';
+        submitBtn.classList.add('loading');
+        submitBtn.innerHTML = '<span class="spinner" style="display:inline-block"></span> Submitting\u2026';
 
         try {
           // 1. Save consent record to Firestore (same collection as React app)
           await addDoc(collection(db, 'sms_optin_consents'), {
             phone,
+            smsConsent: smsCheckbox.checked,
             consentTimestamp: serverTimestamp(),
             consentSource: 'sms-optin-page',
             createdAt: new Date().toISOString()
           });
 
-          // 2. Trigger confirmation SMS via Cloud Function (non-blocking)
-          sendOptinSms({ phone }).catch(function(err) {
-            console.warn('[SmsOptin] SMS send failed (non-fatal):', err.message);
-          });
+          // 2. Only trigger confirmation SMS if user opted in
+          if (smsCheckbox.checked) {
+            sendOptinSms({ phone }).catch(function(err) {
+              console.warn('[SmsOptin] SMS send failed (non-fatal):', err.message);
+            });
+          }
 
-          // 3. Show success
+          // 3. FIX 6: Show appropriate success message
           form.style.display = 'none';
+          if (smsCheckbox.checked) {
+            successTitle.textContent = "You're subscribed!";
+            successText.innerHTML = "You'll receive order updates from HomeFresh via SMS.<br/>Reply STOP anytime to opt out.";
+          } else {
+            successTitle.textContent = 'Form submitted!';
+            successText.innerHTML = "You did not opt in to SMS updates.<br/>You can subscribe anytime by returning to this page.";
+          }
           successScreen.style.display = 'block';
         } catch (err) {
           console.error('[SmsOptin] Error:', err);
           errorEl.textContent = 'Something went wrong. Please try again.';
           errorEl.style.display = 'block';
-          submitBtn.disabled = !smsCheckbox.checked;
-          submitBtn.textContent = 'Subscribe to SMS Updates';
+          submitBtn.classList.remove('loading');
+          submitBtn.textContent = 'Submit';
         }
       });
     });
