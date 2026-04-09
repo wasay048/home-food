@@ -1,4 +1,6 @@
-import { useSelector } from "react-redux";
+import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { setWeChatUser } from "../store/slices/authSlice";
 import {
   generateWeChatAuthUrlWeb,
   generateWeChatAuthUrlMobile,
@@ -20,26 +22,59 @@ export const encodeStateForRedirect = (redirectTo) => {
 };
 
 /**
+ * Read the WeChat user synchronously from localStorage.
+ * This is the single source of truth for auth state — it avoids all Redux
+ * rehydration timing issues because localStorage is always available before
+ * any React render.
+ */
+const readWeChatUserFromStorage = () => {
+  try {
+    const raw = localStorage.getItem("wechat_user");
+    if (!raw) return null;
+    const user = JSON.parse(raw);
+    // Must have an id to be considered a valid session
+    return user && user.id ? user : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
  * useWeChatAuth
  *
- * Generic hook that:
- *   1. Reads the authenticated user from Redux (state.auth.user).
- *   2. Exposes `isAuthenticated` and `currentUser`.
- *   3. Provides `triggerWeChatAuth(redirectTo)` — starts the WeChat OAuth
- *      flow and, after the code exchange, redirects the user back to the
- *      given path instead of the checkout page.
+ * Single-source-of-truth auth hook for all pages.
  *
- * Usage:
- *   const { isAuthenticated, currentUser, triggerWeChatAuth } = useWeChatAuth();
- *
- *   // In a component's auth-gate check:
- *   if (!isAuthenticated) {
- *     triggerWeChatAuth("/my-orders");
- *     return <LoadingScreen />;
- *   }
+ * - Reads from localStorage["wechat_user"] synchronously on mount so there
+ *   is zero flickering regardless of Redux Persist / Firebase rehydration timing.
+ * - Listens to the "wechat_auth_updated" custom event so that after
+ *   WeChatCallbackPage writes the user and dispatches to Redux, every mounted
+ *   component using this hook re-renders immediately without a page reload.
+ * - Also dispatches to Redux for any components/selectors that still use
+ *   state.auth.user directly.
  */
 const useWeChatAuth = () => {
-  const currentUser = useSelector((state) => state.auth.user);
+  const dispatch = useDispatch();
+  const [currentUser, setCurrentUser] = useState(() => readWeChatUserFromStorage());
+
+  useEffect(() => {
+    // If we found a user in localStorage on mount, make sure Redux is in sync.
+    const stored = readWeChatUserFromStorage();
+    if (stored) {
+      dispatch(setWeChatUser(stored));
+    }
+
+    // Listen for auth updates emitted by WeChatCallbackPage after a successful
+    // code exchange — this updates all mounted hooks instantly.
+    const onAuthUpdated = () => {
+      const user = readWeChatUserFromStorage();
+      setCurrentUser(user);
+      if (user) dispatch(setWeChatUser(user));
+    };
+
+    window.addEventListener("wechat_auth_updated", onAuthUpdated);
+    return () => window.removeEventListener("wechat_auth_updated", onAuthUpdated);
+  }, [dispatch]);
+
   const isAuthenticated = !!(currentUser && currentUser.id);
 
   /**
@@ -50,9 +85,6 @@ const useWeChatAuth = () => {
    */
   const triggerWeChatAuth = (redirectTo) => {
     const encodedState = encodeStateForRedirect(redirectTo);
-
-    // generateWeChatAuthUrlWeb / Mobile accept a `state` string as their
-    // first argument — they pass it verbatim to WeChat.
     const isMobile = isMobileDevice();
     const isWeChat = isWeChatBrowser();
 

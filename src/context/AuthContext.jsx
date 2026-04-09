@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { performCompleteLogout } from "../store/actions/logoutActions";
 import { setWeChatUser } from "../store/slices/authSlice";
@@ -183,6 +183,12 @@ export function AuthProvider({ children }) {
 
         // Step 6: Update Redux store
         dispatch(setWeChatUser(wechatUser));
+
+        // Step 7: Notify all mounted useWeChatAuth hooks so they re-read
+        // localStorage immediately — this ensures any page that was open
+        // during the OAuth round-trip (e.g. /my-balance) sees the new user
+        // without waiting for Redux rehydration or a full page reload.
+        window.dispatchEvent(new Event("wechat_auth_updated"));
 
         console.log("✅ WeChat authentication successful:", wechatUser);
         return wechatUser;
