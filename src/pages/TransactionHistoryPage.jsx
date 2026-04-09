@@ -42,7 +42,8 @@ export default function TransactionHistoryPage() {
 
         if (accountSnap.exists()) {
           const data = accountSnap.data();
-          const name = data.name || data.wechatNickname || data.email || "Unknown User";
+          const name =
+            data.name || data.wechatNickname || data.email || "Unknown User";
           setUserNames((prev) => ({ ...prev, [userId]: name }));
           return name;
         }
@@ -52,7 +53,7 @@ export default function TransactionHistoryPage() {
         return "Unknown User";
       }
     },
-    [userNames]
+    [userNames],
   );
 
   useEffect(() => {
@@ -71,12 +72,12 @@ export default function TransactionHistoryPage() {
         // Query for transactions where user is sender
         const senderQuery = query(
           balanceRef,
-          where("senderUserID", "==", userId)
+          where("senderUserID", "==", userId),
         );
         // Query for transactions where user is receiver
         const receiverQuery = query(
           balanceRef,
-          where("receiverUserID", "==", userId)
+          where("receiverUserID", "==", userId),
         );
 
         const [senderSnap, receiverSnap] = await Promise.all([
@@ -144,7 +145,10 @@ export default function TransactionHistoryPage() {
             if (accountSnap.exists()) {
               const data = accountSnap.data();
               nameCache[uid] =
-                data.name || data.wechatNickname || data.email || "Unknown User";
+                data.name ||
+                data.wechatNickname ||
+                data.email ||
+                "Unknown User";
             } else {
               nameCache[uid] = "Unknown User";
             }
@@ -251,8 +255,7 @@ export default function TransactionHistoryPage() {
 
                 // Special case: "system" as receiverUserID from order payment
                 // means this is the user paying for an order
-                const isSystemOrder =
-                  otherPartyId === "system" && !isIncoming;
+                const isSystemOrder = otherPartyId === "system" && !isIncoming;
 
                 // Construct direction label matching iOS Swift logic
                 const directionLabel = isSystemOrder
@@ -320,9 +323,7 @@ export default function TransactionHistoryPage() {
 
                     {/* Details */}
                     <div className="transaction-details">
-                      <div className="transaction-label">
-                        {directionLabel}
-                      </div>
+                      <div className="transaction-label">{directionLabel}</div>
                       <div className="transaction-date">
                         {formatTimestamp(transaction.timestamp)}
                       </div>
@@ -334,7 +335,8 @@ export default function TransactionHistoryPage() {
                         isIncoming ? "incoming" : "outgoing"
                       }`}
                     >
-                      {isIncoming ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
+                      {isIncoming ? "+" : "-"}$
+                      {Math.abs(transaction.amount).toFixed(2)}
                     </div>
                   </div>
                 );

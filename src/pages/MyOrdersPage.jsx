@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
+import useWeChatAuth, { encodeStateForRedirect } from "../hooks/useWeChatAuth";
+import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import { fetchAggregatedOrderQuantities } from "../store/slices/orderAggregationSlice";
 import { getUserOrders } from "../services/orderService";
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
@@ -86,10 +88,8 @@ const getOrderDisplayCase = (order, item) => {
 export default function MyOrdersPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const currentUser = useSelector((state) => state.auth.user);
+  const { isAuthenticated, currentUser } = useWeChatAuth();
   const { quantitiesByItemName } = useSelector((state) => state.orderAggregation);
-  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" }; // Husnain
-  // const currentUser = { id: "ao5qvI8dSjZI52Wf2hrR8vWL37s1" }; // James
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -103,6 +103,8 @@ export default function MyOrdersPage() {
   const [accountBalance, setAccountBalance] = useState(0);
   const [cancellingItem, setCancellingItem] = useState(null); // Track which item is being canceled
   const { getUserBalance, addToBalance } = useUserAccount();
+
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   // Fetch account balance on mount
   useEffect(() => {
@@ -565,6 +567,12 @@ export default function MyOrdersPage() {
 
   return (
     <div className="container">
+      {showAuthDialog && (
+        <WeChatAuthDialog
+          onClose={() => setShowAuthDialog(false)}
+          firebaseImageUrl={encodeStateForRedirect("/my-orders")}
+        />
+      )}
       <div className="mobile-container">
         <div className="my-orders-page">
           {/* Header */}
@@ -632,12 +640,12 @@ export default function MyOrdersPage() {
           {/* Not logged in state */}
           {!currentUser && (
             <div className="orders-empty">
-              <p>Place order to view the details</p>
+              <p>Sign in to view your orders</p>
               <button
                 className="button"
-                onClick={() => navigate("/foods")}
+                onClick={() => setShowAuthDialog(true)}
               >
-                Browse Menu
+                Sign in with WeChat
               </button>
             </div>
           )}

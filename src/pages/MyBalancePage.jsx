@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useDropzone } from "react-dropzone";
+import useWeChatAuth, { encodeStateForRedirect } from "../hooks/useWeChatAuth";
+import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
 import { Copy, X, Image as ImageIcon, ArrowLeft } from "lucide-react";
 import { uploadImageToStorage } from "../services/storageService";
 import { useUserAccount } from "../hooks/useUserAccount";
@@ -15,7 +17,7 @@ export default function MyBalancePage() {
 
   // User state
   const currentUser = useSelector((state) => state.auth.user);
-  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+  const { isAuthenticated, triggerWeChatAuth } = useWeChatAuth();
 
   // Balance
   const { getUserBalance } = useUserAccount();
@@ -38,6 +40,8 @@ export default function MyBalancePage() {
   // Pending request check
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const [checkingPending, setCheckingPending] = useState(true);
+
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   // Fetch balance and check for pending credit requests on mount
   useEffect(() => {
@@ -83,6 +87,10 @@ export default function MyBalancePage() {
 
   // Handle file drop
   const onDrop = async (acceptedFiles) => {
+    if (!isAuthenticated) {
+      setShowAuthDialog(true);
+      return;
+    }
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
       setUploadedFile(file);
@@ -175,8 +183,8 @@ export default function MyBalancePage() {
       return;
     }
 
-    if (!currentUser?.id) {
-      showToast.error("Please log in first.");
+    if (!isAuthenticated) {
+      setShowAuthDialog(true);
       return;
     }
 
@@ -213,6 +221,12 @@ export default function MyBalancePage() {
 
   return (
     <div className="mobile-container my-balance-page">
+      {showAuthDialog && (
+        <WeChatAuthDialog
+          onClose={() => setShowAuthDialog(false)}
+          firebaseImageUrl={encodeStateForRedirect("/my-balance")}
+        />
+      )}
       {/* Header */}
       <div className="my-balance-header">
         <button className="back-button" onClick={() => navigate(-1)}>

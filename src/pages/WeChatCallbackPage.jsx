@@ -4,6 +4,42 @@ import { useNavigate } from "react-router-dom";
 const CF_URL =
   "https://us-central1-homefoods-16e56.cloudfunctions.net/exchangeWeChatCode";
 
+/**
+ * Decode the OAuth `state` parameter.
+ *
+ * Two formats are supported so the existing checkout flow is never broken:
+ *
+ * 1. LEGACY (checkout flow) — state is a raw Firebase Storage URL string,
+ *    e.g. "https://firebasestorage.googleapis.com/...".
+ *    Returns: { redirectTo: "/checkout", firebaseImageUrl: <state> }
+ *
+ * 2. GENERIC (my-orders / my-balance / future pages) — state is a
+ *    base64-encoded JSON object, e.g. btoa(JSON.stringify({ redirectTo: "/my-orders" })).
+ *    Returns: { redirectTo: "/my-orders", firebaseImageUrl: null }
+ *
+ * Detection: if `state` starts with "http" it is treated as a legacy URL.
+ */
+const decodeOAuthState = (state) => {
+  if (!state) return { redirectTo: "/checkout", firebaseImageUrl: null };
+
+  // Legacy checkout flow: state is a plain Firebase Storage / HTTPS URL
+  if (state.startsWith("http")) {
+    return { redirectTo: "/checkout", firebaseImageUrl: state };
+  }
+
+  // Generic flow: state is base64-encoded JSON
+  try {
+    const decoded = JSON.parse(atob(state));
+    return {
+      redirectTo: decoded.redirectTo || "/checkout",
+      firebaseImageUrl: decoded.firebaseImageUrl || null,
+    };
+  } catch {
+    // Unrecognised format — fall back to checkout
+    return { redirectTo: "/checkout", firebaseImageUrl: null };
+  }
+};
+
 const WeChatCallbackPage = () => {
   const [status, setStatus] = useState("loading"); // "loading", "error", "ok"
   const [data, setData] = useState(null);
@@ -13,26 +49,16 @@ const WeChatCallbackPage = () => {
     (async () => {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
-      // alert("code: " + code);
       console.log("code", code);
       const state = params.get("state");
 
       if (!code) {
-        alert("missing code");
         setStatus("error");
         setData({ error: "missing_code" });
         return;
       }
-      // if (!state || !expectedState || state !== expectedState) {
-      //   alert("bad state");
-      //   // CSRF / replay check failed
-      //   setStatus("error");
-      //   setData({ error: "bad_state" });
-      //   return;
-      // }
 
       try {
-        // alert("CF_URL: " + CF_URL);
         const res = await fetch(CF_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -40,50 +66,34 @@ const WeChatCallbackPage = () => {
           credentials: "omit",
         });
         const json = await res.json();
-        // alert("res: " + JSON.stringify(json));
 
         if (!res.ok || json.error) {
-          // alert("error:" + JSON.stringify(json.error));
           setStatus("error");
           setData({ error: json.error || `http_${res.status}` });
           return;
         }
-        // alert("json: " + JSON.stringify(json));
-        setStatus("ok");
-        json["firebaseImageUrl"] = state;
-        setData(json);
-        handleWeChatCallback(json);
-        // handleWeChatCallback({
-        //   openId: "i1234567890",
-        //   unionId: "test",
-        //   uid:"test",
-        //   firebaseImageUrl: state,
-        //   user: {
-        //     nickname: "test",
-        //     avatar: "test",
-        //     openId: "i1234567890",
-        //     sex: 1,
-        //     country: "test",
-        //     province: "test",
-        //     city: "test",
-        //     unionId: "test",
-        //     headimgurl: "test",
 
-        //   }
-        // })
-        const allowRedirectToCheckout = JSON.stringify(
-          localStorage.getItem("page")
-        );
-        if (allowRedirectToCheckout.isDetailPage) {
-          navigate(allowRedirectToCheckout.detailPageUrl, { replace: true });
-          return;
+        const { redirectTo, firebaseImageUrl } = decodeOAuthState(state);
+
+        // Attach firebaseImageUrl to the response payload so AuthContext can
+        // consume it downstream (existing checkout behaviour preserved).
+        json["firebaseImageUrl"] = firebaseImageUrl;
+
+        setStatus("ok");
+        setData(json);
+        await handleWeChatCallback(json);
+
+        // Redirect: checkout flow appends firebaseImageUrl as a query param
+        // (existing behaviour); generic flow redirects cleanly to the target path.
+        if (redirectTo === "/checkout" && firebaseImageUrl) {
+          navigate(
+            "/checkout?" + new URLSearchParams({ firebaseImageUrl }),
+            { replace: true }
+          );
+        } else {
+          navigate(redirectTo, { replace: true });
         }
-        navigate(
-          "/checkout?" + new URLSearchParams({ firebaseImageUrl: state }),
-          { replace: true }
-        );
       } catch (e) {
-        // alert("catch error:" + JSON.stringify(e));
         setStatus("error");
         setData({ error: e?.message || "network_error" });
       }
