@@ -11,17 +11,13 @@ import {onCall, HttpsError} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import {initializeApp, getApps} from "firebase-admin/app";
 import {getFirestore} from "firebase-admin/firestore";
-import twilio from "twilio";
+import {sendSMS, SMSTemplates} from "./smsService.js";
 
 if (getApps().length === 0) {
   initializeApp();
 }
 const db = getFirestore();
 
-const OPTIN_CONFIRMATION_MSG =
-  "HomeFresh: You're now subscribed to order confirmation and status SMS " +
-  "updates. Msg frequency varies per order. Msg & Data rates may apply. " +
-  "Reply STOP to unsubscribe, HELP for help.";
 
 export const smsOptinConfirmation = onCall(
   {region: "us-central1"},
@@ -32,49 +28,77 @@ export const smsOptinConfirmation = onCall(
       throw new HttpsError("invalid-argument", "A valid phone number is required.");
     }
 
-    const accountSid = process.env.TWILIO_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const fromPhone = process.env.TWILIO_PHONE;
-
-    if (!accountSid || !authToken || !fromPhone) {
-      logger.error("sms_optin.missing_env", {
-        hasSid: !!accountSid,
-        hasToken: !!authToken,
-        hasPhone: !!fromPhone,
-      });
-      throw new HttpsError("internal", "SMS service is not configured.");
-    }
-
-    // Ensure phone has country code (default to +1 for US)
     const formatted = phone.startsWith("+") ?
       phone :
       `+1${phone.replace(/\D/g, "")}`;
 
     try {
-      const client = twilio(accountSid, authToken);
+        // Save or update the consent record directly on backend rather than frontend doing it
+        // We will default to looking up user by phone if uid is absent
+        const uid = request.auth ? request.auth.uid : null;
+        
+        let matchingUser = null;
+        
+        if (uid) {
+            matchingUser = await db.collection("users").doc(uid).get();
+        } else {
+             // Find by phone
+             const userPhoneQuery = await db.collection("users")
+                .where("phone", "==", formatted)
+                .limit(1)
+                .get();
+                
+             if (!userPhoneQuery.empty) {
+                 matchingUser = userPhoneQuery.docs[0];
+             }
+        }
+        
+        const ipAddress = request.rawRequest ? request.rawRequest.ip : 'unknown';
 
-      const message = await client.messages.create({
-        body: OPTIN_CONFIRMATION_MSG,
-        from: fromPhone,
-        to: formatted,
+        if (matchingUser && matchingUser.exists) {
+            // Update the existing user array
+            await db.collection("users").doc(matchingUser.id).update({
+                smsConsent: true,
+                smsConsentTimestamp: new Date().toISOString(),
+                smsConsentSource: "sms-optin-page",
+                phone: formatted
+            });
+        }
+
+        // We also create an audit trail generic record like the frontend used to do
+        await db.collection("sms_optin_consents").add({
+            phone: formatted,
+            consentTimestamp: new Date().toISOString(),
+            consentSource: "sms-optin-page",
+            ipAddress,
+            smsConsent: true
+        });
+
+      const body = SMSTemplates.optInConfirmation();
+
+      const result = await sendSMS({
+          to: formatted,
+          body: body,
+          smsConsent: true, // We just verified they opted in!
+          eventType: 'opt_in_confirmation',
+          userId: matchingUser ? matchingUser.id : null
       });
 
-      logger.info("sms_optin.sent", {
-        sid: message.sid,
-        to: formatted.substring(0, 6) + "****",
-      });
+      if (!result.sent) {
+          throw new Error("sendSMS returned failure: " + result.error);
+      }
 
       // Log to Firestore for tracking
       await db.collection("sms_logs").add({
         to: formatted,
-        messageSid: message.sid,
-        status: message.status,
+        messageSid: result.sid,
+        status: "sent",
         type: "optin_confirmation",
-        bodyLength: OPTIN_CONFIRMATION_MSG.length,
+        bodyLength: body.length,
         createdAt: new Date(),
       });
 
-      return {success: true, messageSid: message.sid};
+      return {success: true, messageSid: result.sid};
     } catch (error) {
       logger.error("sms_optin.failed", {
         error: error?.message,

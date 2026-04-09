@@ -31,7 +31,7 @@ import {onCall, HttpsError} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import {initializeApp, getApps} from "firebase-admin/app";
 import {getFirestore} from "firebase-admin/firestore";
-import twilio from "twilio";
+import {sendSMS} from "./smsService.js";
 
 if (getApps().length === 0) {
   initializeApp();
@@ -40,34 +40,6 @@ const db = getFirestore();
 
 // Max recipients per call (prevent abuse)
 const MAX_RECIPIENTS = 50;
-
-// ============================================================
-// Send a single SMS via Twilio
-// ============================================================
-async function sendOneSms(toPhone, messageBody) {
-  const accountSid = process.env.TWILIO_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const fromPhone = process.env.TWILIO_PHONE;
-
-  if (!accountSid || !authToken || !fromPhone) {
-    throw new Error("Twilio credentials not configured");
-  }
-
-  // Ensure phone has country code
-  const formatted = toPhone.startsWith("+") ?
-    toPhone :
-    `+1${toPhone.replace(/\D/g, "")}`;
-
-  const client = twilio(accountSid, authToken);
-
-  const message = await client.messages.create({
-    body: messageBody,
-    from: fromPhone,
-    to: formatted,
-  });
-
-  return {sid: message.sid, status: message.status, to: formatted};
-}
 
 // ============================================================
 // Mask phone for logging (show first 5 chars + ****)
@@ -94,7 +66,11 @@ export const chefSendBulkSms = onCall(
     const {message, recipients, orderIds} = request.data || {};
 
     // ── Validate inputs ──
-    if (!message || typeof message !== "string" || message.trim().length === 0) {
+    if (
+      !message ||
+      typeof message !== "string" ||
+      message.trim().length === 0
+    ) {
       throw new HttpsError(
         "invalid-argument",
         "A non-empty message is required.",
@@ -152,7 +128,20 @@ export const chefSendBulkSms = onCall(
           `Reply STOP to unsubscribe.`,
         ].join("\n");
 
-        const result = await sendOneSms(recipient.phone, smsBody);
+        const result = await sendSMS({
+          to: recipient.phone,
+          body: smsBody,
+          eventType: "order_status_update",
+        });
+
+        if (!result.sent && result.skippedReason) {
+          return {
+            phone: maskPhone(recipient.phone),
+            orderId: recipientOrderId,
+            status: "failed",
+            error: result.skippedReason,
+          };
+        }
 
         return {
           phone: maskPhone(recipient.phone),
