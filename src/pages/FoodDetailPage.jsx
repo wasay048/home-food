@@ -44,10 +44,15 @@ const getMaxCategoryId = (foodCategory) => {
 };
 
 // ✅ Calculate group order percentage using Redux aggregated orders
+// Formula: (totalOrderQuantity / minByGroup) * 100
+// totalOrderQuantity = aggregated quantity across ALL orders for this item (by name, irrespective of kitchen)
+// minByGroup = minimum orders required to meet wholesale requirement (from food item data)
 const calculateGroupOrderPercentage = (food, quantitiesByItemName) => {
   if (!food) return null;
+  const minByGroup = food.minByGroup;
+  if (!minByGroup || minByGroup <= 0) return null; // Guard against division by zero
   const orderedQuantity = quantitiesByItemName[food.name] || 0;
-  const percentage = (orderedQuantity / 100) * 100;
+  const percentage = (orderedQuantity / minByGroup) * 100;
   return Math.round(Math.max(0, percentage)); // Floor at 0, no cap (can exceed 100%)
 };
 

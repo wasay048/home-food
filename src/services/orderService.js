@@ -347,6 +347,18 @@ export const placeOrder = async (orderData) => {
             quantityType: typeof item.quantity,
           });
 
+          // ✅ Check if this is a category 8 item — skip numAvailable update
+          const itemFoodCategory = item.foodCategory || "";
+          const itemCategories = itemFoodCategory.split(",").map((c) => parseInt(c.trim(), 10));
+          const itemMaxCategoryId = Math.max(...itemCategories.filter((c) => !isNaN(c)), 0);
+
+          if (itemMaxCategoryId === 8) {
+            console.log("🛑 [ORDER SERVICE] Category 8 item detected — skipping numAvailable update for:", item.name || item.foodItemId);
+            // Category 8 items use group/wholesale ordering model;
+            // availability is NOT decremented per individual order.
+            continue;
+          }
+
           // 🆕 Try to find the food document using the same pattern as foodService.js
           let foodRef = null;
           let currentDoc = null;

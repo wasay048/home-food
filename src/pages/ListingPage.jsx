@@ -22,10 +22,15 @@ import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import { useSelector, useDispatch } from "react-redux";
 
 // ✅ Calculate group order percentage using Redux aggregated orders
+// Formula: (totalOrderQuantity / minByGroup) * 100
+// totalOrderQuantity = aggregated quantity across ALL orders for this item (by name, irrespective of kitchen)
+// minByGroup = minimum orders required to meet wholesale requirement (from food item data)
 const calculateGroupOrderPercentage = (food, quantitiesByItemName) => {
   if (!food) return 0;
+  const minByGroup = food.minByGroup;
+  if (!minByGroup || minByGroup <= 0) return 0; // Guard against division by zero
   const orderedQuantity = quantitiesByItemName[food.name] || 0;
-  const percentage = (orderedQuantity / 100) * 100;
+  const percentage = (orderedQuantity / minByGroup) * 100;
   return Math.max(0, percentage);
 };
 
