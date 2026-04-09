@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import useWeChatAuth, { encodeStateForRedirect } from "../hooks/useWeChatAuth";
 import WeChatAuthDialog from "../components/WeChatAuthDialog/WeChatAuthDialog";
@@ -87,26 +87,45 @@ const getOrderDisplayCase = (order, item) => {
 
 export default function MyOrdersPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const { isAuthenticated, currentUser } = useWeChatAuth();
   const { quantitiesByItemName } = useSelector((state) => state.orderAggregation);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [foodItemsData, setFoodItemsData] = useState({}); // Store live food data for category 8 items
-  const [kitchenData, setKitchenData] = useState({}); // Store kitchen data for DateTimePicker
-  const [pickupDates, setPickupDates] = useState({}); // Track pickup dates per item
-  const [pickupTimes, setPickupTimes] = useState({}); // Track pickup times per item
-  const [activeTab, setActiveTab] = useState("inProgress"); // "inProgress" or "delivered"
-  
+  const [foodItemsData, setFoodItemsData] = useState({});
+  const [kitchenData, setKitchenData] = useState({});
+  const [pickupDates, setPickupDates] = useState({});
+  const [pickupTimes, setPickupTimes] = useState({});
+  const [activeTab, setActiveTab] = useState("inProgress");
+
   // Account balance state
   const [accountBalance, setAccountBalance] = useState(0);
-  const [cancellingItem, setCancellingItem] = useState(null); // Track which item is being canceled
+  const [cancellingItem, setCancellingItem] = useState(null);
   const { getUserBalance, addToBalance } = useUserAccount();
 
   const [showAuthDialog, setShowAuthDialog] = useState(false);
 
-  // Fetch account balance on mount
+  // Pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
+  const containerRef = useRef(null);
+  const touchStartY = useRef(0);
+
+  // ─── Back navigation ─────────────────────────────────────────────────────
+  // After WeChat OAuth the history stack has wechat's server as the previous
+  // entry. navigate(-1) would re-trigger the auth flow. Use location.state.from
+  // if set (passed by FoodDetailPage), otherwise go to /foods.
+  const handleBack = () => {
+    const from = location.state?.from;
+    if (from) {
+      navigate(from);
+    } else {
+      navigate("/foods");
+    }
+  };
+
+  // Fetch account balance on mount / user change
   useEffect(() => {
     const fetchBalance = async () => {
       if (currentUser?.id) {
@@ -116,6 +135,45 @@ export default function MyOrdersPage() {
     };
     fetchBalance();
   }, [currentUser?.id, getUserBalance]);
+
+  // ─── Pull-to-refresh ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e) => {
+      touchStartY.current = e.touches[0].clientY;
+    };
+
+    const onTouchEnd = async (e) => {
+      const delta = e.changedTouches[0].clientY - touchStartY.current;
+      if (delta > 70 && el.scrollTop === 0 && currentUser?.id) {
+        setRefreshing(true);
+        try {
+          const userOrders = await getUserOrders(currentUser.id);
+          const sorted = userOrders.sort((a, b) => {
+            const dA = a.datePlaced?.toDate ? a.datePlaced.toDate() : new Date(a.datePlaced);
+            const dB = b.datePlaced?.toDate ? b.datePlaced.toDate() : new Date(b.datePlaced);
+            return dB - dA;
+          });
+          setOrders(sorted);
+          const balance = await getUserBalance(currentUser.id);
+          setAccountBalance(balance);
+        } catch (err) {
+          console.error("Pull-to-refresh error:", err);
+        } finally {
+          setRefreshing(false);
+        }
+      }
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [currentUser?.id]);
 
   /**
    * Format date header based on relative date (Today, Yesterday, or formatted date)
@@ -566,7 +624,7 @@ export default function MyOrdersPage() {
   }
 
   return (
-    <div className="container">
+    <div className="container" ref={containerRef}>
       {showAuthDialog && (
         <WeChatAuthDialog
           onClose={() => setShowAuthDialog(false)}
@@ -574,12 +632,17 @@ export default function MyOrdersPage() {
         />
       )}
       <div className="mobile-container">
+        {refreshing && (
+          <div style={{ textAlign: "center", padding: "8px 0", fontSize: "13px", color: "#888" }}>
+            Refreshing…
+          </div>
+        )}
         <div className="my-orders-page">
           {/* Header */}
           <div className="my-orders-header">
             <button
               className="back-button"
-              onClick={() => navigate(-1)}
+              onClick={handleBack}
               aria-label="Go back"
             >
               <svg
