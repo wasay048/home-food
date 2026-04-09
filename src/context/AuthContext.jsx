@@ -58,8 +58,34 @@ export function AuthProvider({ children }) {
       setInitializing(false);
       return;
     }
+    // Before subscribing to Firebase Auth, restore any existing WeChat session
+    // into Redux so persisted auth survives the Firebase Auth initialisation.
+    const wechatSession = localStorage.getItem("wechat_user");
+    if (wechatSession) {
+      try {
+        const wechatUser = JSON.parse(wechatSession);
+        dispatch(setWeChatUser(wechatUser));
+        console.log("🔄 Pre-hydrated WeChat user into Redux:", wechatUser.id);
+      } catch (e) {
+        console.warn("Failed to pre-hydrate WeChat session:", e);
+        localStorage.removeItem("wechat_user");
+      }
+    }
+
     const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u || null);
+      // If a WeChat user is already stored, keep them as the active session
+      // in React Context — don't replace them with the raw Firebase Auth user.
+      const stored = localStorage.getItem("wechat_user");
+      if (stored) {
+        try {
+          const wechatUser = JSON.parse(stored);
+          setUser(wechatUser);
+        } catch {
+          setUser(u || null);
+        }
+      } else {
+        setUser(u || null);
+      }
       setInitializing(false);
     });
     return () => unsub();
