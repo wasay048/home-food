@@ -1650,7 +1650,7 @@ export default function FoodDetailPage() {
               </button>
               <button
                 className="button text-bold font-size-18 manage-orders-btn"
-                onClick={() => navigate("/my-orders", { state: { from: "/share" } })}
+                onClick={() => navigate("/my-orders", { state: { from: location.pathname + location.search } })}
                 style={{
                   pointerEvents: "auto",
                   fontSize: "18px",
@@ -1663,7 +1663,7 @@ export default function FoodDetailPage() {
               </button>
               <button
                 className="button text-bold font-size-18"
-                onClick={() => navigate("/my-balance", { state: { from: "/share" } })}
+                onClick={() => navigate("/my-balance", { state: { from: location.pathname + location.search } })}
                 style={{
                   pointerEvents: "auto",
                   fontSize: "18px",
