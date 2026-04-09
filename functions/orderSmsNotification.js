@@ -7,11 +7,11 @@
 // Uses Twilio SDK directly — credentials loaded from functions/.env
 // ============================================================
 
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import {onDocumentCreated} from "firebase-functions/v2/firestore";
 import * as logger from "firebase-functions/logger";
-import { initializeApp, getApps } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
-import { sendSMS } from "./smsService.js";
+import {initializeApp, getApps} from "firebase-admin/app";
+import {getFirestore} from "firebase-admin/firestore";
+import {sendSMS} from "./smsService.js";
 
 if (getApps().length === 0) {
   initializeApp();
@@ -44,9 +44,9 @@ function isCategory8(item) {
 // Build the order summary (same format as kitchen notification)
 // ============================================================
 function buildOrderSummary(orderData, kitchenName) {
-  const items = Array.isArray(orderData.orderedFoodItems)
-    ? orderData.orderedFoodItems
-    : [];
+  const items = Array.isArray(orderData.orderedFoodItems) ?
+    orderData.orderedFoodItems :
+    [];
 
   const isDelivery = !!orderData.isDeliverydSelected;
   const deliveryLabel = isDelivery ? "deliver on" : "pickup";
@@ -82,7 +82,7 @@ function buildOrderSummary(orderData, kitchenName) {
 // Main trigger: fires when a new order document is created
 // ============================================================
 export const onNewOrderSendSms = onDocumentCreated(
-  { document: "orders/{orderId}", region: "us-central1" },
+  {document: "orders/{orderId}", region: "us-central1"},
   async (event) => {
     const snap = event.data;
     if (!snap) return;
@@ -94,17 +94,17 @@ export const onNewOrderSendSms = onDocumentCreated(
       orderId,
       userId: orderData.userId ?? null,
       kitchenId: orderData.kitchenId ?? null,
-      itemsCount: Array.isArray(orderData.orderedFoodItems)
-        ? orderData.orderedFoodItems.length
-        : 0,
+      itemsCount: Array.isArray(orderData.orderedFoodItems) ?
+        orderData.orderedFoodItems.length :
+        0,
     });
 
     const userId = orderData.userId || null;
-    const { kitchenId, deliveryPhone } = orderData;
+    const {kitchenId, deliveryPhone} = orderData;
     const newOrderId = String(orderData.orderID ?? orderId);
 
     if (!deliveryPhone) {
-      logger.warn("sms.no_phone", { orderId, field: "deliveryPhone" });
+      logger.warn("sms.no_phone", {orderId, field: "deliveryPhone"});
       return;
     }
 
@@ -166,8 +166,9 @@ export const onNewOrderSendSms = onDocumentCreated(
         body: smsBody, // We keep the originally tailored itemized order string
         userId: userId,
         eventType: "order_confirmed",
+        isTestOrder: !!orderData.isTestOrder, // ✅ Skip SMS for orders placed from dev/test environment
       });
-      logger.info("order.sms_sent", { orderId, orderID: newOrderId });
+      logger.info("order.sms_sent", {orderId, orderID: newOrderId});
     } catch (error) {
       // SMS failure should NEVER block other processes
       logger.error("order.sms_failed", {

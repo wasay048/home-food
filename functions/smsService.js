@@ -27,10 +27,28 @@ function getClient() {
  * @param {boolean} options.smsConsent - from user record in DB
  * @param {string} [options.userId] - for logging purposes
  * @param {string} options.eventType - e.g. 'order_confirmed', 'order_ready', 'order_delivered'
+ * @param {boolean} [options.isTestOrder] - if true, skip sending real SMS (dev/test mode)
  * @returns {Promise<{sent: boolean, sid?: string, skippedReason?: string, error?: string}>}
  */
 export const sendSMS = async (options) => {
-  const {to, body, userId, eventType} = options;
+  const {to, body, userId, eventType, isTestOrder} = options;
+
+  // ✅ SERVER-LEVEL KILL SWITCH: SMS_ENABLED env var (defaults to "true" if not set)
+  const smsEnabled = (process.env.SMS_ENABLED || "true").toLowerCase();
+  if (smsEnabled === "false") {
+    const msg = `[SMS] Skipped (SMS_ENABLED=false) | userId: ${userId || "unknown"} | event: ${eventType}`;
+    logger.info(msg);
+    console.log(msg);
+    return {sent: false, skippedReason: "SMS disabled via SMS_ENABLED env var"};
+  }
+
+  // ✅ TEST ORDER CHECK: Skip SMS for orders placed from dev/test environment
+  if (isTestOrder) {
+    const msg = `[SMS] Skipped (test order) | userId: ${userId || "unknown"} | event: ${eventType} | to: ${to || "none"}`;
+    logger.info(msg);
+    console.log(msg);
+    return {sent: false, skippedReason: "Test order — SMS not sent"};
+  }
 
   // PHONE VALIDATION
   if (!to || to.trim() === "") {
