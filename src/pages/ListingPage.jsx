@@ -31,7 +31,7 @@ const calculateGroupOrderPercentage = (food, quantitiesByItemName) => {
   if (!minByGroup || minByGroup <= 0) return 0; // Guard against division by zero
   const orderedQuantity = quantitiesByItemName[food.name] || 0;
   const percentage = (orderedQuantity / minByGroup) * 100;
-  return Math.max(0, percentage);
+  return Math.min(100, percentage);
 };
 
 export default function ListingPage() {
@@ -851,7 +851,7 @@ export default function ListingPage() {
                                   }}
                                 >
                                   Group order filled:{" "}
-                                  {Math.round(calculateGroupOrderPercentage(food, quantitiesByItemName))}%
+                                  {Math.floor(calculateGroupOrderPercentage(food, quantitiesByItemName))}%
                                 </div>
                               )}
                             {/* Hide DateTimePicker for category 8 items */}
