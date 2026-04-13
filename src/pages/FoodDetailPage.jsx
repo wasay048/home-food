@@ -53,7 +53,7 @@ const calculateGroupOrderPercentage = (food, quantitiesByItemName) => {
   if (!minByGroup || minByGroup <= 0) return null; // Guard against division by zero
   const orderedQuantity = quantitiesByItemName[food.name] || 0;
   const percentage = (orderedQuantity / minByGroup) * 100;
-  return Math.round(Math.max(0, percentage)); // Floor at 0, no cap (can exceed 100%)
+  return Math.floor(Math.min(100, percentage)); // Floor at 0, no cap (can exceed 100%)
 };
 
 
