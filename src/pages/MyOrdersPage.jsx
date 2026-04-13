@@ -42,18 +42,17 @@ const isDefaultDate = (date) => {
 
 /**
  * Calculate group order percentage for category 8 items using live food data
- * Formula: (orderedQuantity / minByGroup) * 100
- */
-/**
- * Calculate group order percentage for category 8 items using live food data
- * Formula: (orderedQuantity / 100) * 100
+ * Formula: (totalOrderQuantity / minByGroup) * 100
+ * totalOrderQuantity = aggregated quantity across ALL orders for this item (by name, irrespective of kitchen)
+ * minByGroup = minimum orders required to meet wholesale requirement (from food item data)
  */
 const calculateGroupOrderPercentage = (foodData, quantitiesByItemName) => {
   if (!foodData) return null;
-  
+  const minByGroup = foodData.minByGroup;
+  if (!minByGroup || minByGroup <= 0) return null; // Guard against division by zero
   const orderedQuantity = quantitiesByItemName[foodData.name] || 0;
-  const percentage = (orderedQuantity / 100) * 100;
-  return Math.round(Math.max(0, percentage)); // Floor at 0, no cap (can exceed 100%)
+  const percentage = (orderedQuantity / minByGroup) * 100;
+  return Math.floor(Math.min(100, percentage)); // Floor at 0, no cap (can exceed 100%)
 };
 
 /**
