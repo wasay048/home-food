@@ -17,6 +17,9 @@ const listingSlice = createSlice({
     setListingLoading: (state, action) => {
       state.isLoading = action.payload;
     },
+    setKitchenId: (state, action) => {
+      state.kitchenId = action.payload;
+    },
     setListingData: (state, action) => {
       const { goGrabItems, preOrderItems, availablePreorderDates, kitchen } =
         action.payload;
@@ -34,6 +37,10 @@ const listingSlice = createSlice({
   },
 });
 
-export const { setListingLoading, setListingData, clearListingData } =
-  listingSlice.actions;
+export const {
+  setListingLoading,
+  setKitchenId,
+  setListingData,
+  clearListingData,
+} = listingSlice.actions;
 export default listingSlice.reducer;

@@ -14,7 +14,12 @@ import { useKitchenWithFoods } from "../hooks/useKitchenListing";
 import {
   setListingData,
   setListingLoading,
+  setKitchenId,
 } from "../store/slices/listingSlice";
+
+// Default kitchen to show when a user lands directly on /foods without any
+// prior navigation context (e.g. opens the URL in a new tab or via a bookmark).
+const DEFAULT_DIRECT_LANDING_KITCHEN_ID = "PKcWQYMxEZQxnKSLp4de";
 import { fetchAggregatedOrderQuantities } from "../store/slices/orderAggregationSlice";
 // import Edit from "../assets/images/edit.svg";
 import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
@@ -54,13 +59,19 @@ export default function ListingPage() {
   // ✅ NEW: Get aggregated order quantities from Redux
   const { quantitiesByItemName } = useSelector((state) => state.orderAggregation);
 
-  // ✅ Redirect to home if no kitchenId
+  // ✅ If the user lands directly on /foods with no kitchen context in Redux,
+  // seed the default kitchen instead of bouncing them back home. Any existing
+  // flow that reaches this page after populating Redux (via setListingData or
+  // an explicit setKitchenId) is untouched.
   useEffect(() => {
     if (!kitchenId) {
-      console.log("❌ [ListingPage] No kitchenId found, redirecting to home");
-      navigate("/", { replace: true });
+      console.log(
+        "ℹ️ [ListingPage] No kitchenId in store, defaulting to",
+        DEFAULT_DIRECT_LANDING_KITCHEN_ID
+      );
+      dispatch(setKitchenId(DEFAULT_DIRECT_LANDING_KITCHEN_ID));
     }
-  }, [kitchenId, navigate]);
+  }, [kitchenId, dispatch]);
 
   // ✅ Fetch fresh data from Firebase when mounting/refreshing
   const {
