@@ -193,6 +193,36 @@ const cartSlice = createSlice({
       }
     },
 
+    // Remove all cart items that do NOT belong to the given kitchenId.
+    // Called when the user navigates to a kitchen listing so stale
+    // items from a previously-viewed kitchen are pruned automatically.
+    removeItemsFromOtherKitchens: (state, action) => {
+      const activeKitchenId = action.payload;
+      if (!activeKitchenId) return;
+
+      const before = state.items.length;
+      const removed = state.items.filter(
+        (item) => item.kitchenId && item.kitchenId !== activeKitchenId
+      );
+
+      if (removed.length === 0) return;
+
+      console.log(
+        `🧹 [Cart] Removing ${removed.length} item(s) from other kitchens (active: ${activeKitchenId}):`,
+        removed.map((i) => ({ name: i.food?.name, kitchenId: i.kitchenId }))
+      );
+
+      state.items = state.items.filter(
+        (item) => !item.kitchenId || item.kitchenId === activeKitchenId
+      );
+
+      console.log(
+        `🧹 [Cart] Cart pruned: ${before} → ${state.items.length} item(s)`
+      );
+
+      cartSlice.caseReducers.calculateTotals(state);
+    },
+
     // Clear entire cart
     clearCart: (state) => {
       console.log("🗑️ Clearing entire cart");
@@ -278,6 +308,7 @@ export const {
   calculateTotals,
   setLoading,
   setError,
+  removeItemsFromOtherKitchens,
 } = cartSlice.actions;
 
 export default cartSlice.reducer;

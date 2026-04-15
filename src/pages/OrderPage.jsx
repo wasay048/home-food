@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import dayjs from "dayjs";
-import { clearCart } from "../store/slices/cartSlice";
+import { clearCart, removeItemsFromOtherKitchens } from "../store/slices/cartSlice";
 import { showToast } from "../utils/toast";
 import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
 import scooterRider from "../assets/scooter-rider.png";
@@ -37,6 +37,17 @@ export default function OrderPage() {
 
   // Get cart items from Redux
   const cartItems = useSelector((state) => state.cart.items);
+
+  // Active kitchen from the listing slice (authoritative source of truth)
+  const activeListingKitchenId = useSelector((state) => state.listing.kitchenId);
+
+  // Prune any cart items that don't belong to the active kitchen on mount
+  // and whenever the listing kitchen changes (e.g. back-navigation between kitchens).
+  useEffect(() => {
+    if (activeListingKitchenId) {
+      dispatch(removeItemsFromOtherKitchens(activeListingKitchenId));
+    }
+  }, [activeListingKitchenId, dispatch]);
 
   // Use generic cart hook for reliable quantity updates
   const { getCartQuantity } = useGenericCart();

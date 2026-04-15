@@ -16,6 +16,7 @@ import {
   setListingLoading,
   setKitchenId,
 } from "../store/slices/listingSlice";
+import { removeItemsFromOtherKitchens } from "../store/slices/cartSlice";
 
 // Default kitchen to show when a user lands directly on /foods without any
 // prior navigation context (e.g. opens the URL in a new tab or via a bookmark).
@@ -217,6 +218,10 @@ export default function ListingPage() {
         availablePreorderDates,
         kitchen: fullKitchen,
       };
+
+      // Prune cart items that belong to a different kitchen before updating
+      // listing state, so the cart is always consistent with the active kitchen.
+      dispatch(removeItemsFromOtherKitchens(kitchenId));
 
       dispatch(setListingData(listingData));
     } catch (error) {
