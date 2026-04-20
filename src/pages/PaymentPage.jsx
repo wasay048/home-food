@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
@@ -29,9 +35,7 @@ import "./PaymentPage.css";
 // ✅ Helper function to get max category ID from comma-separated string (e.g., "5, 7" -> 7)
 const getMaxCategoryId = (foodCategory) => {
   if (!foodCategory) return 0;
-  const categories = foodCategory
-    .split(",")
-    .map((c) => parseInt(c.trim(), 10));
+  const categories = foodCategory.split(",").map((c) => parseInt(c.trim(), 10));
   return Math.max(...categories.filter((c) => !isNaN(c)), 0);
 };
 
@@ -77,7 +81,12 @@ export default function PaymentPage() {
   const [useBalance, setUseBalance] = useState(false);
   const [balanceToUse, setBalanceToUse] = useState(0);
 
-  const { checkUserExistsById, getUserBalance, deductFromBalance, updateUserProfile } = useUserAccount();
+  const {
+    checkUserExistsById,
+    getUserBalance,
+    deductFromBalance,
+    updateUserProfile,
+  } = useUserAccount();
   const { handleQuantityChange } = useGenericCart();
   const { deliveryFee, loading: deliveryFeeLoading } = useDeliveryFee();
   const navigate = useNavigate();
@@ -96,9 +105,46 @@ export default function PaymentPage() {
   useEffect(() => {
     if (currentUser?.cellPhone && !deliveryPhone) {
       setDeliveryPhone(currentUser.cellPhone);
-      console.log("☎️ [PaymentPage] Pre-populated phone from account:", currentUser.cellPhone);
+      console.log(
+        "☎️ [PaymentPage] Pre-populated phone from account:",
+        currentUser.cellPhone,
+      );
     }
   }, [currentUser?.cellPhone]);
+
+  // ✅ Fetch saved cellPhone from account doc (currentUser in Redux may not carry it)
+  useEffect(() => {
+    let cancelled = false;
+    const loadSavedPhone = async () => {
+      if (!currentUser?.id || deliveryPhone) return;
+      try {
+        const result = await checkUserExistsById(currentUser.id);
+        if (cancelled) return;
+        if (result?.exists && result.data?.cellPhone) {
+          setDeliveryPhone(result.data.cellPhone);
+          console.log(
+            "☎️ [PaymentPage] Pre-populated phone from accounts doc:",
+            result.data.cellPhone,
+          );
+        } else if (typeof window !== "undefined") {
+          const cached = window.localStorage.getItem("hf_last_cellPhone");
+          if (cached) {
+            setDeliveryPhone(cached);
+            console.log(
+              "☎️ [PaymentPage] Pre-populated phone from localStorage:",
+              cached,
+            );
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load saved cellPhone:", err);
+      }
+    };
+    loadSavedPhone();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.id]);
 
   // ✅ Check if any cart item contains foodCategory 7 or 8 (cash payment not allowed)
   const hasCashRestrictedItems = useMemo(() => {
@@ -106,7 +152,7 @@ export default function PaymentPage() {
       // foodCategory format is comma-separated like "5, 7"
       const foodCategory = item.foodCategory || item.food?.foodCategory || "";
       if (!foodCategory) return false;
-      
+
       // Split the category string and check for 7 or 8
       const categories = foodCategory.split(",").map((c) => c.trim());
       return categories.includes("7") || categories.includes("8");
@@ -117,10 +163,10 @@ export default function PaymentPage() {
   // fulfillmentType: 1 = delivery, 2 = pickup, null/undefined/missing = pickup (default)
   const fulfillmentAnalysis = useMemo(() => {
     const deliveryItems = cartItems.filter(
-      (item) => item.fulfillmentType === 1 || item.food?.orderType === 1
+      (item) => item.fulfillmentType === 1 || item.food?.orderType === 1,
     );
     const pickupItems = cartItems.filter(
-      (item) => item.fulfillmentType !== 1 && item.food?.orderType !== 1
+      (item) => item.fulfillmentType !== 1 && item.food?.orderType !== 1,
     );
 
     const hasDeliveryItems = deliveryItems.length > 0;
@@ -235,9 +281,14 @@ export default function PaymentPage() {
   useEffect(() => {
     // If we have a preview but no file or firebase URL, the state is invalid
     if (uploadPreview && !uploadedFile && !firebaseImageUrl) {
-      console.log("📸 [PaymentPage] Clearing stale upload preview state on mount");
+      console.log(
+        "📸 [PaymentPage] Clearing stale upload preview state on mount",
+      );
       // Safely revoke blob URL if it's a valid blob string
-      if (typeof uploadPreview === 'string' && uploadPreview.startsWith('blob:')) {
+      if (
+        typeof uploadPreview === "string" &&
+        uploadPreview.startsWith("blob:")
+      ) {
         try {
           URL.revokeObjectURL(uploadPreview);
         } catch (e) {
@@ -290,7 +341,7 @@ export default function PaymentPage() {
         showToast.success(
           `${isDeliveryItem ? "Delivery" : "Pickup"} time updated to ${
             pickupDetails.display
-          } at ${pickupDetails.time}`
+          } at ${pickupDetails.time}`,
         );
 
         // Close the modal
@@ -300,7 +351,7 @@ export default function PaymentPage() {
         showToast.error(
           isDeliveryItem
             ? "Failed to update delivery time"
-            : "Failed to update pickup time"
+            : "Failed to update pickup time",
         );
       }
     } else {
@@ -415,7 +466,7 @@ export default function PaymentPage() {
       // Get unique dates from DELIVERY items only (fulfillmentType === 1)
       const deliveryItemDates = cartItems
         .filter(
-          (item) => item.fulfillmentType === 1 || item.food?.orderType === 1
+          (item) => item.fulfillmentType === 1 || item.food?.orderType === 1,
         )
         .map((item) => item.selectedDate)
         .filter(Boolean);
@@ -427,7 +478,7 @@ export default function PaymentPage() {
 
       console.log(
         "🚚 [Delivery] Unique dates from delivery items:",
-        Array.from(uniqueDates)
+        Array.from(uniqueDates),
       );
       console.log("🚚 [Delivery] Delivery fee per date:", deliveryFee);
       console.log("🚚 [Delivery] Delivery charges:", deliveryCharges);
@@ -458,7 +509,9 @@ export default function PaymentPage() {
 
   // Check if order is fully covered by balance
   const isFullyCoveredByBalance = useMemo(() => {
-    return useBalance && balanceToUse >= parseFloat(paymentCalculation.totalPayment);
+    return (
+      useBalance && balanceToUse >= parseFloat(paymentCalculation.totalPayment)
+    );
   }, [useBalance, balanceToUse, paymentCalculation.totalPayment]);
 
   // Determine if Place Order button should be disabled
@@ -468,24 +521,31 @@ export default function PaymentPage() {
       return true;
     }
 
-    
     // If balance fully covers the order, enable the button
     if (isFullyCoveredByBalance) {
       return false;
     }
-    
+
     // If payment type is cash, allow without screenshot
     if (paymentType === "cash") {
       return false;
     }
-    
+
     // If payment type is online and there's remaining amount, require screenshot
     if (paymentType === "online" && !firebaseImageUrl) {
       return true;
     }
-    
+
     return false;
-  }, [isPlacingOrder, isUploading, cartItems.length, isFullyCoveredByBalance, paymentType, firebaseImageUrl, deliveryPhone]);
+  }, [
+    isPlacingOrder,
+    isUploading,
+    cartItems.length,
+    isFullyCoveredByBalance,
+    paymentType,
+    firebaseImageUrl,
+    deliveryPhone,
+  ]);
 
   // Handle file upload with react-dropzone
   const onDrop = async (acceptedFiles) => {
@@ -521,7 +581,7 @@ export default function PaymentPage() {
         const downloadURL = await uploadImageToStorage(
           file,
           "payment-screenshots",
-          userId
+          userId,
         );
 
         setFirebaseImageUrl(downloadURL);
@@ -587,14 +647,14 @@ export default function PaymentPage() {
         } catch (error) {
           console.error(
             `Error updating time for item ${item.food?.name}:`,
-            error
+            error,
           );
         }
       }
 
       showToast.success(`Delivery time updated to ${newTime} for all items`);
     },
-    [needsDeliveryAddress, cartItems, handleQuantityChange, kitchenInfo]
+    [needsDeliveryAddress, cartItems, handleQuantityChange, kitchenInfo],
   );
   // Add this validation function before handlePlaceOrder
   const validatePickupDates = () => {
@@ -605,7 +665,10 @@ export default function PaymentPage() {
     cartItems.forEach((item) => {
       // ✅ Skip validation for category 8 items - they use default date (2000-01-01) intentionally
       if (isCategory8Item(item)) {
-        console.log("📅 [Validation] Skipping category 8 item:", item.food?.name);
+        console.log(
+          "📅 [Validation] Skipping category 8 item:",
+          item.food?.name,
+        );
         return;
       }
 
@@ -644,7 +707,7 @@ export default function PaymentPage() {
 
     if (cartItems.length === 0) {
       showToast.error(
-        "Your cart is empty. Please add items before placing an order."
+        "Your cart is empty. Please add items before placing an order.",
       );
       return;
     }
@@ -659,7 +722,11 @@ export default function PaymentPage() {
     }
 
     // ✅ Phone number is ALWAYS required (for SMS order confirmation)
-    if (!deliveryPhone || !deliveryPhone.trim() || !isValidPhoneNumber(deliveryPhone)) {
+    if (
+      !deliveryPhone ||
+      !deliveryPhone.trim() ||
+      !isValidPhoneNumber(deliveryPhone)
+    ) {
       console.log("❌ Invalid or missing phone number");
       setShowPhoneErrorDialog(true);
       return;
@@ -682,16 +749,20 @@ export default function PaymentPage() {
     }
 
     // Only require screenshot if not fully covered by balance and payment type is online
-    if (paymentType === "online" && !firebaseImageUrl && !isFullyCoveredByBalance) {
+    if (
+      paymentType === "online" &&
+      !firebaseImageUrl &&
+      !isFullyCoveredByBalance
+    ) {
       showToast.error(
-        "Please upload a payment confirmation screenshot before placing your order."
+        "Please upload a payment confirmation screenshot before placing your order.",
       );
       return;
     }
 
     if (!kitchenInfo || !kitchenInfo.id || !cartItems[0]?.kitchenId) {
       showToast.error(
-        "Kitchen information is missing. Please return to the listing page and try again."
+        "Kitchen information is missing. Please return to the listing page and try again.",
       );
       return;
     }
@@ -711,10 +782,10 @@ export default function PaymentPage() {
 
       if (!userCheck.exists) {
         console.log(
-          "🔒 User not found in accounts collection, showing login dialog"
+          "🔒 User not found in accounts collection, showing login dialog",
         );
         showToast.error(
-          "Your session has expired. Please login again to place your order."
+          "Your session has expired. Please login again to place your order.",
         );
         setShowWeChatDialog(true);
         orderLockRef.current = false;
@@ -726,7 +797,7 @@ export default function PaymentPage() {
       console.log("📦 Starting availability validation...");
       const unavailableItems = await validateItemAvailability(
         cartItems,
-        kitchenInfo?.id || kitchenInfo?.kitchenId || cartItems[0]?.kitchenId
+        kitchenInfo?.id || kitchenInfo?.kitchenId || cartItems[0]?.kitchenId,
       );
 
       if (unavailableItems.length > 0) {
@@ -741,17 +812,20 @@ export default function PaymentPage() {
       console.log("✅ All validations passed, proceeding with order...");
 
       // Calculate remaining amount after balance deduction
-      const remainingAmount = useBalance 
-        ? Math.max(0, parseFloat(paymentCalculation.totalPayment) - balanceToUse) 
+      const remainingAmount = useBalance
+        ? Math.max(
+            0,
+            parseFloat(paymentCalculation.totalPayment) - balanceToUse,
+          )
         : parseFloat(paymentCalculation.totalPayment);
       console.log("✅ All items available, proceeding with order...");
       console.log(
         "placeOrder --hasDeliveryItems",
-        fulfillmentAnalysis.hasDeliveryItems
+        fulfillmentAnalysis.hasDeliveryItems,
       );
       console.log(
         "placeOrder --deliveryAddress",
-        needsDeliveryAddress ? deliveryAddress.trim() : null
+        needsDeliveryAddress ? deliveryAddress.trim() : null,
       );
       debugger;
       // Create order object
@@ -784,9 +858,15 @@ export default function PaymentPage() {
 
       // Deduct balance from user account if balance was used
       if (useBalance && balanceToUse > 0) {
-        const deductResult = await deductFromBalance(currentUser.id, balanceToUse);
+        const deductResult = await deductFromBalance(
+          currentUser.id,
+          balanceToUse,
+        );
         if (deductResult.success) {
-          console.log("✅ Balance deducted successfully:", { balanceUsed: balanceToUse, newBalance: deductResult.newBalance });
+          console.log("✅ Balance deducted successfully:", {
+            balanceUsed: balanceToUse,
+            newBalance: deductResult.newBalance,
+          });
 
           // Add entry to balanceAdjustment collection
           try {
@@ -809,20 +889,29 @@ export default function PaymentPage() {
 
       // ✅ Save cellPhone to accounts collection for future pre-population
       if (deliveryPhone && currentUser?.id) {
-        updateUserProfile(currentUser.id, { cellPhone: deliveryPhone }).then((res) => {
-          if (res.success) {
-            console.log("☎️ cellPhone saved to account:", deliveryPhone);
-            // Also update Redux so it persists in-session
-            dispatch(updateUserProfileRedux({ cellPhone: deliveryPhone }));
+        if (typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem("hf_last_cellPhone", deliveryPhone);
+          } catch (e) {
+            console.warn("Failed to cache cellPhone locally:", e);
           }
-        }).catch((err) => console.warn("Failed to save cellPhone:", err));
+        }
+        updateUserProfile(currentUser.id, { cellPhone: deliveryPhone })
+          .then((res) => {
+            if (res.success) {
+              console.log("☎️ cellPhone saved to account:", deliveryPhone);
+              // Also update Redux so it persists in-session
+              dispatch(updateUserProfileRedux({ cellPhone: deliveryPhone }));
+            }
+          })
+          .catch((err) => console.warn("Failed to save cellPhone:", err));
       }
 
       // Clear the cart after successful order placement
       dispatch(clearCart());
 
       showToast.success(
-        "Order placed successfully! Redirecting to success page..."
+        "Order placed successfully! Redirecting to success page...",
       );
 
       // Navigate to success page with order details
@@ -871,9 +960,7 @@ export default function PaymentPage() {
                 id: item?.foodId || item?.id,
                 foodItemId: item?.foodId || item?.id,
                 name: item?.food?.name || "Unknown Item",
-                description:
-                  item?.food?.description ||
-                  "",
+                description: item?.food?.description || "",
                 imageUrl: item?.food?.imageUrl || item?.food?.image,
                 price: item?.food?.cost || item?.food?.price || "0.00",
                 quantity: item?.quantity || 1,
@@ -959,13 +1046,17 @@ export default function PaymentPage() {
               {deliveryPhone && !isValidPhoneNumber(deliveryPhone) && (
                 <p className="phone-error">Please enter a valid phone number</p>
               )}
-              <p style={{
-                fontSize: "10px",
-                color: "#888",
-                marginTop: "6px",
-                lineHeight: "1.4",
-              }}>
-                By providing your phone number, you consent to receive order confirmation &amp; status update SMS from HomeFresh. Msg &amp; data rates may apply. Reply STOP to opt out.
+              <p
+                style={{
+                  fontSize: "10px",
+                  color: "#888",
+                  marginTop: "6px",
+                  lineHeight: "1.4",
+                }}
+              >
+                By providing your phone number, you consent to receive order
+                confirmation &amp; status update SMS from HomeFresh. Msg &amp;
+                data rates may apply. Reply STOP to opt out.
               </p>
             </div>
 
@@ -1065,7 +1156,7 @@ export default function PaymentPage() {
                   <span>${paymentCalculation.deliveryCharges}</span>
                 </div>
               )}
-              
+
               {/* Account Balance Option */}
               {accountBalance > 0 && (
                 <div className="use-balance-section">
@@ -1088,35 +1179,57 @@ export default function PaymentPage() {
                   {useBalance && balanceToUse > 0 && (
                     <div className="item-flex balance-deduction">
                       <span>Balance Applied</span>
-                      <span className="balance-amount">-${balanceToUse.toFixed(2)}</span>
+                      <span className="balance-amount">
+                        -${balanceToUse.toFixed(2)}
+                      </span>
                     </div>
                   )}
                 </div>
               )}
-              
+
               <div className="hr mb-12"></div>
               <div className="item-flex bold">
-                <span>{useBalance && balanceToUse > 0 ? "Amount to Pay" : "Total Payment"}</span>
-                <span>${useBalance && balanceToUse > 0 
-                  ? Math.max(0, parseFloat(paymentCalculation.totalPayment) - balanceToUse).toFixed(2)
-                  : paymentCalculation.totalPayment
-                }</span>
+                <span>
+                  {useBalance && balanceToUse > 0
+                    ? "Amount to Pay"
+                    : "Total Payment"}
+                </span>
+                <span>
+                  $
+                  {useBalance && balanceToUse > 0
+                    ? Math.max(
+                        0,
+                        parseFloat(paymentCalculation.totalPayment) -
+                          balanceToUse,
+                      ).toFixed(2)
+                    : paymentCalculation.totalPayment}
+                </span>
               </div>
-              
+
               {/* Show remaining amount when using balance */}
               {useBalance && balanceToUse > 0 && (
                 <div className="remaining-payment-info">
-                  {balanceToUse >= parseFloat(paymentCalculation.totalPayment) ? (
+                  {balanceToUse >=
+                  parseFloat(paymentCalculation.totalPayment) ? (
                     <div className="fully-covered">
-                      ✓ Order fully covered by account balance. No payment screenshot needed.
+                      ✓ Order fully covered by account balance. No payment
+                      screenshot needed.
                     </div>
                   ) : (
                     <div className="partial-payment">
                       <div className="remaining-amount">
-                        Remaining to pay: <strong>${(parseFloat(paymentCalculation.totalPayment) - balanceToUse).toFixed(2)}</strong>
+                        Remaining to pay:{" "}
+                        <strong>
+                          $
+                          {(
+                            parseFloat(paymentCalculation.totalPayment) -
+                            balanceToUse
+                          ).toFixed(2)}
+                        </strong>
                       </div>
                       <div className="remaining-note">
-                        Please upload a payment screenshot for the remaining amount.
+                        Please upload a payment screenshot for the remaining
+                        amount.
                       </div>
                     </div>
                   )}
@@ -1154,17 +1267,19 @@ export default function PaymentPage() {
                             {!isCategory8Item(item) && (
                               <div className="pickup-time">
                                 {dayjs(item.selectedDate).format(
-                                  "dddd, MMMM D, YYYY"
+                                  "dddd, MMMM D, YYYY",
                                 )}{" "}
                                 at{" "}
                                 {dayjs(item.selectedTime, "h:mm A").format(
-                                  "h:mm A"
+                                  "h:mm A",
                                 )}
                               </div>
                             )}
                             <div className="item-quantity">
-                              Qty: {item.quantity} × $
-                              {item.food?.cost || item.food?.price || "0.00"}
+                              Qty: {item.quantity} ×{" "}
+                              <span className="item-price">
+                                ${item.food?.cost || item.food?.price || "0.00"}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -1209,19 +1324,22 @@ export default function PaymentPage() {
                                 {!isCategory8Item(item) && (
                                   <div className="pickup-time">
                                     {dayjs(item.selectedDate).format(
-                                      "dddd, MMMM D, YYYY"
+                                      "dddd, MMMM D, YYYY",
                                     )}{" "}
                                     at{" "}
                                     {dayjs(item.selectedTime, "h:mm A").format(
-                                      "h:mm A"
+                                      "h:mm A",
                                     )}
                                   </div>
                                 )}
                                 <div className="item-quantity">
-                                  Qty: {item.quantity} × $
-                                  {item.food?.cost ||
-                                    item.food?.price ||
-                                    "0.00"}
+                                  Qty: {item.quantity} ×{" "}
+                                  <span className="item-price">
+                                    $
+                                    {item.food?.cost ||
+                                      item.food?.price ||
+                                      "0.00"}
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -1237,7 +1355,7 @@ export default function PaymentPage() {
                               </div>
                             )}
                           </div>
-                        ))
+                        )),
                     )}
                 </div>
               </div>
@@ -1271,7 +1389,7 @@ export default function PaymentPage() {
                             </h5>
                             <div className="pickup-time">
                               {dayjs(item.selectedDate).format(
-                                "dddd, MMMM D, YYYY"
+                                "dddd, MMMM D, YYYY",
                               )}{" "}
                               - Before 6 PM
                             </div>
@@ -1284,8 +1402,13 @@ export default function PaymentPage() {
                               }}
                             >
                               <span>
-                                Qty: {item.quantity} × $
-                                {item.food?.cost || item.food?.price || "0.00"}
+                                Qty: {item.quantity} ×{" "}
+                                <span className="item-price">
+                                  $
+                                  {item.food?.cost ||
+                                    item.food?.price ||
+                                    "0.00"}
+                                </span>
                               </span>
                               <img
                                 src={scooterRider}
@@ -1337,7 +1460,7 @@ export default function PaymentPage() {
                                 </h5>
                                 <div className="pickup-time">
                                   {dayjs(item.selectedDate).format(
-                                    "dddd, MMMM D, YYYY"
+                                    "dddd, MMMM D, YYYY",
                                   )}{" "}
                                   - Before 6 PM
                                 </div>
@@ -1349,10 +1472,13 @@ export default function PaymentPage() {
                                   }}
                                 >
                                   <span>
-                                    Qty: {item.quantity} × $
-                                    {item.food?.cost ||
-                                      item.food?.price ||
-                                      "0.00"}
+                                    Qty: {item.quantity} ×{" "}
+                                    <span className="item-price">
+                                      $
+                                      {item.food?.cost ||
+                                        item.food?.price ||
+                                        "0.00"}
+                                    </span>
                                   </span>
                                   <img
                                     src={scooterRider}
@@ -1376,13 +1502,16 @@ export default function PaymentPage() {
                               <img src={Edit} alt="Edit disabled" />
                             </div>
                           </div>
-                        ))
+                        )),
                     )}
                 </div>
               </div>
             )}
             {/* Hide payment options if fully covered by balance */}
-            {!(useBalance && balanceToUse >= parseFloat(paymentCalculation.totalPayment)) && (
+            {!(
+              useBalance &&
+              balanceToUse >= parseFloat(paymentCalculation.totalPayment)
+            ) && (
               <>
                 <div className="mb-4">
                   <div>
@@ -1410,7 +1539,10 @@ export default function PaymentPage() {
                         name="paymentType"
                         onChange={() => setPaymentType("cash")}
                       />
-                      <label htmlFor="paymentType2" className="body-text-med ms-2">
+                      <label
+                        htmlFor="paymentType2"
+                        className="body-text-med ms-2"
+                      >
                         I will pay cash
                       </label>
                     </div>
@@ -1433,7 +1565,9 @@ export default function PaymentPage() {
                             className="preview-image"
                             onError={(e) => {
                               // If image fails to load, clear all upload state to show dropzone
-                              console.log("📸 [Preview] Image failed to load, clearing all upload state");
+                              console.log(
+                                "📸 [Preview] Image failed to load, clearing all upload state",
+                              );
                               // Clear all upload-related states
                               setUploadPreview(null);
                               setUploadedFile(null);
@@ -1460,54 +1594,56 @@ export default function PaymentPage() {
                           )}
                         </div>
                       </div>
+                    ) : /* Show login prompt if not authenticated, otherwise show upload dropzone */
+                    !isAuthenticated || !currentUser ? (
+                      <div
+                        className="upload-dropzone login-required"
+                        onClick={() => setShowWeChatDialog(true)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <div className="upload-content">
+                          <div className="upload-icon">
+                            <ImageIcon size={32} />
+                          </div>
+                          <h6 className="upload-title">Login Required</h6>
+                          <p className="upload-description">
+                            Please <span className="upload-link">login</span> to
+                            upload payment screenshot
+                          </p>
+                          <p
+                            className="upload-formats"
+                            style={{ color: "#ff9800" }}
+                          >
+                            You will be redirected back here after login
+                          </p>
+                        </div>
+                      </div>
                     ) : (
-                      /* Show login prompt if not authenticated, otherwise show upload dropzone */
-                      !isAuthenticated || !currentUser ? (
-                        <div
-                          className="upload-dropzone login-required"
-                          onClick={() => setShowWeChatDialog(true)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <div className="upload-content">
-                            <div className="upload-icon">
-                              <ImageIcon size={32} />
-                            </div>
-                            <h6 className="upload-title">
-                              Login Required
-                            </h6>
-                            <p className="upload-description">
-                              Please <span className="upload-link">login</span> to upload payment screenshot
-                            </p>
-                            <p className="upload-formats" style={{ color: '#ff9800' }}>
-                              You will be redirected back here after login
-                            </p>
+                      <div
+                        {...getRootProps()}
+                        className={`upload-dropzone ${
+                          isDragActive ? "active" : ""
+                        }`}
+                      >
+                        <input {...getInputProps()} />
+                        <div className="upload-content">
+                          <div className="upload-icon">
+                            <ImageIcon size={32} />
                           </div>
+                          <h6 className="upload-title">
+                            {isDragActive
+                              ? "Drop image here"
+                              : "Upload Screenshot"}
+                          </h6>
+                          <p className="upload-description">
+                            Drag & drop your payment confirmation or{" "}
+                            <span className="upload-link">browse files</span>
+                          </p>
+                          <p className="upload-formats">
+                            Supports: JPG, PNG, GIF, WebP (Max 10MB)
+                          </p>
                         </div>
-                      ) : (
-                        <div
-                          {...getRootProps()}
-                          className={`upload-dropzone ${
-                            isDragActive ? "active" : ""
-                          }`}
-                        >
-                          <input {...getInputProps()} />
-                          <div className="upload-content">
-                            <div className="upload-icon">
-                              <ImageIcon size={32} />
-                            </div>
-                            <h6 className="upload-title">
-                              {isDragActive ? "Drop image here" : "Upload Screenshot"}
-                            </h6>
-                            <p className="upload-description">
-                              Drag & drop your payment confirmation or{" "}
-                              <span className="upload-link">browse files</span>
-                            </p>
-                            <p className="upload-formats">
-                              Supports: JPG, PNG, GIF, WebP (Max 10MB)
-                            </p>
-                          </div>
-                        </div>
-                      )
+                      </div>
                     )}
                   </div>
                 )}
@@ -1521,8 +1657,8 @@ export default function PaymentPage() {
               {isPlacingOrder
                 ? "Placing Order..."
                 : !isAuthenticated
-                ? "Login to Place Order"
-                : "Place My Order"}
+                  ? "Login to Place Order"
+                  : "Place My Order"}
             </button>
           </div>
         </div>
@@ -1669,10 +1805,7 @@ export default function PaymentPage() {
                     showToast.error("Please enter a valid phone number");
                   }
                 }}
-                disabled={
-                  !deliveryPhone ||
-                  !isValidPhoneNumber(deliveryPhone)
-                }
+                disabled={!deliveryPhone || !isValidPhoneNumber(deliveryPhone)}
               >
                 Continue
               </button>

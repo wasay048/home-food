@@ -823,6 +823,20 @@ export default function ListingPage() {
                                   />
                                 )}
                               </div>
+                              {getMaxCategoryId(food.foodCategory) === 8 &&
+                                calculateGroupOrderPercentage(food, quantitiesByItemName) !== null && (
+                                  <div
+                                    style={{
+                                      color: "#e74c3c",
+                                      fontSize: "13px",
+                                      fontWeight: "700",
+                                      marginTop: "4px",
+                                    }}
+                                  >
+                                    Group order filled:{" "}
+                                    {Math.floor(calculateGroupOrderPercentage(food, quantitiesByItemName))}%
+                                  </div>
+                                )}
                               {(() => {
                                 const cartItem = getCartItem(food.id);
                                 return cartItem?.specialInstructions ? (
@@ -854,22 +868,6 @@ export default function ListingPage() {
                                 selectedTime={pickupTimes[food.id]}
                               />
                             </div>
-                            {/* Show group order percentage for category 8 items - on its own line */}
-                            {getMaxCategoryId(food.foodCategory) === 8 &&
-                              calculateGroupOrderPercentage(food, quantitiesByItemName) !== null && (
-                                <div
-                                  style={{
-                                    color: "#e74c3c",
-                                    fontSize: "14px",
-                                    fontWeight: "700",
-                                    marginTop: "4px",
-                                    width: "100%",
-                                  }}
-                                >
-                                  Group order filled:{" "}
-                                  {Math.floor(calculateGroupOrderPercentage(food, quantitiesByItemName))}%
-                                </div>
-                              )}
                             {/* Hide DateTimePicker for category 8 items */}
                             {getMaxCategoryId(food.foodCategory) !== 8 && (
                               <div className="pickup-time-section">
