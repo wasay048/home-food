@@ -165,79 +165,130 @@ ld {
   border: 1px solid #ddd;
 }
 
-/* Listing Page specific styles */
+/* ─────────────────────────────────────────────────────────────────
+   Listing-page DateTimePicker — iOS-first redesign.
+   Goals:
+     • Consistent look between Date + Time inputs (same height, fill,
+       radius, typography).
+     • iOS-native palette: systemGray6 fill, hairline separator border,
+       10px radius, SF-like label sizing.
+     • Immune to host OS dark mode (the listing card is always light,
+       so we force the pickers light too — prevents the "half dark pill"
+       look when only the <select> picks up prefers-color-scheme).
+     • Comfortable tap targets (36px) without bloating the card.
+   ──────────────────────────────────────────────────────────────── */
 .listing-page-picker {
-  margin-top: 4px;
+  margin-top: 8px;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Helvetica Neue", Arial, sans-serif;
 }
 
 .listing-page-picker .picker-field {
-  margin-bottom: 4px;
-  gap: 2px;
+  margin-bottom: 0;
+  gap: 4px;
 }
 
 .listing-page-picker .picker-label {
-  font-size: 10px;
-  color: #666;
+  font-size: 11px;
+  color: #6e6e73; /* iOS secondary label */
   margin-bottom: 2px;
   font-weight: 500;
+  letter-spacing: -0.1px;
 }
 
-.listing-page-picker .picker-select {
-  padding: 4px 6px;
-  font-size: 11px;
-  border-radius: 6px;
-  border: 1px solid #e0e0e0;
-  background: #f8f9fa;
-  min-height: 28px;
+/* Shared "iOS input pill" — applies to date display, time display, and
+   any raw select rendered at the listing-page scope. */
+.listing-page-picker .picker-select,
+.listing-page-picker .date-display-text,
+.listing-page-picker .time-select-display {
+  padding: 8px 12px !important;
+  font-size: 13px;
+  line-height: 1.3;
+  border-radius: 10px;
+  border: 0.5px solid rgba(60, 60, 67, 0.18); /* iOS hairline */
+  background: #f2f2f7 !important; /* iOS systemGray6 */
+  color: #1c1c1e !important;
+  min-height: 36px;
+  box-shadow: none;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
-.listing-page-picker .picker-select:focus {
-  border-color: #4caf50;
-  box-shadow: 0 0 0 1px rgba(76, 175, 80, 0.2);
-  background: white;
+.listing-page-picker .picker-select:focus,
+.listing-page-picker .time-select-wrapper .picker-select.time-select:focus
+  + .time-select-display {
+  outline: none;
+  border-color: rgba(0, 122, 255, 0.5) !important; /* iOS systemBlue */
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12) !important;
 }
 
-/* Reduced height for pickup time selector in listing page */
-.listing-page-picker .time-select-display:not(.delivery-time-fixed) {
-  min-height: 28px;
-  padding: 4px 6px;
+.listing-page-picker .time-select-display .picker-arrow,
+.listing-page-picker .date-input-wrapper .picker-arrow {
+  color: #8e8e93 !important; /* iOS tertiary label */
 }
 
-.listing-page-picker .date-display-text {
-  padding: 4px 6px;
-  min-height: 20px;
-  font-size: 11px;
+.listing-page-picker .picker-select:disabled,
+.listing-page-picker .time-select-wrapper .picker-select.time-select:disabled
+  + .time-select-display {
+  background: #e5e5ea !important;
+  color: #c7c7cc !important;
 }
 
-/* Compact layout for listing page */
+/* Remove harsh green border from global hover rule within listing scope. */
+.listing-page-picker .picker-select:not(:disabled):hover,
+.listing-page-picker .date-input-wrapper:hover .date-display-text {
+  border-color: rgba(60, 60, 67, 0.3) !important;
+}
+
+/* Compact layout for listing page — stack Date and Time with even gap. */
 .pickup-time-section {
-  padding-top: 0px;
+  padding-top: 4px;
 }
 
 .pickup-time-section .date-time-picker {
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  width: 100%;
 }
 
 .pickup-time-section .picker-field {
   margin-bottom: 0;
+  width: 100%;
 }
 
-/* Mobile responsive for listing page */
-@media (max-width: 767px) {
-  .listing-page-picker .picker-select {
-    font-size: 11px;
-    padding: 5px 6px;
-    min-height: 28px;
-  }
+/* Force both Date and Time fields to the same full width — overrides the
+   global .picker-select { width: 130px } and the unset .date-input-wrapper
+   width that was making Date narrower than Time. */
+.listing-page-picker .picker-field,
+.listing-page-picker .date-input-wrapper,
+.listing-page-picker .time-select-wrapper,
+.listing-page-picker .picker-select,
+.listing-page-picker .date-display-text,
+.listing-page-picker .time-select-display {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
 
+/* Mobile responsive for listing page — keep tap targets generous on
+   touch devices (Apple HIG recommends >= 36-44px). */
+@media (max-width: 767px) {
+  .listing-page-picker .picker-select,
+  .listing-page-picker .date-display-text,
+  .listing-page-picker .time-select-display {
+    font-size: 14px; /* >=14px to avoid iOS input-zoom on focus */
+    padding: 9px 12px !important;
+    min-height: 38px;
+  }
   .listing-page-picker .picker-label {
     font-size: 11px;
   }
-
   .pickup-time-section {
-    margin-top: 0px;
-    padding-top: 0%;
+    margin-top: 0;
+    padding-top: 4px;
   }
 }
 
@@ -1024,7 +1075,9 @@ ld {
   }
 }
 
-/* ✅ UNIVERSAL: Dark mode support */
+/* ✅ UNIVERSAL: Dark mode support — scoped so it doesn't flip only the
+   time-select black inside light-only surfaces (listing cards, the
+   food-detail page) and create a mismatched pill. */
 @media (prefers-color-scheme: dark) {
   .time-select-display {
     background: #1c1c1e;
@@ -1039,5 +1092,19 @@ ld {
   .time-select-wrapper .picker-select.time-select:focus + .time-select-display {
     border-color: #0a84ff;
     box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.2);
+  }
+
+  /* Force the listing-page picker to stay light regardless of OS theme
+     — the card above it is always white, so a dark pill looks broken. */
+  .listing-page-picker .time-select-display,
+  .listing-page-picker .picker-select,
+  .listing-page-picker .date-display-text {
+    background: #f2f2f7 !important;
+    border-color: rgba(60, 60, 67, 0.18) !important;
+    color: #1c1c1e !important;
+  }
+  .listing-page-picker .time-select-display .picker-arrow,
+  .listing-page-picker .date-input-wrapper .picker-arrow {
+    color: #8e8e93 !important;
   }
 }

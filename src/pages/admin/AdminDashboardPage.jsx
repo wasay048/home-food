@@ -5,10 +5,11 @@ import { AdminAuthContext } from "./AdminAuthGate";
 import dayjs from "../../lib/dayjs";
 import "./AdminDashboard.css";
 import AdminOrdersTab from "./AdminOrdersTab";
+import AdminGroupOrderDebugTab from "./AdminGroupOrderDebugTab";
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("users"); // "users" or "orders"
+  const [activeTab, setActiveTab] = useState("users"); // "users" | "orders" | "group-debug"
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -119,9 +120,15 @@ export default function AdminDashboardPage() {
           >
             Orders by Kitchen / Category
           </button>
+          <button
+            className={`admin-tab ${activeTab === "group-debug" ? "active" : ""}`}
+            onClick={() => setActiveTab("group-debug")}
+          >
+            Group Order Debug
+          </button>
         </div>
 
-        {activeTab === "users" ? (
+        {activeTab === "users" && (
           <>
             {/* Stats Row */}
             <div className="admin-stats-row">
@@ -265,9 +272,9 @@ export default function AdminDashboardPage() {
               </div>
             )}
           </>
-        ) : (
-          <AdminOrdersTab />
         )}
+        {activeTab === "orders" && <AdminOrdersTab />}
+        {activeTab === "group-debug" && <AdminGroupOrderDebugTab />}
       </div>
     </div>
   );

@@ -37,7 +37,7 @@ const calculateGroupOrderPercentage = (food, quantitiesByItemName) => {
   if (!minByGroup || minByGroup <= 0) return 0; // Guard against division by zero
   const orderedQuantity = quantitiesByItemName[food.name] || 0;
   const percentage = (orderedQuantity / minByGroup) * 100;
-  return Math.min(100, percentage);
+  return Math.max(0, Math.round(percentage * 100) / 100);
 };
 
 export default function ListingPage() {
@@ -803,25 +803,44 @@ export default function ListingPage() {
                               <div className="text">
                                 {food.description || ""}
                               </div>
-                              <div
-                                className="price"
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                }}
-                              >
-                                <span>$ {food.cost}</span>
-                                {food.orderType === 1 && (
-                                  <img
-                                    src={scooterRider}
-                                    alt="Delivery"
-                                    style={{
-                                      marginLeft: "5px",
-                                      width: "15px",
-                                      height: "15px",
-                                    }}
-                                  />
-                                )}
+                              <div className="price-row">
+                                <div
+                                  className="price"
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <span>$ {food.cost}</span>
+                                  {food.orderType === 1 && (
+                                    <img
+                                      src={scooterRider}
+                                      alt="Delivery"
+                                      style={{
+                                        marginLeft: "5px",
+                                        width: "15px",
+                                        height: "15px",
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                                <div
+                                  className="quantity-warpper"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div className="right mb-1">
+                                    <QuantitySelector
+                                      food={food}
+                                      kitchen={kitchen}
+                                      selectedDate={pickupDates[food.id]}
+                                      size="small"
+                                      initialQuantity={cartQty}
+                                      minQuantity={0}
+                                      orderType={"GO_GRAB"}
+                                      selectedTime={pickupTimes[food.id]}
+                                    />
+                                  </div>
+                                </div>
                               </div>
                               {getMaxCategoryId(food.foodCategory) === 8 &&
                                 calculateGroupOrderPercentage(food, quantitiesByItemName) !== null && (
@@ -834,7 +853,7 @@ export default function ListingPage() {
                                     }}
                                   >
                                     Group order filled:{" "}
-                                    {Math.floor(calculateGroupOrderPercentage(food, quantitiesByItemName))}%
+                                    {calculateGroupOrderPercentage(food, quantitiesByItemName)}%
                                   </div>
                                 )}
                               {(() => {
@@ -852,54 +871,42 @@ export default function ListingPage() {
                                   </div>
                                 ) : null;
                               })()}
+                              {/* Hide DateTimePicker for category 8 items */}
+                              {getMaxCategoryId(food.foodCategory) !== 8 && (
+                                <div
+                                  className="pickup-time-section"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <DateTimePicker
+                                    food={food}
+                                    kitchen={kitchen}
+                                    orderType="GO_GRAB"
+                                    selectedDate={currentPickupDate}
+                                    selectedTime={currentPickupTime}
+                                    onDateChange={(newDate) => {
+                                      handleDateChange(food.id, newDate, false);
+                                    }}
+                                    onTimeChange={(newTime) => {
+                                      handleTimeChange(food.id, newTime, false);
+                                    }}
+                                    disabled={!food || !kitchen}
+                                    className="listing-page-picker"
+                                    dateLabel={
+                                      food.orderType === 1
+                                        ? "Delivery Date"
+                                        : "Pickup Date"
+                                    }
+                                    timeLabel={
+                                      food.orderType === 1
+                                        ? "Deliver Time"
+                                        : "Pickup Time"
+                                    }
+                                    isDeliveryMode={food.orderType === 1}
+                                    fulfillmentType={food.orderType}
+                                  />
+                                </div>
+                              )}
                             </div>
-                          </div>
-
-                          <div className="quantity-warpper">
-                            <div className="right mb-1">
-                              <QuantitySelector
-                                food={food}
-                                kitchen={kitchen}
-                                selectedDate={pickupDates[food.id]}
-                                size="small"
-                                initialQuantity={cartQty}
-                                minQuantity={0}
-                                orderType={"GO_GRAB"}
-                                selectedTime={pickupTimes[food.id]}
-                              />
-                            </div>
-                            {/* Hide DateTimePicker for category 8 items */}
-                            {getMaxCategoryId(food.foodCategory) !== 8 && (
-                              <div className="pickup-time-section">
-                                <DateTimePicker
-                                  food={food}
-                                  kitchen={kitchen}
-                                  orderType="GO_GRAB"
-                                  selectedDate={currentPickupDate}
-                                  selectedTime={currentPickupTime}
-                                  onDateChange={(newDate) => {
-                                    handleDateChange(food.id, newDate, false);
-                                  }}
-                                  onTimeChange={(newTime) => {
-                                    handleTimeChange(food.id, newTime, false);
-                                  }}
-                                  disabled={!food || !kitchen}
-                                  className="listing-page-picker"
-                                  dateLabel={
-                                    food.orderType === 1
-                                      ? "Delivery Date"
-                                      : "Pickup Date"
-                                  }
-                                  timeLabel={
-                                    food.orderType === 1
-                                      ? "Deliver Time"
-                                      : "Pickup Time"
-                                  }
-                                  isDeliveryMode={food.orderType === 1}
-                                  fulfillmentType={food.orderType}
-                                />
-                              </div>
-                            )}
                           </div>
                         </div>
                       );
@@ -972,25 +979,47 @@ export default function ListingPage() {
                           <div className="data">
                             <div className="title">{food.name}</div>
                             <div className="text">{food.description || ""}</div>
-                            <div
-                              className="price"
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                              }}
-                            >
-                              <span>$ {food.cost}</span>
-                              {food.orderType === 1 && (
-                                <img
-                                  src={scooterRider}
-                                  alt="Delivery"
-                                  style={{
-                                    marginLeft: "5px",
-                                    width: "15px",
-                                    height: "15px",
-                                  }}
-                                />
-                              )}
+                            <div className="price-row">
+                              <div
+                                className="price"
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <span>$ {food.cost}</span>
+                                {food.orderType === 1 && (
+                                  <img
+                                    src={scooterRider}
+                                    alt="Delivery"
+                                    style={{
+                                      marginLeft: "5px",
+                                      width: "15px",
+                                      height: "15px",
+                                    }}
+                                  />
+                                )}
+                              </div>
+                              <div
+                                className="quantity-warpper"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className="right mb-1">
+                                  <QuantitySelector
+                                    food={food}
+                                    kitchen={kitchen}
+                                    selectedDate={
+                                      pickupDates[`${food.id}_preorder`] ||
+                                      dateInfo.dateString
+                                    }
+                                    size="small"
+                                    initialQuantity={cartQty}
+                                    minQuantity={0}
+                                    orderType={"PRE_ORDER"}
+                                    selectedTime={pickupTimes[`${food.id}_preorder`]}
+                                  />
+                                </div>
+                              </div>
                             </div>
                             {(() => {
                               const cartItem = cartItems.find(
@@ -1011,53 +1040,38 @@ export default function ListingPage() {
                                 </div>
                               ) : null;
                             })()}
-                          </div>
-                        </div>
-
-                        <div className="quantity-warpper">
-                          <div className="right mb-1">
-                            <QuantitySelector
-                              food={food}
-                              kitchen={kitchen}
-                              selectedDate={
-                                pickupDates[`${food.id}_preorder`] ||
-                                dateInfo.dateString
-                              }
-                              size="small"
-                              initialQuantity={cartQty}
-                              minQuantity={0}
-                              orderType={"PRE_ORDER"}
-                              selectedTime={pickupTimes[`${food.id}_preorder`]}
-                            />
-                          </div>
-                          <div className="pickup-time-section">
-                            <DateTimePicker
-                              food={food}
-                              kitchen={kitchen}
-                              orderType="PRE_ORDER"
-                              selectedDate={currentPickupDate}
-                              selectedTime={currentPickupTime}
-                              onDateChange={(newDate) => {
-                                handleDateChange(food.id, newDate, true);
-                              }}
-                              onTimeChange={(newTime) => {
-                                handleTimeChange(food.id, newTime, true);
-                              }}
-                              disabled={!food || !kitchen}
-                              className="listing-page-picker"
-                              dateLabel={
-                                food.orderType === 1
-                                  ? "Delivery Date"
-                                  : "Pickup Date"
-                              }
-                              timeLabel={
-                                food.orderType === 1
-                                  ? "Deliver Time"
-                                  : "Pickup Time"
-                              }
-                              isDeliveryMode={food.orderType === 1}
-                              fulfillmentType={food.orderType}
-                            />
+                            <div
+                              className="pickup-time-section"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <DateTimePicker
+                                food={food}
+                                kitchen={kitchen}
+                                orderType="PRE_ORDER"
+                                selectedDate={currentPickupDate}
+                                selectedTime={currentPickupTime}
+                                onDateChange={(newDate) => {
+                                  handleDateChange(food.id, newDate, true);
+                                }}
+                                onTimeChange={(newTime) => {
+                                  handleTimeChange(food.id, newTime, true);
+                                }}
+                                disabled={!food || !kitchen}
+                                className="listing-page-picker"
+                                dateLabel={
+                                  food.orderType === 1
+                                    ? "Delivery Date"
+                                    : "Pickup Date"
+                                }
+                                timeLabel={
+                                  food.orderType === 1
+                                    ? "Deliver Time"
+                                    : "Pickup Time"
+                                }
+                                isDeliveryMode={food.orderType === 1}
+                                fulfillmentType={food.orderType}
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
