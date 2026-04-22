@@ -251,15 +251,73 @@ export default function ListingPage() {
     return Math.max(...categories.filter((c) => !isNaN(c)), 0);
   }, []);
 
+  // ✅ Search state — `searchInput` mirrors the input field; `searchQuery`
+  // is the debounced value used for filtering so keystrokes don't re-filter
+  // the entire list on every character.
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setSearchQuery(searchInput.trim()), 150);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // ✅ Pre-compute a normalized, lowercased haystack per food item so each
+  // keystroke does O(1) `includes` calls instead of re-lowercasing text.
+  // Covers name, description, and category name for richer matching.
+  const foodSearchIndex = useMemo(() => {
+    const index = new Map();
+    const categoryNameMap = {};
+    foodCategories.forEach((cat) => {
+      categoryNameMap[String(cat.id)] = cat.name;
+    });
+    const buildHaystack = (food) => {
+      const catIds = (food.foodCategory || "")
+        .split(",")
+        .map((c) => c.trim())
+        .filter(Boolean);
+      const catNames = catIds.map((id) => categoryNameMap[id] || "").join(" ");
+      return [food.name, food.description, catNames]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase();
+    };
+    (goGrabItems || []).forEach((f) => index.set(f.id, buildHaystack(f)));
+    (preOrderItems || []).forEach((f) => {
+      if (!index.has(f.id)) index.set(f.id, buildHaystack(f));
+    });
+    return index;
+  }, [goGrabItems, preOrderItems, foodCategories]);
+
+  // ✅ Tokenize once; every token must appear in the haystack (AND logic).
+  const searchTokens = useMemo(() => {
+    if (!searchQuery) return [];
+    return searchQuery.toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  }, [searchQuery]);
+
+  const matchesSearch = useCallback(
+    (foodId) => {
+      if (searchTokens.length === 0) return true;
+      const hay = foodSearchIndex.get(foodId) || "";
+      for (let i = 0; i < searchTokens.length; i++) {
+        if (!hay.includes(searchTokens[i])) return false;
+      }
+      return true;
+    },
+    [searchTokens, foodSearchIndex],
+  );
+
   // ✅ Sort Go&Grab items by foodCategory in ascending order
   const sortedGoGrabItems = useMemo(() => {
     if (!goGrabItems || goGrabItems.length === 0) return [];
-    return [...goGrabItems].sort((a, b) => {
+    const base = searchTokens.length
+      ? goGrabItems.filter((f) => matchesSearch(f.id))
+      : goGrabItems;
+    return [...base].sort((a, b) => {
       const maxCatA = getMaxCategoryId(a.foodCategory);
       const maxCatB = getMaxCategoryId(b.foodCategory);
       return maxCatA - maxCatB; // Ascending order
     });
-  }, [goGrabItems, getMaxCategoryId]);
+  }, [goGrabItems, getMaxCategoryId, searchTokens, matchesSearch]);
 
   // ✅ Group Go&Grab items by category for display
   const groupedGoGrabItems = useMemo(() => {
@@ -392,9 +450,10 @@ export default function ListingPage() {
           );
           return food ? { ...food, scheduleItem } : null;
         })
-        .filter(Boolean);
+        .filter(Boolean)
+        .filter((food) => matchesSearch(food.id));
     },
-    [kitchen, preOrderItems],
+    [kitchen, preOrderItems, matchesSearch],
   );
 
   const initializePickupDataFromCart = useCallback(() => {
@@ -616,6 +675,21 @@ export default function ListingPage() {
     cartItems.map((item) => item.foodId),
   );
 
+  // ✅ When a search is active, compute whether any section will render
+  // so we can show a clear empty-state instead of a blank page.
+  const hasSearchResults = useMemo(() => {
+    if (searchTokens.length === 0) return true;
+    if (groupedGoGrabItems.some((g) => g.items.length > 0)) return true;
+    return availablePreorderDates.some(
+      (d) => getPreOrderItemsForDate(d.dateString).length > 0,
+    );
+  }, [
+    searchTokens,
+    groupedGoGrabItems,
+    availablePreorderDates,
+    getPreOrderItemsForDate,
+  ]);
+
   const getPickupDate = useCallback(
     (foodId, isPreOrder = false, fallbackDate = null) => {
       const key = isPreOrder ? `${foodId}_preorder` : foodId;
@@ -749,6 +823,65 @@ export default function ListingPage() {
           <h2 className="small-title mb-2">
             {kitchen?.name || "Coco&apos;s Kitchen"}
           </h2>
+
+          {/* iOS-first search bar */}
+          <div className="listing-search-bar">
+            <svg
+              className="listing-search-bar__icon"
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <path
+                d="M7.333 12.667A5.333 5.333 0 107.333 2a5.333 5.333 0 000 10.667zM14 14l-2.9-2.9"
+                stroke="#8e8e93"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <input
+              type="search"
+              inputMode="search"
+              enterKeyHint="search"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck="false"
+              className="listing-search-bar__input"
+              placeholder="Search dishes, categories…"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              aria-label="Search food items"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                className="listing-search-bar__clear"
+                onClick={() => setSearchInput("")}
+                aria-label="Clear search"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <circle cx="7" cy="7" r="7" fill="#c7c7cc" />
+                  <path
+                    d="M4.5 4.5l5 5M9.5 4.5l-5 5"
+                    stroke="#fff"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
 
           {/* Go & Grab Section - Grouped by Category */}
           {groupedGoGrabItems.length > 0 && (
@@ -1081,6 +1214,18 @@ export default function ListingPage() {
               </div>
             );
           })}
+
+          {/* Empty search results state */}
+          {searchTokens.length > 0 && !hasSearchResults && (
+            <div className="listing-search-empty">
+              <div className="listing-search-empty__title">
+                No matches for &ldquo;{searchQuery}&rdquo;
+              </div>
+              <div className="listing-search-empty__subtitle">
+                Try a different keyword or clear the search.
+              </div>
+            </div>
+          )}
 
           {/* Continue to Cart Button - Only show when data is loaded */}
           <button

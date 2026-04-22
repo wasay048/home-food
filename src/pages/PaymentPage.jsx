@@ -22,6 +22,7 @@ import {
   createOrderObject,
   validateItemAvailability,
 } from "../services/orderService";
+import { getKitchenById } from "../services/foodService";
 import { clearCart } from "../store/slices/cartSlice";
 import { updateUserProfile as updateUserProfileRedux } from "../store/slices/authSlice";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
@@ -31,6 +32,9 @@ import useDeliveryFee from "../hooks/useDeliveryFee";
 import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import "./PaymentPage.css";
+
+// Fallback kitchen ID whose payment info is displayed for kitchenTypeB kitchens
+const KITCHEN_TYPE_B_PAYMENT_SOURCE_ID = "PKcWQYMxEZQxnKSLp4de";
 
 // ✅ Helper function to get max category ID from comma-separated string (e.g., "5, 7" -> 7)
 const getMaxCategoryId = (foodCategory) => {
@@ -80,6 +84,9 @@ export default function PaymentPage() {
   const [accountBalance, setAccountBalance] = useState(0);
   const [useBalance, setUseBalance] = useState(false);
   const [balanceToUse, setBalanceToUse] = useState(0);
+
+  // Payment info source kitchen for kitchenTypeB kitchens
+  const [typeBPaymentKitchen, setTypeBPaymentKitchen] = useState(null);
 
   const {
     checkUserExistsById,
@@ -229,12 +236,32 @@ export default function PaymentPage() {
           paypal: kitchen?.paypal || "",
           venmo: kitchen?.venmo || "",
           zelle: kitchen?.zelle || "",
+          kitchenTypeB: kitchen?.kitchenTypeB === true,
           kitchenImageURL: kitchen?.kitchenCoverPhoto || "",
         };
       }
     }
     return null;
   }, [currentKitchen]);
+
+  // Payment-info source: kitchenTypeB kitchens show payment details from a
+  // dedicated source kitchen instead of their own
+  const paymentDisplayInfo = useMemo(() => {
+    if (kitchenInfo?.kitchenTypeB && typeBPaymentKitchen) {
+      return {
+        name: typeBPaymentKitchen?.name || "",
+        paypal: typeBPaymentKitchen?.paypal || "",
+        venmo: typeBPaymentKitchen?.venmo || "",
+        zelle: typeBPaymentKitchen?.zelle || "",
+      };
+    }
+    return {
+      name: kitchenInfo?.name || "",
+      paypal: kitchenInfo?.paypal || "",
+      venmo: kitchenInfo?.venmo || "",
+      zelle: kitchenInfo?.zelle || "",
+    };
+  }, [kitchenInfo, typeBPaymentKitchen]);
 
   // Handle edit pickup time
   const handleEditPickupTime = (item) => {
@@ -276,6 +303,27 @@ export default function PaymentPage() {
     };
     fetchBalance();
   }, [currentUser?.id, getUserBalance]);
+
+  // For kitchenTypeB kitchens, load payment info from a dedicated source kitchen
+  useEffect(() => {
+    let cancelled = false;
+    if (currentKitchen?.kitchenTypeB === true) {
+      if (
+        typeBPaymentKitchen?.id === KITCHEN_TYPE_B_PAYMENT_SOURCE_ID
+      ) {
+        return;
+      }
+      (async () => {
+        const k = await getKitchenById(KITCHEN_TYPE_B_PAYMENT_SOURCE_ID);
+        if (!cancelled) setTypeBPaymentKitchen(k);
+      })();
+    } else if (typeBPaymentKitchen) {
+      setTypeBPaymentKitchen(null);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [currentKitchen?.kitchenTypeB, typeBPaymentKitchen]);
 
   // Clear any stale upload state on mount (prevents broken previews after login redirect)
   useEffect(() => {
@@ -1069,38 +1117,37 @@ export default function PaymentPage() {
               </>
             )}
 
-            {/* <div className="payment-method mb-20"> ... */}
             <div className="other-payments-wrapper mb-20">
               <h2 className="title">
                 Other Payments acceptable to{" "}
-                {kitchenInfo?.name || "the Kitchen"}
+                {paymentDisplayInfo?.name || "the Kitchen"}
               </h2>
-              {kitchenInfo?.paypal && kitchenInfo?.paypal !== "" && (
+              {paymentDisplayInfo?.paypal && paymentDisplayInfo.paypal !== "" && (
                 <div className="item-flex">
                   <div className="left">
                     <div className="text">PayPal to</div>
-                    <a className="email">{kitchenInfo?.paypal}</a>
+                    <a className="email">{paymentDisplayInfo.paypal}</a>
                   </div>
                   <div
                     className="copy"
                     onClick={async () =>
-                      await handleCopyEmail(kitchenInfo?.paypal)
+                      await handleCopyEmail(paymentDisplayInfo.paypal)
                     }
                   >
                     <Copy /> Copy
                   </div>
                 </div>
               )}
-              {kitchenInfo?.venmo && kitchenInfo?.venmo !== "" && (
+              {paymentDisplayInfo?.venmo && paymentDisplayInfo.venmo !== "" && (
                 <div className="item-flex">
                   <div className="left">
                     <div className="text">Venmo to</div>
-                    <a className="email">{kitchenInfo?.venmo}</a>
+                    <a className="email">{paymentDisplayInfo.venmo}</a>
                   </div>
                   <div
                     className="copy"
                     onClick={async () =>
-                      await handleCopyEmail(kitchenInfo?.venmo)
+                      await handleCopyEmail(paymentDisplayInfo.venmo)
                     }
                   >
                     <Copy /> Copy
@@ -1108,16 +1155,16 @@ export default function PaymentPage() {
                 </div>
               )}
 
-              {kitchenInfo?.zelle && kitchenInfo?.zelle !== "" && (
+              {paymentDisplayInfo?.zelle && paymentDisplayInfo.zelle !== "" && (
                 <div className="item-flex">
                   <div className="left">
                     <div className="text">Zelle to</div>
-                    <a className="email">{kitchenInfo?.zelle}</a>
+                    <a className="email">{paymentDisplayInfo.zelle}</a>
                   </div>
                   <div
                     className="copy"
                     onClick={async () =>
-                      await handleCopyEmail(kitchenInfo?.zelle)
+                      await handleCopyEmail(paymentDisplayInfo.zelle)
                     }
                   >
                     <Copy /> Copy
