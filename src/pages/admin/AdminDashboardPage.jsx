@@ -6,6 +6,7 @@ import dayjs from "../../lib/dayjs";
 import "./AdminDashboard.css";
 import AdminOrdersTab from "./AdminOrdersTab";
 import AdminGroupOrderDebugTab from "./AdminGroupOrderDebugTab";
+import AdminItemsTab from "./AdminItemsTab";
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
@@ -119,6 +120,12 @@ export default function AdminDashboardPage() {
             onClick={() => setActiveTab("orders")}
           >
             Orders by Kitchen / Category
+          </button>
+          <button
+            className={`admin-tab ${activeTab === "items" ? "active" : ""}`}
+            onClick={() => setActiveTab("items")}
+          >
+            Kitchen Items
           </button>
           <button
             className={`admin-tab ${activeTab === "group-debug" ? "active" : ""}`}
@@ -274,6 +281,7 @@ export default function AdminDashboardPage() {
           </>
         )}
         {activeTab === "orders" && <AdminOrdersTab />}
+        {activeTab === "items" && <AdminItemsTab />}
         {activeTab === "group-debug" && <AdminGroupOrderDebugTab />}
       </div>
     </div>
