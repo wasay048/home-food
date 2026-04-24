@@ -757,6 +757,10 @@ export const createOrderObject = ({
         price: parseFloat(item.food?.cost || item.food?.price || 0),
       },
       price: parseFloat(item.food?.cost || item.food?.price || 0),
+      poundsInOneOrder:
+        item.poundsInOneOrder ?? item.food?.poundsInOneOrder ?? null,
+      variableWeight:
+        item.variableWeight ?? item.food?.variableWeight ?? false,
       // ✅ Use default date for category 8 items
       pickupDate: isCategory8 ? defaultCategory8Date : new Date(item.selectedDate),
       pickupDateString: isCategory8 ? "01,01,2000" : dayjs(item.selectedDate).format("MM,DD,YYYY"),
@@ -798,6 +802,7 @@ export const createOrderObject = ({
     // Payment breakdown fields
     paidFromBalance: parseFloat(balanceToUse.toFixed(2)),
     paidFromOnline: parseFloat(Math.max(0, parseFloat(paymentCalculation.totalPayment) - balanceToUse).toFixed(2)),
+    // isTestOrder: true 
   };
 
   return orderObject;
