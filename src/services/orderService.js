@@ -757,10 +757,18 @@ export const createOrderObject = ({
         price: parseFloat(item.food?.cost || item.food?.price || 0),
       },
       price: parseFloat(item.food?.cost || item.food?.price || 0),
-      poundsInOneOrder:
-        item.poundsInOneOrder ?? item.food?.poundsInOneOrder ?? null,
-      variableWeight:
-        item.variableWeight ?? item.food?.variableWeight ?? false,
+      poundsInOneOrder: (() => {
+        const raw = item.poundsInOneOrder ?? item.food?.poundsInOneOrder ?? 0;
+        const n = parseInt(raw, 10);
+        return Number.isFinite(n) ? n : 0;
+      })(),
+      variableWeight: (() => {
+        const raw = item.variableWeight ?? item.food?.variableWeight ?? 0;
+        if (raw === true) return 1;
+        if (raw === false) return 0;
+        const n = parseInt(raw, 10);
+        return Number.isFinite(n) ? n : 0;
+      })(),
       // ✅ Use default date for category 8 items
       pickupDate: isCategory8 ? defaultCategory8Date : new Date(item.selectedDate),
       pickupDateString: isCategory8 ? "01,01,2000" : dayjs(item.selectedDate).format("MM,DD,YYYY"),

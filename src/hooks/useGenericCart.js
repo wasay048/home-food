@@ -567,6 +567,8 @@ export const useGenericCart = () => {
               description: food.description,
               orderType: food?.orderType, // Preserve the food's orderType for fulfillment
               foodCategory: food?.foodCategory, // Save food category for filtering
+              poundsInOneOrder: food?.poundsInOneOrder,
+              variableWeight: food?.variableWeight,
             },
             kitchen: {
               id: kitchen.id,

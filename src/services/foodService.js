@@ -9,6 +9,27 @@ import {
 } from "firebase/firestore";
 import { db, firebaseDisabled } from "./firebase";
 
+// Coerce any stored form (int, string, bool, null) into a safe integer.
+// Firestore may hold `variableWeight` as 1/0, but older/iOS records can be true/false.
+function toSafeInt(value) {
+  if (value === true) return 1;
+  if (value === false || value === null || value === undefined) return 0;
+  const n = parseInt(value, 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// Guarantees poundsInOneOrder and variableWeight are present and integer-typed
+// on every food item returned from Firestore, so all downstream consumers
+// (cart, detail page, order save) see a consistent shape.
+function normalizeFoodItem(food) {
+  if (!food) return food;
+  return {
+    ...food,
+    poundsInOneOrder: toSafeInt(food.poundsInOneOrder),
+    variableWeight: toSafeInt(food.variableWeight),
+  };
+}
+
 /**
  * Get all food categories from Firestore
  * @returns {Promise<Array<{id: string, name: string}>>} Array of category objects
@@ -590,7 +611,7 @@ export async function getFoodById(foodId, kitchenId = null) {
           "[getFoodById] Found in specific kitchen subcollection:",
           foundFood
         );
-        return { ...foundFood, kitchenId: foundKitchenId };
+        return normalizeFoodItem({ ...foundFood, kitchenId: foundKitchenId });
       }
     }
 
@@ -622,7 +643,7 @@ export async function getFoodById(foodId, kitchenId = null) {
               `[getFoodById] Found in kitchen ${kitchenDoc.id}:`,
               foundFood
             );
-            return { ...foundFood, kitchenId: foundKitchenId };
+            return normalizeFoodItem({ ...foundFood, kitchenId: foundKitchenId });
           }
         } catch (error) {
           console.warn(
@@ -640,7 +661,7 @@ export async function getFoodById(foodId, kitchenId = null) {
     if (foodDoc.exists()) {
       const foodData = { id: foodDoc.id, ...foodDoc.data() };
       console.log("[getFoodById] Found in top-level collection:", foodData);
-      return foodData;
+      return normalizeFoodItem(foodData);
     }
 
     console.warn(
@@ -762,10 +783,9 @@ export async function getFoodsByKitchenId(kitchenId, limitCount = 10) {
     );
     const subcollectionSnapshot = await getDocs(subcollectionQuery);
     if (subcollectionSnapshot.size > 0) {
-      return subcollectionSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      return subcollectionSnapshot.docs.map((doc) =>
+        normalizeFoodItem({ id: doc.id, ...doc.data() })
+      );
     }
     const topLevelQuery = query(
       collection(db, "foodItems"),
@@ -773,10 +793,9 @@ export async function getFoodsByKitchenId(kitchenId, limitCount = 10) {
       limit(limitCount)
     );
     const querySnapshot = await getDocs(topLevelQuery);
-    const foods = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const foods = querySnapshot.docs.map((doc) =>
+      normalizeFoodItem({ id: doc.id, ...doc.data() })
+    );
     return foods.length > 0 ? foods : getMockFoodsByKitchen(kitchenId);
   } catch (error) {
     console.error("[getFoodsByKitchenId] Error:", error);
@@ -798,10 +817,9 @@ export async function getFeaturedFoods(limitCount = 10) {
       limit(limitCount)
     );
     const querySnapshot = await getDocs(q);
-    const foods = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const foods = querySnapshot.docs.map((doc) =>
+      normalizeFoodItem({ id: doc.id, ...doc.data() })
+    );
     return foods.length > 0 ? foods : getMockFeaturedFoods();
   } catch (error) {
     console.error("[getFeaturedFoods] Error:", error);
@@ -819,10 +837,9 @@ export async function getAllFoods(limitCount = 20) {
   try {
     const q = query(collection(db, "foodItems"), limit(limitCount));
     const querySnapshot = await getDocs(q);
-    const foods = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const foods = querySnapshot.docs.map((doc) =>
+      normalizeFoodItem({ id: doc.id, ...doc.data() })
+    );
     return foods.length > 0 ? foods : getMockAllFoods();
   } catch (error) {
     console.error("[getAllFoods] Error:", error);
@@ -1280,11 +1297,9 @@ export async function getKitchenWithFoodItems(kitchenId) {
     const foodItemsRef = collection(db, "kitchens", kitchenId, "foodItems");
     const foodItemsSnapshot = await getDocs(foodItemsRef);
 
-    const foods = foodItemsSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      kitchenId: kitchenId,
-      ...doc.data(),
-    }));
+    const foods = foodItemsSnapshot.docs.map((doc) =>
+      normalizeFoodItem({ id: doc.id, kitchenId: kitchenId, ...doc.data() })
+    );
 
     console.log(
       `[getKitchenWithFoodItems] Found ${foods.length} food items for kitchen ${kitchenId}`
@@ -1356,11 +1371,9 @@ export async function getAllKitchensWithFoodItems(limitKitchens = 10) {
       );
       const foodItemsSnapshot = await getDocs(foodItemsRef);
 
-      const foods = foodItemsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        kitchenId: kitchenDoc.id,
-        ...doc.data(),
-      }));
+      const foods = foodItemsSnapshot.docs.map((doc) =>
+        normalizeFoodItem({ id: doc.id, kitchenId: kitchenDoc.id, ...doc.data() })
+      );
 
       kitchensWithFoods.push({
         kitchen,
