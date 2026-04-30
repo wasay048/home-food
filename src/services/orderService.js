@@ -656,6 +656,7 @@ export const createOrderObject = ({
   isDelivery,
   deliveryPhone,
   balanceToUse = 0, // Amount to deduct from user's account balance
+  pastDueCharge = 0, // Amount added to bill to settle a negative account balance
 }) => {
   const now = new Date();
   const orderID = generateOrderID();
@@ -810,7 +811,8 @@ export const createOrderObject = ({
     // Payment breakdown fields
     paidFromBalance: parseFloat(balanceToUse.toFixed(2)),
     paidFromOnline: parseFloat(Math.max(0, parseFloat(paymentCalculation.totalPayment) - balanceToUse).toFixed(2)),
-    // isTestOrder: true 
+    previousDues: parseFloat(Number(pastDueCharge || 0).toFixed(2)),
+    // isTestOrder: true
   };
 
   return orderObject;

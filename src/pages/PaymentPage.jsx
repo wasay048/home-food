@@ -84,6 +84,11 @@ export default function PaymentPage() {
   const [accountBalance, setAccountBalance] = useState(0);
   const [useBalance, setUseBalance] = useState(false);
   const [balanceToUse, setBalanceToUse] = useState(0);
+  // Past-due alert: shown once per page load when accountBalance < 0.
+  // The user owes this amount, so we surface it as a one-time iOS alert
+  // and add a "Past Due Charge" line to the bill.
+  const [showPastDueAlert, setShowPastDueAlert] = useState(false);
+  const pastDueAlertShownRef = useRef(false);
 
   // Payment info source kitchen for kitchenTypeB kitchens
   const [typeBPaymentKitchen, setTypeBPaymentKitchen] = useState(null);
@@ -92,6 +97,7 @@ export default function PaymentPage() {
     checkUserExistsById,
     getUserBalance,
     deductFromBalance,
+    addToBalance,
     updateUserProfile,
   } = useUserAccount();
   const { handleQuantityChange } = useGenericCart();
@@ -299,6 +305,13 @@ export default function PaymentPage() {
       if (currentUser?.id) {
         const balance = await getUserBalance(currentUser.id);
         setAccountBalance(balance);
+        // If the balance is negative the user owes money — surface a one-time
+        // iOS-style notice so they understand why an extra line appears in
+        // the bill below.
+        if (typeof balance === "number" && balance < 0 && !pastDueAlertShownRef.current) {
+          pastDueAlertShownRef.current = true;
+          setShowPastDueAlert(true);
+        }
       }
     };
     fetchBalance();
@@ -308,9 +321,7 @@ export default function PaymentPage() {
   useEffect(() => {
     let cancelled = false;
     if (currentKitchen?.kitchenTypeB === true) {
-      if (
-        typeBPaymentKitchen?.id === KITCHEN_TYPE_B_PAYMENT_SOURCE_ID
-      ) {
+      if (typeBPaymentKitchen?.id === KITCHEN_TYPE_B_PAYMENT_SOURCE_ID) {
         return;
       }
       (async () => {
@@ -532,7 +543,10 @@ export default function PaymentPage() {
       console.log("🚚 [Delivery] Delivery charges:", deliveryCharges);
     }
 
-    const totalPayment = subtotal + salesTax + deliveryCharges;
+    // Past-due charge: when accountBalance is negative, the user owes that
+    // amount. Add it to the bill so it's settled with this order.
+    const pastDueCharge = accountBalance < 0 ? Math.abs(accountBalance) : 0;
+    const totalPayment = subtotal + salesTax + deliveryCharges + pastDueCharge;
 
     return {
       subtotal: subtotal.toFixed(2),
@@ -540,9 +554,10 @@ export default function PaymentPage() {
       deliveryCharges: deliveryCharges.toFixed(2),
       uniqueDatesCount: uniqueDatesCount,
       deliveryFeePerDate: deliveryFee,
+      pastDueCharge: pastDueCharge.toFixed(2),
       totalPayment: totalPayment.toFixed(2),
     };
-  }, [cartItems, fulfillmentAnalysis.hasDeliveryItems, deliveryFee]);
+  }, [cartItems, fulfillmentAnalysis.hasDeliveryItems, deliveryFee, accountBalance]);
 
   // Calculate balance to use when toggle changes (must be after paymentCalculation)
   useEffect(() => {
@@ -877,6 +892,12 @@ export default function PaymentPage() {
       );
       debugger;
       // Create order object
+      // Snapshot the past-due charge from the calculation; we both record it
+      // on the order and settle the user's negative balance after placement.
+      const pastDueChargeAmount = parseFloat(
+        paymentCalculation.pastDueCharge || 0,
+      );
+
       const orderData = createOrderObject({
         cartItems,
         kitchenInfo,
@@ -890,6 +911,7 @@ export default function PaymentPage() {
         deliveryPhone: deliveryPhone || null, // Always save phone (required for SMS)
         fulfillmentAnalysis, // Pass the fulfillment analysis for detailed order info
         balanceToUse: useBalance ? balanceToUse : 0, // Amount to deduct from user's account balance
+        pastDueCharge: pastDueChargeAmount, // Amount added to settle a negative account balance
       });
 
       console.log("Order data to be placed:", orderData);
@@ -932,6 +954,45 @@ export default function PaymentPage() {
         } else {
           console.error("⚠️ Failed to deduct balance:", deductResult.error);
           // Note: Order is already placed, so we log the error but don't prevent success
+        }
+      }
+
+      // Settle a past-due (negative) balance after the order is placed: the
+      // user has just paid the past-due amount as part of this order, so
+      // bring their balance back up by that amount and record an adjustment
+      // for the audit trail. Failures here are non-blocking — the order is
+      // already in Firestore.
+      if (pastDueChargeAmount > 0 && currentUser?.id) {
+        try {
+          const addResult = await addToBalance(
+            currentUser.id,
+            pastDueChargeAmount,
+          );
+          if (addResult.success) {
+            console.log("✅ Past-due settled:", {
+              pastDueChargeAmount,
+              newBalance: addResult.newBalance,
+            });
+            try {
+              await addDoc(collection(db, "balanceAdjustment"), {
+                balanceSent: pastDueChargeAmount,
+                senderUserID: "system",
+                receiverUserID: currentUser.id,
+                reason: "pastDueChargePaid",
+                relatedOrderId: orderDocId || null,
+                timestamp: serverTimestamp(),
+              });
+            } catch (adjError) {
+              console.error(
+                "⚠️ Failed to record past-due adjustment:",
+                adjError,
+              );
+            }
+          } else {
+            console.error("⚠️ Failed to settle past-due:", addResult.error);
+          }
+        } catch (settleError) {
+          console.error("⚠️ Past-due settlement threw:", settleError);
         }
       }
 
@@ -1122,22 +1183,23 @@ export default function PaymentPage() {
                 Other Payments acceptable to{" "}
                 {paymentDisplayInfo?.name || "the Kitchen"}
               </h2>
-              {paymentDisplayInfo?.paypal && paymentDisplayInfo.paypal !== "" && (
-                <div className="item-flex">
-                  <div className="left">
-                    <div className="text">PayPal to</div>
-                    <a className="email">{paymentDisplayInfo.paypal}</a>
+              {paymentDisplayInfo?.paypal &&
+                paymentDisplayInfo.paypal !== "" && (
+                  <div className="item-flex">
+                    <div className="left">
+                      <div className="text">PayPal to</div>
+                      <a className="email">{paymentDisplayInfo.paypal}</a>
+                    </div>
+                    <div
+                      className="copy"
+                      onClick={async () =>
+                        await handleCopyEmail(paymentDisplayInfo.paypal)
+                      }
+                    >
+                      <Copy /> Copy
+                    </div>
                   </div>
-                  <div
-                    className="copy"
-                    onClick={async () =>
-                      await handleCopyEmail(paymentDisplayInfo.paypal)
-                    }
-                  >
-                    <Copy /> Copy
-                  </div>
-                </div>
-              )}
+                )}
               {paymentDisplayInfo?.venmo && paymentDisplayInfo.venmo !== "" && (
                 <div className="item-flex">
                   <div className="left">
@@ -1201,6 +1263,24 @@ export default function PaymentPage() {
                     )}
                   </span>
                   <span>${paymentCalculation.deliveryCharges}</span>
+                </div>
+              )}
+
+              {/* Past Due Charge — shown only when the user's account balance
+                  is negative (they owe money). The amount is added to the
+                  total payment so the balance is settled with this order. */}
+              {parseFloat(paymentCalculation.pastDueCharge) > 0 && (
+                <div className="item-flex past-due-line">
+                  <span>
+                    Past Due Charge
+                    <span className="past-due-hint">
+                      {" "}
+                      (balance: -${Math.abs(accountBalance).toFixed(2)})
+                    </span>
+                  </span>
+                  <span className="past-due-amount">
+                    +${paymentCalculation.pastDueCharge}
+                  </span>
                 </div>
               )}
 
@@ -2071,6 +2151,45 @@ export default function PaymentPage() {
                 Continue
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* iOS-style "Past Due Charge" notice — fired once when balance < 0. */}
+      {showPastDueAlert && (
+        <div
+          className="modal-overlay ios-alert-overlay"
+          onClick={() => setShowPastDueAlert(false)}
+          role="presentation"
+        >
+          <div
+            className="ios-alert"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="past-due-alert-title"
+            aria-describedby="past-due-alert-body"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="ios-alert__content">
+              <h3 id="past-due-alert-title" className="ios-alert__title">
+                Past Due Charge
+              </h3>
+              <p id="past-due-alert-body" className="ios-alert__body">
+                To help cover your current account balance of{" "}
+                <strong>-${Math.abs(accountBalance).toFixed(2)}</strong>, a past
+                due charge of{" "}
+                <strong>${Math.abs(accountBalance).toFixed(2)}</strong> will be
+                added to the payment.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="ios-alert__action"
+              onClick={() => setShowPastDueAlert(false)}
+              autoFocus
+            >
+              Ok
+            </button>
           </div>
         </div>
       )}

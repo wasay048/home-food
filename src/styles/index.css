@@ -393,6 +393,171 @@ body,
   margin-bottom: 10px;
   padding-left: 2px;
 }
+
+/* Listing-page-only: tighten the vertical rhythm inside food cards so the
+   title, description, price-row and side-by-side pickers feel like one
+   compact iOS group instead of a loose stack. Scoped to .category-group so
+   OrderPage / SuccessPage cards keep their existing spacing. */
+.category-group .menu-listing .menu-list {
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+.category-group .menu-listing .menu-list .left {
+  gap: 10px;
+}
+.category-group .menu-listing .menu-list .left .data .title {
+  margin-bottom: 2px;
+  line-height: 1.25;
+}
+.category-group .menu-listing .menu-list .left .data .text {
+  margin-bottom: 2px;
+}
+.category-group .menu-listing .menu-list .left .data .price-row {
+  margin-top: 0;
+  margin-bottom: 0;
+  gap: 8px;
+}
+/* Keep "$" and the number on one line, side by side, regardless of how
+   much the chip next to them eats. */
+.category-group .menu-listing .menu-list .left .data .price-row .price {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* iOS-style "Group order filled: X%" chip — fills the white space between
+   the price and the quantity selector for category-8 (Group PreOrder)
+   cards. Allowed to wrap to two lines if there isn't horizontal room. */
+.group-order-chip {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  display: inline-block;
+  text-align: center;
+  padding: 0 4px;
+  background: transparent;
+  color: #c0392b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+  line-height: 1.25;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.group-order-chip__label {
+  color: #c0392b;
+  font-weight: 600;
+}
+.group-order-chip__value {
+  color: #c0392b;
+  font-weight: 800;
+  margin-left: 2px;
+}
+.category-group .menu-listing .menu-list .quantity-warpper .right.mb-1 {
+  margin-bottom: 0 !important;
+}
+.category-group .pickup-time-section {
+  margin-top: 2px;
+  padding-top: 0;
+}
+
+/* iOS-first subcategory accordion (used for category 8 / Group PreOrder) */
+.subcategory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.subcategory-group {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04),
+    0 6px 18px rgba(17, 24, 39, 0.04);
+  overflow: hidden;
+  transition: box-shadow 0.18s ease;
+}
+.subcategory-group.is-expanded {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05),
+    0 10px 28px rgba(17, 24, 39, 0.07);
+}
+.subcategory-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+  color: #1c1c1e;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+.subcategory-header:active {
+  background: rgba(118, 118, 128, 0.08);
+}
+.subcategory-header__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.subcategory-header__name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #1c1c1e;
+  text-transform: capitalize;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.subcategory-header__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(63, 192, 69, 0.12);
+  color: #2a8f31;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.subcategory-header__chevron {
+  flex-shrink: 0;
+  color: #8e8e93;
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 0.18s ease;
+}
+.subcategory-group.is-expanded .subcategory-header__chevron {
+  transform: rotate(180deg);
+  color: #3fc045;
+}
+.subcategory-body {
+  padding: 4px 12px 12px;
+  border-top: 1px solid rgba(60, 60, 67, 0.08);
+  animation: subcategoryReveal 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.subcategory-body .menu-listing {
+  margin: 0;
+}
+@keyframes subcategoryReveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 .body-text {
   font-size: 12px;
   font-weight: 400;
@@ -2301,6 +2466,95 @@ body,
   max-width: 300px;
   margin: 20px;
   /* box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); */
+}
+
+/* iOS-style alert (used for the Past Due Charge notice). Two-tier card with
+   a centered title + body, hairline divider, and a single full-width Ok
+   button — matches the system UIAlertController look. */
+.ios-alert-overlay {
+  background-color: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  padding: 20px;
+}
+.ios-alert {
+  width: 100%;
+  max-width: 270px;
+  background: rgba(250, 250, 250, 0.96);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.25);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Helvetica Neue", Arial, sans-serif;
+  animation: iosAlertIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes iosAlertIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.ios-alert__content {
+  padding: 18px 16px 16px;
+  text-align: center;
+}
+.ios-alert__title {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #000;
+  letter-spacing: -0.2px;
+}
+.ios-alert__body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #1c1c1e;
+}
+.ios-alert__body strong {
+  font-weight: 700;
+  color: #000;
+}
+.ios-alert__action {
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-top: 0.5px solid rgba(60, 60, 67, 0.29);
+  color: #007aff;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+  transition: background 0.12s ease;
+}
+.ios-alert__action:hover,
+.ios-alert__action:focus-visible {
+  outline: none;
+  background: rgba(0, 122, 255, 0.06);
+}
+.ios-alert__action:active {
+  background: rgba(0, 122, 255, 0.12);
+}
+
+/* Past Due Charge line on the payment summary. Subtle red so it reads as a
+   surcharge rather than a normal line item. */
+.past-due-line .past-due-amount {
+  color: #c0392b;
+  font-weight: 700;
+}
+.past-due-line .past-due-hint {
+  font-size: 12px;
+  color: #8e8e93;
+  font-weight: 400;
 }
 
 .modal-header {

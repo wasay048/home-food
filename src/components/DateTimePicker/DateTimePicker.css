@@ -178,7 +178,7 @@ ld {
      • Comfortable tap targets (36px) without bloating the card.
    ──────────────────────────────────────────────────────────────── */
 .listing-page-picker {
-  margin-top: 8px;
+  margin-top: 0;
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Text",
     "Helvetica Neue", Arial, sans-serif;
@@ -186,15 +186,16 @@ ld {
 
 .listing-page-picker .picker-field {
   margin-bottom: 0;
-  gap: 4px;
+  gap: 2px;
 }
 
 .listing-page-picker .picker-label {
   font-size: 11px;
   color: #6e6e73; /* iOS secondary label */
-  margin-bottom: 2px;
+  margin-bottom: 0;
   font-weight: 500;
   letter-spacing: -0.1px;
+  line-height: 1.2;
 }
 
 /* Shared "iOS input pill" — applies to date display, time display, and
@@ -243,26 +244,35 @@ ld {
   border-color: rgba(60, 60, 67, 0.3) !important;
 }
 
-/* Compact layout for listing page — stack Date and Time with even gap. */
+/* Compact layout for listing page — Date and Time sit side-by-side, each
+   taking an equal share of the row (iOS-style two-up form). */
 .pickup-time-section {
-  padding-top: 4px;
+  padding-top: 2px;
 }
 
 .pickup-time-section .date-time-picker {
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
   gap: 8px;
   width: 100%;
 }
 
 .pickup-time-section .picker-field {
   margin-bottom: 0;
-  width: 100%;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
-/* Force both Date and Time fields to the same full width — overrides the
+/* Force both Date and Time fields to share the row equally — overrides the
    global .picker-select { width: 130px } and the unset .date-input-wrapper
    width that was making Date narrower than Time. */
-.listing-page-picker .picker-field,
+.listing-page-picker .picker-field {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
 .listing-page-picker .date-input-wrapper,
 .listing-page-picker .time-select-wrapper,
 .listing-page-picker .picker-select,
@@ -288,7 +298,7 @@ ld {
   }
   .pickup-time-section {
     margin-top: 0;
-    padding-top: 4px;
+    padding-top: 2px;
   }
 }
 

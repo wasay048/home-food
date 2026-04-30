@@ -17,6 +17,11 @@ import {
   setKitchenId,
 } from "../store/slices/listingSlice";
 import { removeItemsFromOtherKitchens } from "../store/slices/cartSlice";
+import {
+  setFoodCategories,
+  setFoodCategoriesLoading,
+} from "../store/slices/foodCategoriesSlice";
+import { getFoodCategories } from "../services/foodService";
 
 // Default kitchen to show when a user lands directly on /foods without any
 // prior navigation context (e.g. opens the URL in a new tab or via a bookmark).
@@ -238,6 +243,36 @@ export default function ListingPage() {
   const foodCategories = useSelector(
     (state) => state.foodCategories?.categories || [],
   );
+  const foodCategoriesLastUpdated = useSelector(
+    (state) => state.foodCategories?.lastUpdated,
+  );
+
+  // Background-fetch food categories so headings show real names (e.g.
+  // "Group PreOrder") instead of the "Category 8" fallback when the user
+  // lands directly on /foods without first visiting FoodDetailPage.
+  useEffect(() => {
+    const ONE_HOUR_MS = 60 * 60 * 1000;
+    const isStale =
+      !foodCategoriesLastUpdated ||
+      Date.now() - foodCategoriesLastUpdated > ONE_HOUR_MS;
+    if (foodCategories.length > 0 && !isStale) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        dispatch(setFoodCategoriesLoading(true));
+        const categories = await getFoodCategories();
+        if (cancelled) return;
+        dispatch(setFoodCategories(categories));
+      } catch (err) {
+        console.error("[ListingPage] Failed to fetch food categories:", err);
+        if (!cancelled) dispatch(setFoodCategoriesLoading(false));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, foodCategories.length, foodCategoriesLastUpdated]);
 
   // Use the generic cart hook for all cart operations
   const { cartItems, getCartQuantity, getCartItem } = useGenericCart();
@@ -323,11 +358,27 @@ export default function ListingPage() {
   const groupedGoGrabItems = useMemo(() => {
     if (!sortedGoGrabItems || sortedGoGrabItems.length === 0) return [];
 
-    // Create a map from category id to category name
+    // Create a map from category id to category name. Stringify the key so
+    // numeric ids from Firestore and string lookups below land in the same slot.
     const categoryNameMap = {};
     foodCategories.forEach((cat) => {
-      categoryNameMap[cat.id] = cat.name;
+      categoryNameMap[String(cat.id)] = cat.name;
     });
+
+    // Shared comparator: group-order % desc, then first English letter, then full name
+    const compareItems = (a, b) => {
+      const percentA = calculateGroupOrderPercentage(a, quantitiesByItemName);
+      const percentB = calculateGroupOrderPercentage(b, quantitiesByItemName);
+      if (percentB !== percentA) return percentB - percentA;
+      const matchA = (a.name || "").match(/[A-Za-z]/);
+      const matchB = (b.name || "").match(/[A-Za-z]/);
+      const letterA = matchA ? matchA[0].toUpperCase() : "~";
+      const letterB = matchB ? matchB[0].toUpperCase() : "~";
+      if (letterA !== letterB) return letterA.localeCompare(letterB);
+      return (a.name || "").localeCompare(b.name || "", undefined, {
+        sensitivity: "base",
+      });
+    };
 
     // Group items by their max category ID
     const groups = {};
@@ -346,21 +397,38 @@ export default function ListingPage() {
 
     // Sort ALL categories by group order percentage (high to low), then alphabetically
     Object.keys(groups).forEach((catId) => {
-      groups[catId].items.sort((a, b) => {
-        const percentA = calculateGroupOrderPercentage(a, quantitiesByItemName);
-        const percentB = calculateGroupOrderPercentage(b, quantitiesByItemName);
-        if (percentB !== percentA) return percentB - percentA; // Descending by percentage
-        // If same percentage, sort alphabetically by first English letter, then full name
-        const matchA = (a.name || "").match(/[A-Za-z]/);
-        const matchB = (b.name || "").match(/[A-Za-z]/);
-        const letterA = matchA ? matchA[0].toUpperCase() : "~"; // ~ sorts after Z
-        const letterB = matchB ? matchB[0].toUpperCase() : "~";
-        if (letterA !== letterB) return letterA.localeCompare(letterB);
-        return (a.name || "").localeCompare(b.name || "", undefined, {
-          sensitivity: "base",
-        });
-      });
+      groups[catId].items.sort(compareItems);
     });
+
+    // For category 8 (Group PreOrder), build a sub-grouping by `subcategory`.
+    // Subcategories containing "#" — and missing/empty values — collapse into "Others".
+    // Sorting within each subcategory uses the exact same pattern as the parent group.
+    const OTHERS_KEY = "Others";
+    const cat8 = groups[8];
+    if (cat8) {
+      const subBuckets = {};
+      cat8.items.forEach((food) => {
+        const raw = (food.subcategory || "").trim();
+        const useOthers = !raw || raw.includes("#");
+        const displayName = useOthers
+          ? OTHERS_KEY
+          : raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+        if (!subBuckets[displayName]) {
+          subBuckets[displayName] = { name: displayName, items: [] };
+        }
+        subBuckets[displayName].items.push(food);
+      });
+
+      Object.values(subBuckets).forEach((bucket) => {
+        bucket.items.sort(compareItems);
+      });
+
+      cat8.subcategoryGroups = Object.values(subBuckets).sort((a, b) => {
+        if (a.name === OTHERS_KEY) return 1;
+        if (b.name === OTHERS_KEY) return -1;
+        return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      });
+    }
 
     return Object.values(groups).sort((a, b) => a.categoryId - b.categoryId);
   }, [sortedGoGrabItems, foodCategories, getMaxCategoryId, quantitiesByItemName]);
@@ -435,6 +503,25 @@ export default function ListingPage() {
   // State for managing pickup dates and times for each food item
   const [pickupDates, setPickupDates] = useState({});
   const [pickupTimes, setPickupTimes] = useState({});
+
+  // ✅ Collapsed-by-default subcategory accordions for category 8 (Group PreOrder).
+  // While a search is active we treat every subcategory as expanded so matches
+  // are never hidden behind a closed accordion.
+  const [expandedSubcategories, setExpandedSubcategories] = useState(
+    () => new Set(),
+  );
+  const toggleSubcategory = useCallback((key) => {
+    setExpandedSubcategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+  const isSubcategoryExpanded = useCallback(
+    (key) => searchTokens.length > 0 || expandedSubcategories.has(key),
+    [searchTokens.length, expandedSubcategories],
+  );
 
   // ✅ Get preorder items for a specific date (using Redux data)
   const getPreOrderItemsForDate = useCallback(
@@ -716,6 +803,139 @@ export default function ListingPage() {
     "Rendering ListingPage with state:",
     cartItems.map((item) => item.foodId),
   );
+
+  // Render a single Go&Grab card. Extracted so the same card markup is reused
+  // both for flat category lists and inside the cat-8 subcategory accordions.
+  const renderGoGrabFoodCard = (food) => {
+    const foodLetterMatch = (food.name || "").match(/[A-Za-z]/);
+    const foodLetter = foodLetterMatch ? foodLetterMatch[0].toUpperCase() : "#";
+    const cartQty = getMemoizedCartQuantity(food.id);
+    const currentPickupDate = getPickupDate(food.id, false);
+    const currentPickupTime = getPickupTime(food.id, false);
+    const isCat8 = getMaxCategoryId(food.foodCategory) === 8;
+    return (
+      <div key={food.id} className="menu-list" data-food-letter={foodLetter}>
+        <div
+          className="left"
+          onClick={() =>
+            window.open(
+              `/share?kitchenId=${kitchen?.id}&foodId=${food.id}`,
+              "_blank",
+            )
+          }
+          style={{ cursor: "pointer" }}
+        >
+          <div className="image">
+            <img
+              src={food.imageUrl || "/src/assets/images/product.png"}
+              alt={food.name}
+              onError={(e) => {
+                e.target.src = "/src/assets/images/product.png";
+              }}
+            />
+          </div>
+          <div className="data">
+            <div className="title">{food.name}</div>
+            <div className="text">{food.description || ""}</div>
+            <div className="price-row">
+              <div
+                className="price"
+                style={{ display: "flex", alignItems: "center" }}
+              >
+                <span>$ {food.cost}</span>
+                {food.orderType === 1 && (
+                  <img
+                    src={scooterRider}
+                    alt="Delivery"
+                    style={{
+                      marginLeft: "5px",
+                      width: "15px",
+                      height: "15px",
+                    }}
+                  />
+                )}
+              </div>
+              {isCat8 &&
+                calculateGroupOrderPercentage(food, quantitiesByItemName) !==
+                  null && (
+                  <div className="group-order-chip" aria-label="Group order filled">
+                    <span className="group-order-chip__label">
+                      Group order filled:
+                    </span>{" "}
+                    <span className="group-order-chip__value">
+                      {calculateGroupOrderPercentage(
+                        food,
+                        quantitiesByItemName,
+                      )}
+                      %
+                    </span>
+                  </div>
+                )}
+              <div
+                className="quantity-warpper"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="right mb-1">
+                  <QuantitySelector
+                    food={food}
+                    kitchen={kitchen}
+                    selectedDate={pickupDates[food.id]}
+                    size="small"
+                    initialQuantity={cartQty}
+                    minQuantity={0}
+                    orderType={"GO_GRAB"}
+                    selectedTime={pickupTimes[food.id]}
+                  />
+                </div>
+              </div>
+            </div>
+            {(() => {
+              const cartItem = getCartItem(food.id);
+              return cartItem?.specialInstructions ? (
+                <div
+                  className="text"
+                  style={{ marginTop: "4px", fontStyle: "italic" }}
+                >
+                  Special Instruction: {cartItem.specialInstructions}
+                </div>
+              ) : null;
+            })()}
+            {!isCat8 && (
+              <div
+                className="pickup-time-section"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <DateTimePicker
+                  food={food}
+                  kitchen={kitchen}
+                  orderType="GO_GRAB"
+                  selectedDate={currentPickupDate}
+                  selectedTime={currentPickupTime}
+                  onDateChange={(newDate) => {
+                    handleDateChange(food.id, newDate, false);
+                  }}
+                  onTimeChange={(newTime) => {
+                    handleTimeChange(food.id, newTime, false);
+                  }}
+                  disabled={!food || !kitchen}
+                  className="listing-page-picker"
+                  dateLabel={
+                    food.orderType === 1 ? "Delivery Date" : "Pickup Date"
+                  }
+                  timeLabel={
+                    food.orderType === 1 ? "Deliver Time" : "Pickup Time"
+                  }
+                  isDeliveryMode={food.orderType === 1}
+                  fulfillmentType={food.orderType}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
       className="container"
@@ -887,166 +1107,78 @@ export default function ListingPage() {
           {groupedGoGrabItems.length > 0 && (
             <>
               <h2 className="small-title mb-20">Available Today</h2>
-              {groupedGoGrabItems.map((group) => (
-                <div key={group.categoryId} className="category-group">
-                  <h3 className="category-title">{group.categoryName}</h3>
-                  <div className="menu-listing">
-                    {group.items.map((food) => {
-                      // Compute the letter for this food item (for sidebar scroll targeting)
-                      const foodLetterMatch = (food.name || "").match(
-                        /[A-Za-z]/,
-                      );
-                      const foodLetter = foodLetterMatch
-                        ? foodLetterMatch[0].toUpperCase()
-                        : "#";
-                      const cartQty = getMemoizedCartQuantity(food.id);
-                      const currentPickupDate = getPickupDate(food.id, false);
-                      const currentPickupTime = getPickupTime(food.id, false);
-                      return (
-                        <div
-                          key={food.id}
-                          className="menu-list"
-                          data-food-letter={foodLetter}
-                        >
-                          <div
-                            className="left"
-                            onClick={() =>
-                              window.open(
-                                `/share?kitchenId=${kitchen?.id}&foodId=${food.id}`,
-                                "_blank",
-                              )
-                            }
-                            style={{ cursor: "pointer" }}
-                          >
-                            <div className="image">
-                              <img
-                                src={
-                                  food.imageUrl ||
-                                  "/src/assets/images/product.png"
-                                }
-                                alt={food.name}
-                                onError={(e) => {
-                                  e.target.src =
-                                    "/src/assets/images/product.png";
-                                }}
-                              />
-                            </div>
-                            <div className="data">
-                              <div className="title">{food.name}</div>
-                              <div className="text">
-                                {food.description || ""}
-                              </div>
-                              <div className="price-row">
-                                <div
-                                  className="price"
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                  }}
+              {groupedGoGrabItems.map((group) => {
+                const isCat8 = group.categoryId === 8;
+                return (
+                  <div key={group.categoryId} className="category-group">
+                    <h3 className="category-title">{group.categoryName}</h3>
+                    {isCat8 && group.subcategoryGroups ? (
+                      <div className="subcategory-list">
+                        {group.subcategoryGroups.map((sg) => {
+                          const subKey = `${group.categoryId}__${sg.name}`;
+                          const expanded = isSubcategoryExpanded(subKey);
+                          return (
+                            <div
+                              key={subKey}
+                              className={`subcategory-group${expanded ? " is-expanded" : ""}`}
+                            >
+                              <button
+                                type="button"
+                                className="subcategory-header"
+                                onClick={() => toggleSubcategory(subKey)}
+                                aria-expanded={expanded}
+                                aria-controls={`subcat-body-${subKey}`}
+                              >
+                                <span className="subcategory-header__label">
+                                  <span className="subcategory-header__name">
+                                    {sg.name}
+                                  </span>
+                                  <span className="subcategory-header__count">
+                                    {sg.items.length}
+                                  </span>
+                                </span>
+                                <svg
+                                  className="subcategory-header__chevron"
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 14 14"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  aria-hidden="true"
                                 >
-                                  <span>$ {food.cost}</span>
-                                  {food.orderType === 1 && (
-                                    <img
-                                      src={scooterRider}
-                                      alt="Delivery"
-                                      style={{
-                                        marginLeft: "5px",
-                                        width: "15px",
-                                        height: "15px",
-                                      }}
-                                    />
-                                  )}
-                                </div>
-                                <div
-                                  className="quantity-warpper"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <div className="right mb-1">
-                                    <QuantitySelector
-                                      food={food}
-                                      kitchen={kitchen}
-                                      selectedDate={pickupDates[food.id]}
-                                      size="small"
-                                      initialQuantity={cartQty}
-                                      minQuantity={0}
-                                      orderType={"GO_GRAB"}
-                                      selectedTime={pickupTimes[food.id]}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                              {getMaxCategoryId(food.foodCategory) === 8 &&
-                                calculateGroupOrderPercentage(food, quantitiesByItemName) !== null && (
-                                  <div
-                                    style={{
-                                      color: "#e74c3c",
-                                      fontSize: "13px",
-                                      fontWeight: "700",
-                                      marginTop: "4px",
-                                    }}
-                                  >
-                                    Group order filled:{" "}
-                                    {calculateGroupOrderPercentage(food, quantitiesByItemName)}%
-                                  </div>
-                                )}
-                              {(() => {
-                                const cartItem = getCartItem(food.id);
-                                return cartItem?.specialInstructions ? (
-                                  <div
-                                    className="text"
-                                    style={{
-                                      marginTop: "4px",
-                                      fontStyle: "italic",
-                                    }}
-                                  >
-                                    Special Instruction:{" "}
-                                    {cartItem.specialInstructions}
-                                  </div>
-                                ) : null;
-                              })()}
-                              {/* Hide DateTimePicker for category 8 items */}
-                              {getMaxCategoryId(food.foodCategory) !== 8 && (
-                                <div
-                                  className="pickup-time-section"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <DateTimePicker
-                                    food={food}
-                                    kitchen={kitchen}
-                                    orderType="GO_GRAB"
-                                    selectedDate={currentPickupDate}
-                                    selectedTime={currentPickupTime}
-                                    onDateChange={(newDate) => {
-                                      handleDateChange(food.id, newDate, false);
-                                    }}
-                                    onTimeChange={(newTime) => {
-                                      handleTimeChange(food.id, newTime, false);
-                                    }}
-                                    disabled={!food || !kitchen}
-                                    className="listing-page-picker"
-                                    dateLabel={
-                                      food.orderType === 1
-                                        ? "Delivery Date"
-                                        : "Pickup Date"
-                                    }
-                                    timeLabel={
-                                      food.orderType === 1
-                                        ? "Deliver Time"
-                                        : "Pickup Time"
-                                    }
-                                    isDeliveryMode={food.orderType === 1}
-                                    fulfillmentType={food.orderType}
+                                  <path
+                                    d="M3.5 5.25L7 8.75L10.5 5.25"
+                                    stroke="currentColor"
+                                    strokeWidth="1.6"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
                                   />
+                                </svg>
+                              </button>
+                              {expanded && (
+                                <div
+                                  id={`subcat-body-${subKey}`}
+                                  className="subcategory-body"
+                                >
+                                  <div className="menu-listing">
+                                    {sg.items.map((food) =>
+                                      renderGoGrabFoodCard(food),
+                                    )}
+                                  </div>
                                 </div>
                               )}
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="menu-listing">
+                        {group.items.map((food) => renderGoGrabFoodCard(food))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </>
           )}
 
