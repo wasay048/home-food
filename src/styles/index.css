@@ -1395,10 +1395,10 @@ body,
 }
 
 .menu-listing .menu-list .left .data .price {
-  font-size: 14px;
+  font-size: 18px;
   font-weight: bold;
   text-align: left;
-  color: #3fc045;
+  color: #000000;
 }
 .menu-listing .menu-list .quantity-warpper {
   flex: 0 0 auto;

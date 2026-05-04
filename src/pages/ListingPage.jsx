@@ -17,6 +17,7 @@ import {
   setKitchenId,
 } from "../store/slices/listingSlice";
 import { removeItemsFromOtherKitchens } from "../store/slices/cartSlice";
+import { setCurrentKitchen } from "../store/slices/foodSlice";
 import {
   setFoodCategories,
   setFoodCategoriesLoading,
@@ -63,7 +64,9 @@ export default function ListingPage() {
   const dispatch = useDispatch();
 
   // ✅ NEW: Get aggregated order quantities from Redux
-  const { quantitiesByItemName } = useSelector((state) => state.orderAggregation);
+  const { quantitiesByItemName } = useSelector(
+    (state) => state.orderAggregation,
+  );
 
   // ✅ If the user lands directly on /foods with no kitchen context in Redux,
   // seed the default kitchen instead of bouncing them back home. Any existing
@@ -73,7 +76,7 @@ export default function ListingPage() {
     if (!kitchenId) {
       console.log(
         "ℹ️ [ListingPage] No kitchenId in store, defaulting to",
-        DEFAULT_DIRECT_LANDING_KITCHEN_ID
+        DEFAULT_DIRECT_LANDING_KITCHEN_ID,
       );
       dispatch(setKitchenId(DEFAULT_DIRECT_LANDING_KITCHEN_ID));
     }
@@ -229,6 +232,9 @@ export default function ListingPage() {
       dispatch(removeItemsFromOtherKitchens(kitchenId));
 
       dispatch(setListingData(listingData));
+      // Seed food.currentKitchen so downstream pages (e.g. PaymentPage) work
+      // even when the user skips FoodDetailPage (direct /foods → /checkout).
+      dispatch(setCurrentKitchen(fullKitchen));
     } catch (error) {
       console.error("❌ [ListingPage] Error processing fresh data:", error);
     }
@@ -431,7 +437,12 @@ export default function ListingPage() {
     }
 
     return Object.values(groups).sort((a, b) => a.categoryId - b.categoryId);
-  }, [sortedGoGrabItems, foodCategories, getMaxCategoryId, quantitiesByItemName]);
+  }, [
+    sortedGoGrabItems,
+    foodCategories,
+    getMaxCategoryId,
+    quantitiesByItemName,
+  ]);
 
   // ✅ Build alphabet-grouped items per category (for letter headers)
   const alphabetGroupedItems = useMemo(() => {
@@ -842,7 +853,7 @@ export default function ListingPage() {
                 className="price"
                 style={{ display: "flex", alignItems: "center" }}
               >
-                <span>$ {food.cost}</span>
+                <span>${food.cost}</span>
                 {food.orderType === 1 && (
                   <img
                     src={scooterRider}
@@ -858,10 +869,8 @@ export default function ListingPage() {
               {isCat8 &&
                 calculateGroupOrderPercentage(food, quantitiesByItemName) !==
                   null && (
-                  <div className="group-order-chip" aria-label="Group order filled">
-                    <span className="group-order-chip__label">
-                      Group order filled:
-                    </span>{" "}
+                  <div className="group-order-chip" aria-label="Groupbuy">
+                    <span className="group-order-chip__label">Groupbuy:</span>{" "}
                     <span className="group-order-chip__value">
                       {calculateGroupOrderPercentage(
                         food,
@@ -1252,7 +1261,7 @@ export default function ListingPage() {
                                   alignItems: "center",
                                 }}
                               >
-                                <span>$ {food.cost}</span>
+                                <span>${food.cost}</span>
                                 {food.orderType === 1 && (
                                   <img
                                     src={scooterRider}
@@ -1281,7 +1290,9 @@ export default function ListingPage() {
                                     initialQuantity={cartQty}
                                     minQuantity={0}
                                     orderType={"PRE_ORDER"}
-                                    selectedTime={pickupTimes[`${food.id}_preorder`]}
+                                    selectedTime={
+                                      pickupTimes[`${food.id}_preorder`]
+                                    }
                                   />
                                 </div>
                               </div>

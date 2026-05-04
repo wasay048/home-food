@@ -184,6 +184,13 @@ const foodSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    // Allows non-FoodDetailPage flows (e.g. ListingPage direct landing) to seed
+    // currentKitchen so downstream pages like PaymentPage have what they need.
+    setCurrentKitchen: (state, action) => {
+      state.currentKitchen = action.payload
+        ? serializeFirestoreData(action.payload)
+        : null;
+    },
     clearAllFoodsError: (state) => {
       state.allFoodsError = null;
     },
@@ -318,6 +325,7 @@ export const {
   clearAllFoodsError,
   updateFoodInList,
   toggleLikeLocally,
+  setCurrentKitchen,
 } = foodSlice.actions;
 
 export default foodSlice.reducer;

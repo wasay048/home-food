@@ -1443,7 +1443,7 @@ export default function FoodDetailPage() {
                   marginBottom: "8px",
                 }}
               >
-                Group Order Filled: {calculateGroupOrderPercentage(food, quantitiesByItemName)}%
+                Groupbuy {calculateGroupOrderPercentage(food, quantitiesByItemName)}%
               </div>
             )}
 

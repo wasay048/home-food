@@ -869,9 +869,9 @@ export default function MyOrdersPage() {
                             {/* CASE 4: Group Progress */}
                             {displayCase === "group_progress" && (
                               <div className="group-progress">
-                                <span className="progress-label">Group Order</span>
+                                <span className="progress-label">Groupbuy</span>
                                 <span className="progress-value">
-                                Filled {calculateGroupOrderPercentage(foodItemsData[item.foodItemId], quantitiesByItemName) || 0}%
+                                {calculateGroupOrderPercentage(foodItemsData[item.foodItemId], quantitiesByItemName) || 0}%
                                 </span>
                                 {/* Show wholesale message only for default date - placed below the percentage */}
                                 {item.pickupDateString && ["01,01,2000", "01/01/2000"].includes(item.pickupDateString) && (
