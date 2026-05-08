@@ -147,3 +147,7 @@ export {chefSendBulkSms} from "./chefBulkSms.js";
 
 // Re-export SMS opt-in confirmation (sends confirmation SMS on user opt-in)
 export {smsOptinConfirmation} from "./smsOptinNotification.js";
+
+// Re-export generic SMS sender (callable from iOS — single-recipient,
+// caller-built message body; used for purchase summary, credit added, etc.)
+export {sendGenericSms} from "./genericSms.js";
