@@ -7,10 +7,11 @@ import "./AdminDashboard.css";
 import AdminOrdersTab from "./AdminOrdersTab";
 import AdminGroupOrderDebugTab from "./AdminGroupOrderDebugTab";
 import AdminItemsTab from "./AdminItemsTab";
+import AdminTransactionsTab from "./AdminTransactionsTab";
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("users"); // "users" | "orders" | "group-debug"
+  const [activeTab, setActiveTab] = useState("users"); // "users" | "orders" | "items" | "transactions" | "group-debug"
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -126,6 +127,12 @@ export default function AdminDashboardPage() {
             onClick={() => setActiveTab("items")}
           >
             Kitchen Items
+          </button>
+          <button
+            className={`admin-tab ${activeTab === "transactions" ? "active" : ""}`}
+            onClick={() => setActiveTab("transactions")}
+          >
+            Transactions
           </button>
           <button
             className={`admin-tab ${activeTab === "group-debug" ? "active" : ""}`}
@@ -282,6 +289,7 @@ export default function AdminDashboardPage() {
         )}
         {activeTab === "orders" && <AdminOrdersTab />}
         {activeTab === "items" && <AdminItemsTab />}
+        {activeTab === "transactions" && <AdminTransactionsTab />}
         {activeTab === "group-debug" && <AdminGroupOrderDebugTab />}
       </div>
     </div>

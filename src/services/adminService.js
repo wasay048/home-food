@@ -7,6 +7,11 @@ import {
   where,
   orderBy,
   limit,
+  updateDoc,
+  deleteDoc,
+  writeBatch,
+  serverTimestamp,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -331,6 +336,182 @@ export const getUserSummaryStats = async (userId) => {
     };
   } catch (error) {
     console.error("[AdminService] Error computing summary stats:", error);
+    throw error;
+  }
+};
+
+// ─── Balance Adjustment (Transactions) Management ───────────────────────────
+
+/**
+ * Fetch ALL balance adjustment (transaction) records, sorted by timestamp desc.
+ * For the admin Transactions tab — full CRUD over `balanceAdjustment`.
+ */
+export const getAllBalanceAdjustments = async () => {
+  try {
+    const adjRef = collection(db, "balanceAdjustment");
+    const snapshot = await getDocs(adjRef);
+
+    const txns = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    txns.sort((a, b) => {
+      const dateA = a.timestamp?.toDate
+        ? a.timestamp.toDate()
+        : new Date(a.timestamp || 0);
+      const dateB = b.timestamp?.toDate
+        ? b.timestamp.toDate()
+        : new Date(b.timestamp || 0);
+      return dateB - dateA;
+    });
+
+    return txns;
+  } catch (error) {
+    console.error("[AdminService] Error fetching balance adjustments:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update a single balance adjustment document. Only the listed fields are
+ * persisted to keep writes safe.
+ */
+export const updateBalanceAdjustment = async (id, updates) => {
+  if (!id) throw new Error("Transaction id is required");
+
+  const allowed = {};
+  if (updates.balanceSent !== undefined) {
+    const num = Number(updates.balanceSent);
+    if (Number.isNaN(num)) throw new Error("balanceSent must be a number");
+    allowed.balanceSent = num;
+  }
+  if (updates.senderUserID !== undefined) {
+    allowed.senderUserID = String(updates.senderUserID || "").trim();
+  }
+  if (updates.receiverUserID !== undefined) {
+    allowed.receiverUserID = String(updates.receiverUserID || "").trim();
+  }
+  if (updates.reason !== undefined) {
+    allowed.reason = updates.reason ? String(updates.reason) : null;
+  }
+  if (updates.timestamp instanceof Date) {
+    allowed.timestamp = Timestamp.fromDate(updates.timestamp);
+  }
+
+  allowed.lastEditedAt = serverTimestamp();
+  allowed.lastEditedBy = "admin";
+
+  try {
+    const ref = doc(db, "balanceAdjustment", id);
+    await updateDoc(ref, allowed);
+    const fresh = await getDoc(ref);
+    return { id: fresh.id, ...fresh.data() };
+  } catch (error) {
+    console.error("[AdminService] Error updating balance adjustment:", error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a balance adjustment document.
+ */
+export const deleteBalanceAdjustment = async (id) => {
+  if (!id) throw new Error("Transaction id is required");
+  try {
+    await deleteDoc(doc(db, "balanceAdjustment", id));
+    return true;
+  } catch (error) {
+    console.error("[AdminService] Error deleting balance adjustment:", error);
+    throw error;
+  }
+};
+
+/**
+ * Delete many balance adjustment documents in batched writes.
+ * Firestore caps a batch at 500 operations, so we chunk automatically.
+ * Returns { deleted, failed } counts.
+ */
+export const deleteBalanceAdjustmentsBulk = async (ids) => {
+  const list = (ids || []).filter(Boolean);
+  if (list.length === 0) return { deleted: 0, failed: 0 };
+
+  const CHUNK = 450; // safely below Firestore's 500-op batch limit
+  let deleted = 0;
+  let failed = 0;
+
+  for (let i = 0; i < list.length; i += CHUNK) {
+    const slice = list.slice(i, i + CHUNK);
+    const batch = writeBatch(db);
+    slice.forEach((id) => {
+      batch.delete(doc(db, "balanceAdjustment", id));
+    });
+    try {
+      await batch.commit();
+      deleted += slice.length;
+    } catch (error) {
+      console.error(
+        "[AdminService] Bulk delete batch failed:",
+        error,
+        "ids:",
+        slice,
+      );
+      failed += slice.length;
+    }
+  }
+
+  if (failed > 0 && deleted === 0) {
+    throw new Error(`Failed to delete ${failed} transaction(s).`);
+  }
+  return { deleted, failed };
+};
+
+/**
+ * Fetch a lightweight map of every kitchen → identifying user ID.
+ * The collection's senderUserID / receiverUserID fields are user IDs, but
+ * since each kitchen is owned by one user account, we expose kitchens as
+ * a friendlier filter on the admin Transactions tab.
+ */
+export const getKitchenDirectory = async () => {
+  try {
+    const kitchensRef = collection(db, "kitchens");
+    const snap = await getDocs(kitchensRef);
+    return snap.docs.map((d) => {
+      const data = d.data() || {};
+      return {
+        id: d.id,
+        name: data.name || data.kitchenName || "Unnamed Kitchen",
+        ownerId: data.ownerId || data.ownerID || null,
+        // The user ID associated with this kitchen for transaction matching.
+        // Most kitchens use kitchen.id === userId; fall back to ownerId.
+        userId: d.id || data.ownerId || data.ownerID || null,
+        city: data.city || null,
+      };
+    });
+  } catch (error) {
+    console.error("[AdminService] Error fetching kitchens directory:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch a lightweight map of every account → display name.
+ * Used by AdminTransactionsTab to resolve sender/receiver IDs to names.
+ */
+export const getAccountsDirectory = async () => {
+  try {
+    const accountsRef = collection(db, "accounts");
+    const snap = await getDocs(accountsRef);
+    const map = {};
+    snap.docs.forEach((d) => {
+      const data = d.data() || {};
+      map[d.id] = {
+        id: d.id,
+        name: data.name || data.wechatNickname || data.email || null,
+        email: data.email || null,
+        cellPhone: data.cellPhone || null,
+      };
+    });
+    return map;
+  } catch (error) {
+    console.error("[AdminService] Error fetching accounts directory:", error);
     throw error;
   }
 };
