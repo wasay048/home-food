@@ -26,11 +26,11 @@
 // Auth: caller must be signed in (request.auth required).
 // ============================================================
 
-import {onCall, HttpsError} from "firebase-functions/v2/https";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
-import {initializeApp, getApps} from "firebase-admin/app";
-import {getFirestore} from "firebase-admin/firestore";
-import {sendSMS} from "./smsService.js";
+import { initializeApp, getApps } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+import { sendSMS } from "./smsService.js";
 
 if (getApps().length === 0) {
   initializeApp();
@@ -45,7 +45,7 @@ function maskPhone(phone) {
 }
 
 export const sendGenericSms = onCall(
-  {region: "us-central1"},
+  { region: "us-central1" },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
@@ -54,7 +54,7 @@ export const sendGenericSms = onCall(
       );
     }
 
-    const {phone, message, eventType, userId, metadata} = request.data || {};
+    const { phone, message, eventType, userId, metadata } = request.data || {};
 
     if (!phone || typeof phone !== "string" || phone.trim().length === 0) {
       throw new HttpsError(
@@ -86,9 +86,9 @@ export const sendGenericSms = onCall(
 
     const callerUid = request.auth.uid;
     const trimmedMessage = message.trim();
-    const formattedPhone = phone.startsWith("+") ?
-      phone :
-      `+1${phone.replace(/\D/g, "")}`;
+    const formattedPhone = phone.startsWith("+")
+      ? phone
+      : `+1${phone.replace(/\D/g, "")}`;
 
     logger.info("generic_sms.start", {
       callerUid,
@@ -144,6 +144,6 @@ export const sendGenericSms = onCall(
       sid: result.sid,
     });
 
-    return {success: true, sid: result.sid};
+    return { success: true, sid: result.sid };
   },
 );
