@@ -773,6 +773,101 @@ export default function ListingPage() {
     cartItems.map((item) => item.foodId),
   );
 
+  // ✅ "Pickup Now" inventory list — INTENTIONALLY isolated from goGrabItems
+  // and the existing numAvailable-based flow. Derives directly from the raw
+  // `allFoods` fetched by useKitchenWithFoods, filters by the dedicated
+  // `stock` field (>0), and applies its own price/stock formulas keyed on
+  // variableWeight + poundsInOneOrder. Touching this memo cannot affect the
+  // categorized menu sections rendered below.
+  const pickupNowItems = useMemo(() => {
+    if (!allFoods || allFoods.length === 0 || !kitchenId) return [];
+
+    const stripPrefix = (name) => {
+      let cleaned = (name || "").trim();
+      while (cleaned.startsWith("付款预订")) {
+        cleaned = cleaned.slice(4).trim();
+      }
+      return cleaned;
+    };
+    const isVariableWeight = (food) =>
+      food?.variableWeight === 1 || food?.variableWeight === true;
+    const formatNum = (n) => {
+      const rounded = Math.round(n * 100) / 100;
+      return Number.isInteger(rounded) ? `${rounded}` : `${rounded}`;
+    };
+
+    return allFoods
+      .filter((food) => {
+        if (!food || food.deActiveItem) return false;
+        if (food.kitchenId !== kitchenId) return false;
+        const stock = Number(food.stock) || 0;
+        return stock > 0;
+      })
+      .map((food) => {
+        const stock = Number(food.stock) || 0;
+        const pounds = Number(food.poundsInOneOrder) || 0;
+        const cost = Number(food.cost) || 0;
+        const variable = isVariableWeight(food);
+
+        let priceText;
+        if (variable && pounds > 0) {
+          priceText = `$${formatNum(cost / pounds)}/lb`;
+        } else {
+          priceText = `$${formatNum(cost)}`;
+        }
+
+        let stockText;
+        if (variable && pounds > 0) {
+          stockText = `${formatNum(pounds * stock)}lb`;
+        } else {
+          stockText = `${stock}`;
+        }
+
+        return {
+          id: food.id,
+          displayName: stripPrefix(food.name),
+          priceText,
+          stockText,
+        };
+      });
+  }, [allFoods, kitchenId]);
+
+  const [copyFeedback, setCopyFeedback] = useState("");
+
+  const handleCopyInventory = useCallback(async () => {
+    if (!pickupNowItems || pickupNowItems.length === 0) return;
+    const origin =
+      typeof window !== "undefined" && window.location
+        ? window.location.origin
+        : "";
+    const header = `${kitchen?.name || "Kitchen"} — Pickup Now (No Preorder Needed)`;
+    const lines = pickupNowItems.map((it) => {
+      const link = `${origin}/share?kitchenId=${kitchen?.id || ""}&foodId=${it.id}&pickupNow=1`;
+      return `${it.displayName} — ${it.priceText} (${it.stockText} in stock)\n${link}`;
+    });
+    const text = [header, ...lines].join("\n\n");
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopyFeedback("Copied!");
+      setTimeout(() => setCopyFeedback(""), 1500);
+    } catch (err) {
+      console.error("[ListingPage] Copy inventory failed:", err);
+      setCopyFeedback("Copy failed");
+      setTimeout(() => setCopyFeedback(""), 1500);
+    }
+  }, [pickupNowItems, kitchen]);
+
   // ✅ When a search is active, compute whether any section will render
   // so we can show a clear empty-state instead of a blank page.
   const hasSearchResults = useMemo(() => {
@@ -1045,13 +1140,69 @@ export default function ListingPage() {
                 />
               </svg>
             </button>
-            <div className="listing-page-title">More offers from HomeFresh</div>
+            <div className="listing-page-title">
+              {kitchen?.name ? `${kitchen.name} on HomeFresh` : "HomeFresh"}
+            </div>
           </div>
 
-          {/* Kitchen Info */}
-          <h2 className="small-title mb-2">
-            {kitchen?.name || "Coco&apos;s Kitchen"}
-          </h2>
+          {/* Chef / kitchen info row: avatar + chef name + MEHKO license on the
+              left; "My Orders" and "My Balance" pill buttons on the right.
+              Buttons mirror the same nav targets used on FoodDetailPage. */}
+          <div className="kitchen-info-row">
+            <div className="kitchen-info-left">
+              <div className="kitchen-info-avatar">
+                {kitchen?.imageURL ? (
+                  <img
+                    src={kitchen.imageURL}
+                    alt={kitchen?.name || "Chef"}
+                    onError={(e) => {
+                      e.target.src = "/src/assets/images/product.png";
+                    }}
+                  />
+                ) : (
+                  <div className="kitchen-info-avatar__placeholder" aria-hidden="true" />
+                )}
+              </div>
+              <div className="kitchen-info-text">
+                <div className="kitchen-info-chef">
+                  {kitchen?.chefName || kitchen?.name || "Chef"}
+                </div>
+                <div className="kitchen-info-license">
+                  {(() => {
+                    const raw = kitchen?.dateApproved;
+                    const year = raw ? new Date(raw).getFullYear() : null;
+                    return year && !Number.isNaN(year)
+                      ? `MEHKO licensed since ${year}`
+                      : "MEHKO licensed";
+                  })()}
+                </div>
+              </div>
+            </div>
+            <div className="kitchen-info-actions">
+              <button
+                type="button"
+                className="kitchen-info-btn kitchen-info-btn--orders"
+                onClick={() =>
+                  navigate("/my-orders", {
+                    state: { from: location.pathname + location.search },
+                  })
+                }
+              >
+                My Orders
+              </button>
+              <button
+                type="button"
+                className="kitchen-info-btn kitchen-info-btn--balance"
+                onClick={() =>
+                  navigate("/my-balance", {
+                    state: { from: location.pathname + location.search },
+                  })
+                }
+              >
+                My Balance
+              </button>
+            </div>
+          </div>
 
           {/* iOS-first search bar */}
           <div className="listing-search-bar">
@@ -1080,7 +1231,7 @@ export default function ListingPage() {
               autoCapitalize="none"
               spellCheck="false"
               className="listing-search-bar__input"
-              placeholder="Search dishes, categories…"
+              placeholder="Search"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               aria-label="Search food items"
@@ -1111,6 +1262,73 @@ export default function ListingPage() {
               </button>
             )}
           </div>
+
+          {/* Pickup Now (No Preorder Needed) — flat inventory table of items
+              with stock > 0, sourced from goGrabItems. Rendered above the
+              categorized menu cards; existing sections below are untouched. */}
+          {pickupNowItems.length > 0 && (
+            <div className="pickup-now-section">
+              <div className="pickup-now-header">
+                <h2 className="small-title pickup-now-title">
+                  Pickup Now{" "}
+                  <span className="pickup-now-subtitle">
+                    (No Preorder Needed)
+                  </span>
+                </h2>
+                <button
+                  type="button"
+                  className="pickup-now-copy-btn"
+                  onClick={handleCopyInventory}
+                  aria-label="Copy inventory list"
+                >
+                  {copyFeedback || "Copy"}
+                </button>
+              </div>
+              <div className="pickup-now-table">
+                <div className="pickup-now-row pickup-now-row--head">
+                  <span className="pickup-now-col pickup-now-col--name" />
+                  <span className="pickup-now-col pickup-now-col--price">
+                    Price
+                  </span>
+                  <span className="pickup-now-col pickup-now-col--stock">
+                    In Stock
+                  </span>
+                </div>
+                {pickupNowItems.map((item) => (
+                  <div key={item.id} className="pickup-now-row">
+                    <span
+                      className="pickup-now-col pickup-now-col--name pickup-now-col--clickable"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() =>
+                        window.open(
+                          `/share?kitchenId=${kitchen?.id}&foodId=${item.id}&pickupNow=1`,
+                          "_blank",
+                        )
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          window.open(
+                            `/share?kitchenId=${kitchen?.id}&foodId=${item.id}&pickupNow=1`,
+                            "_blank",
+                          );
+                        }
+                      }}
+                    >
+                      {item.displayName}
+                    </span>
+                    <span className="pickup-now-col pickup-now-col--price">
+                      {item.priceText}
+                    </span>
+                    <span className="pickup-now-col pickup-now-col--stock">
+                      {item.stockText}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Go & Grab Section - Grouped by Category */}
           {groupedGoGrabItems.length > 0 && (

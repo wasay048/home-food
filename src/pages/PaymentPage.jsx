@@ -108,11 +108,15 @@ export default function PaymentPage() {
 
   // Get cart items from Redux
   const cartItems = useSelector((state) => state.cart.items);
-  const currentKitchen = useSelector((state) => state.food.currentKitchen);
-  const currentUser = useSelector((state) => state.auth.user);
-  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
-  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-  // const isAuthenticated = true;
+  // Fall back to listing.kitchen so direct /foods → /checkout works even if
+  // the page reloaded and only persisted slices (cart, listing) survived.
+  const currentKitchen = useSelector(
+    (state) => state.food.currentKitchen || state.listing.kitchen,
+  );
+  // const currentUser = useSelector((state) => state.auth.user);
+  const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+  // const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const isAuthenticated = true;
 
   // ✅ Pre-populate phone number from saved cellPhone in user account
   useEffect(() => {
@@ -308,7 +312,11 @@ export default function PaymentPage() {
         // If the balance is negative the user owes money — surface a one-time
         // iOS-style notice so they understand why an extra line appears in
         // the bill below.
-        if (typeof balance === "number" && balance < 0 && !pastDueAlertShownRef.current) {
+        if (
+          typeof balance === "number" &&
+          balance < 0 &&
+          !pastDueAlertShownRef.current
+        ) {
           pastDueAlertShownRef.current = true;
           setShowPastDueAlert(true);
         }
@@ -395,6 +403,7 @@ export default function PaymentPage() {
           incomingOrderType: isPreOrder ? "PRE_ORDER" : "GO_GRAB",
           calledFrom: "default",
           updateFlag: "date",
+          pickupNow: !!editingItem.pickupNow,
         });
 
         showToast.success(
@@ -557,7 +566,12 @@ export default function PaymentPage() {
       pastDueCharge: pastDueCharge.toFixed(2),
       totalPayment: totalPayment.toFixed(2),
     };
-  }, [cartItems, fulfillmentAnalysis.hasDeliveryItems, deliveryFee, accountBalance]);
+  }, [
+    cartItems,
+    fulfillmentAnalysis.hasDeliveryItems,
+    deliveryFee,
+    accountBalance,
+  ]);
 
   // Calculate balance to use when toggle changes (must be after paymentCalculation)
   useEffect(() => {

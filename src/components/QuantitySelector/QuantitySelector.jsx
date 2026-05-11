@@ -16,6 +16,11 @@ export const QuantitySelector = ({
   disabled = false,
   orderType,
   selectedTime,
+  // ✅ Optional Pickup Now flag — when true, availability validates
+  // against food.stock instead of food.numAvailable. Default false keeps
+  // every existing caller (Listing, FoodDetail, Order, Payment) byte-
+  // identical when the flag isn't passed.
+  pickupNow = false,
 }) => {
   console.log("selectedDate in QuantitySelector:", selectedDate);
   // ✅ USE: Get functions from useGenericCart hook
@@ -43,9 +48,18 @@ export const QuantitySelector = ({
         kitchen,
         selectedDate,
         maxQuantity,
-        orderType
+        orderType,
+        pickupNow
       ),
-    [calculateAvailability, food, kitchen, selectedDate, maxQuantity, orderType]
+    [
+      calculateAvailability,
+      food,
+      kitchen,
+      selectedDate,
+      maxQuantity,
+      orderType,
+      pickupNow,
+    ]
   );
 
   // ✅ CRITICAL FIX: Only call cart operations, don't call parent callback to prevent double operations
@@ -98,6 +112,7 @@ export const QuantitySelector = ({
         specialInstructions: "",
         incomingOrderType: orderType,
         calledFrom: "QuantitySelector",
+        pickupNow,
         // isPreOrder: availabilityStatus.orderType === "PRE_ORDER",
       });
 
@@ -114,6 +129,7 @@ export const QuantitySelector = ({
       selectedDate,
       handleCartQuantityChange,
       orderType,
+      pickupNow,
     ]
   );
 

@@ -294,6 +294,13 @@ export default function FoodDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // ✅ Pickup Now mode: opt-in via `?pickupNow=1` set by the Pickup Now
+  // inventory list on ListingPage. When ON, the availability number sources
+  // from `food.stock` instead of `food.numAvailable` — this is the *only*
+  // detail-page behavior the flag changes; every other code path is byte-
+  // identical to before the flag was introduced.
+  const isPickupNowMode = searchParams.get("pickupNow") === "1";
+
   const currentUser = useSelector((state) => state.auth.user);
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
@@ -607,9 +614,11 @@ export default function FoodDetailPage() {
 
   // Determine order type based on availability and selected date
   const orderType = React.useMemo(() => {
-    // Get current availability
-    const currentAvailability =
-      food?.availability?.numAvailable || food?.numAvailable || 0;
+    // Pickup Now items source availability from `stock`; everything else
+    // keeps the existing numAvailable behavior.
+    const currentAvailability = isPickupNowMode
+      ? Number(food?.stock) || 0
+      : food?.availability?.numAvailable || food?.numAvailable || 0;
 
     // PRIORITY: If food has availability > 0, it's Go&Grab regardless of date
     if (currentAvailability > 0 && !selectedDate) {
@@ -622,7 +631,7 @@ export default function FoodDetailPage() {
     }
 
     return "GO_GRAB"; // Default fallback
-  }, [selectedDate, food, kitchen]);
+  }, [selectedDate, food, kitchen, isPickupNowMode]);
 
   const cartQuantity = getCartQuantity(
     foodId,
@@ -633,12 +642,17 @@ export default function FoodDetailPage() {
   const getCurrentAvailability = useMemo(() => {
     let currentAvailability = 0;
     if (orderType === "GO_GRAB") {
-      // For Go&Grab: Check direct food availability
-      currentAvailability =
-        food?.availability?.numAvailable ||
-        food?.numAvailable ||
-        food?.numberOfAvailableItem ||
-        0;
+      if (isPickupNowMode) {
+        // Pickup Now: dedicated stock field, ignored elsewhere on this page.
+        currentAvailability = Number(food?.stock) || 0;
+      } else {
+        // For Go&Grab: Check direct food availability
+        currentAvailability =
+          food?.availability?.numAvailable ||
+          food?.numAvailable ||
+          food?.numberOfAvailableItem ||
+          0;
+      }
     } else if (orderType === "PRE_ORDER") {
       // For Pre-Order: Check availability in kitchen's preorder schedule
       const scheduleForDate = kitchen?.preorderSchedule?.dates?.[pickupDate];
@@ -659,7 +673,7 @@ export default function FoodDetailPage() {
     });
 
     return currentAvailability;
-  }, [orderType, pickupDate, food, kitchen]);
+  }, [orderType, pickupDate, food, kitchen, isPickupNowMode]);
 
   useEffect(() => {
     if (existingCartItem) {
@@ -982,13 +996,14 @@ export default function FoodDetailPage() {
             newQuantity: getCurrentAvailability === 0 ? 0 : 1, // Default quantity
             // currentQuantity: 0,
             // ✅ Use default date for category 8, otherwise use normal date
-            selectedDate: isCategory8 
-              ? category8DefaultDate 
+            selectedDate: isCategory8
+              ? category8DefaultDate
               : (pickupDate || dayjs().format("YYYY-MM-DD")),
             selectedTime: isCategory8 ? category8DefaultTime : pickupTime,
             specialInstructions: "",
             incomingOrderType: orderType,
             calledFrom: "direct-landing-useEffect",
+            pickupNow: isPickupNowMode,
           });
         }, 100); // Small delay to break the update cycle
 
@@ -1429,6 +1444,7 @@ export default function FoodDetailPage() {
                 size="large"
                 className="food-detail-quantity"
                 orderType={orderType}
+                pickupNow={isPickupNowMode}
               />
             </div>
 
@@ -1497,6 +1513,7 @@ export default function FoodDetailPage() {
                     incomingOrderType: orderType,
                     calledFrom: "FoodDetailPage date picker",
                     updateFlag: "date",
+                    pickupNow: isPickupNowMode,
                   });
                 }}
                 onTimeChange={(newTime) => {
@@ -1512,6 +1529,7 @@ export default function FoodDetailPage() {
                     incomingOrderType: orderType,
                     calledFrom: "FoodDetailPage time picker",
                     updateFlag: "date",
+                    pickupNow: isPickupNowMode,
                   });
                 }}
                 disabled={!food || !kitchen}
@@ -1583,13 +1601,14 @@ export default function FoodDetailPage() {
                       kitchen,
                       newQuantity: cartQuantity || 1,
                       // ✅ Use default date for category 8, otherwise use normal date
-                      selectedDate: isCategory8 
-                        ? category8DefaultDate 
+                      selectedDate: isCategory8
+                        ? category8DefaultDate
                         : (pickupDate || dayjs().format("YYYY-MM-DD")),
                       selectedTime: isCategory8 ? category8DefaultTime : pickupTime,
                       specialInstructions,
                       incomingOrderType: orderType,
                       calledFrom: "FoodDetailPage Add to Cart button",
+                      pickupNow: isPickupNowMode,
                     });
                   }
                   localStorage.setItem("skipListing", "true");
@@ -1630,6 +1649,7 @@ export default function FoodDetailPage() {
                       selectedTime: pickupTime,
                       specialInstructions,
                       incomingOrderType: orderType,
+                      pickupNow: isPickupNowMode,
                     });
                   }
 

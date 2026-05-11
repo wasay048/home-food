@@ -428,6 +428,7 @@ export default function OrderPage() {
                                 initialQuantity={cartQty}
                                 minQuantity={0}
                                 orderType="GO_GRAB"
+                                pickupNow={!!item.pickupNow}
                               />
                             </div>
                             {/* Hide date/time for category 8 items */}
@@ -540,6 +541,7 @@ export default function OrderPage() {
                                   initialQuantity={cartQty}
                                   minQuantity={0}
                                   orderType="PRE_ORDER"
+                                  pickupNow={!!item.pickupNow}
                                 />
                               </div>
                               {/* Hide date/time for category 8 items */}

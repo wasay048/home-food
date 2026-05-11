@@ -18,7 +18,8 @@ export const useGenericCart = () => {
       kitchen,
       selectedDate = null,
       maxQuantity = 99,
-      incomingOrderType = null
+      incomingOrderType = null,
+      pickupNow = false
     ) => {
       if (!incomingOrderType) {
         return;
@@ -37,9 +38,12 @@ export const useGenericCart = () => {
 
       const today = dayjs().startOf("day");
 
-      // Get current Go&Grab availability
-      const numAvailable =
-        food.availability?.numAvailable || food.numAvailable || 0;
+      // Get current Go&Grab availability.
+      // ✅ Pickup Now items source from the dedicated `stock` field; every
+      // other flow falls through to the legacy numAvailable behavior.
+      const numAvailable = pickupNow
+        ? Number(food.stock) || 0
+        : food.availability?.numAvailable || food.numAvailable || 0;
 
       // CASE 2: Go&Grab items with availability > 0 (HIGHEST PRIORITY)
       // This case ignores date completely - if items are available, it's Go&Grab
@@ -434,6 +438,7 @@ export const useGenericCart = () => {
       calledFrom = "default",
       updateFlag = "combo",
       fulfillmentType = null, // 1 = delivery, 2 = pickup, null = pickup (default)
+      pickupNow = false, // ✅ When true, availability validates against food.stock
     }) => {
       try {
         // ✅ Helper function to get max category ID
@@ -468,7 +473,8 @@ export const useGenericCart = () => {
           kitchen,
           selectedDate,
           99,
-          incomingOrderType
+          incomingOrderType,
+          pickupNow
         );
         if (!availability) {
           console.log("🔥 Missing availability data");
@@ -569,6 +575,10 @@ export const useGenericCart = () => {
               foodCategory: food?.foodCategory, // Save food category for filtering
               poundsInOneOrder: food?.poundsInOneOrder,
               variableWeight: food?.variableWeight,
+              // ✅ Snapshot the stock value so Pickup Now items can still
+              // validate quantity in OrderPage/PaymentPage where the live
+              // food doc isn't directly available.
+              stock: food?.stock,
             },
             kitchen: {
               id: kitchen.id,
@@ -583,6 +593,11 @@ export const useGenericCart = () => {
             orderType,
             updateFlag: updateFlag,
             fulfillmentType: itemFulfillmentType,
+            // ✅ Stamp the Pickup Now flag onto the cart item so downstream
+            // pages (Order, Payment) keep validating against `stock` instead
+            // of `numAvailable`, and so placeOrder can decrement the right
+            // field. Defaults to false for every existing flow.
+            pickupNow: !!pickupNow,
           };
           console.log("Adding new cart item:", cartItem);
           console.log("orderType", orderType);
