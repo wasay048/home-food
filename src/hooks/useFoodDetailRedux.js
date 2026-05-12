@@ -392,7 +392,13 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
   }, [dispatch, foodId, kitchenId, food, user?.id]);
 
   // Computed values
-  const loading = foodLoading || isCurrentKitchenStatsLoading;
+  // Only gate the spinner on the primary food fetch. Kitchen stats are an
+  // auxiliary background fetch — `reviewStats` from fetchFoodDetail already
+  // populates the displayed rating, and `currentKitchenStats` is only a
+  // fallback. Including isCurrentKitchenStatsLoading here previously kept the
+  // page spinner up forever when getKitchenAllReviews (kitchens/{id}/reviews
+  // subcollection query) hung on a specific kitchen in the WeChat webview.
+  const loading = foodLoading;
   const error = foodError;
 
   // Use Redux review stats or fallback to kitchen stats
