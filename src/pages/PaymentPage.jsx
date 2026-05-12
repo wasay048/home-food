@@ -113,10 +113,10 @@ export default function PaymentPage() {
   const currentKitchen = useSelector(
     (state) => state.food.currentKitchen || state.listing.kitchen,
   );
-  // const currentUser = useSelector((state) => state.auth.user);
-  const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
-  // const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-  const isAuthenticated = true;
+  const currentUser = useSelector((state) => state.auth.user);
+  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  // const isAuthenticated = true;
 
   // ✅ Pre-populate phone number from saved cellPhone in user account
   useEffect(() => {
