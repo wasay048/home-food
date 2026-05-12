@@ -12,14 +12,11 @@ import { AuthProvider } from "./context/AuthContext";
 
 import "./styles/index.css";
 
-// vConsole — Tencent's in-page DevTools panel. Hook console.* BEFORE anything
-// else runs so early logs (Firebase init, Sentry init, route mount) are captured.
-// Auto-enables inside WeChat's in-app browser, and on any URL with ?debug=1
-// for ad-hoc inspection from a normal browser. Tap the floating "vConsole"
-// button on the page to open Log / Network / Storage / System tabs.
-const enableVConsole =
-  /MicroMessenger/i.test(navigator.userAgent) ||
-  /[?&]debug=1\b/.test(window.location.search);
+// vConsole — Tencent's in-page DevTools panel. Hidden from end users in
+// production; opt-in via `?debug=1` on any URL when we need to inspect a
+// live WeChat session again. Package stays installed so re-enabling is a
+// one-line condition change, no rebuild of dependencies.
+const enableVConsole = /[?&]debug=1\b/.test(window.location.search);
 if (enableVConsole) {
   new VConsole();
 }
