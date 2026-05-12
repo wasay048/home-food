@@ -358,17 +358,18 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
   }, [dispatch]);
 
   // Effects
+  // Only depend on the URL params here. The three load* callbacks' own deps
+  // include slice state that mutates as a result of dispatching (e.g.
+  // kitchenStatsLoading[kitchenId]), so listing them here previously caused
+  // an infinite re-dispatch loop — fetchFoodDetail kept entering `pending`
+  // and the FoodDetailPage spinner never settled. Sentry breadcrumbs in
+  // WeChat confirmed [Complete result] firing 4+ times in 15ms.
   useEffect(() => {
     loadFoodDetail();
     loadKitchenStats();
     loadFoodReviews();
-
-    // Cleanup on unmount
-    return () => {
-      // Optional: Clear data when component unmounts
-      // clearData();
-    };
-  }, [loadFoodDetail, loadKitchenStats, loadFoodReviews]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [foodId, kitchenId]);
 
   // Check like status when food loads and user is authenticated
   useEffect(() => {
@@ -391,7 +392,13 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
   }, [dispatch, foodId, kitchenId, food, user?.id]);
 
   // Computed values
-  const loading = foodLoading || isCurrentKitchenStatsLoading;
+  // Only gate the spinner on the primary food fetch. Kitchen stats are an
+  // auxiliary background fetch — `reviewStats` from fetchFoodDetail already
+  // populates the displayed rating, and `currentKitchenStats` is only a
+  // fallback. Including isCurrentKitchenStatsLoading here previously kept the
+  // page spinner up forever when getKitchenAllReviews (kitchens/{id}/reviews
+  // subcollection query) hung on a specific kitchen in the WeChat webview.
+  const loading = foodLoading;
   const error = foodError;
 
   // Use Redux review stats or fallback to kitchen stats

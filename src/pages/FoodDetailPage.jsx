@@ -33,6 +33,7 @@ import { setWeChatUser } from "../store/slices/authSlice";
 import { db } from "../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { configureWeChatShare } from "../utils/wechatShare";
+import * as Sentry from "@sentry/react";
 
 // ✅ Helper function to get max category ID from comma-separated string (e.g., "5, 7" -> 7)
 const getMaxCategoryId = (foodCategory) => {
@@ -404,6 +405,10 @@ export default function FoodDetailPage() {
         }
       } catch (error) {
         console.error("❌ [Migration] Error:", error);
+        Sentry.captureException(error, {
+          tags: { page: "FoodDetailPage", op: "migrateUserId" },
+          extra: { email: currentUser?.email },
+        });
         // Don't throw - fail silently to prevent app crash
         // Mark as checked to prevent repeated attempts
         sessionStorage.setItem(migrationKey, "error");
@@ -537,6 +542,67 @@ export default function FoodDetailPage() {
     toggleLike,
     loadFoodDetail,
   } = useFoodDetailRedux(foodId, kitchenId);
+
+  // Sentry: log a breadcrumb on mount with the URL params we received, so
+  // every captured event from this page carries the originating context.
+  useEffect(() => {
+    Sentry.addBreadcrumb({
+      category: "food-detail",
+      level: "info",
+      message: "FoodDetailPage mounted",
+      data: {
+        kitchenId,
+        foodId,
+        selectedDate,
+        toggle,
+        url: window.location.href,
+        referrer: document.referrer || "(none)",
+        isWeChat: /MicroMessenger/i.test(navigator.userAgent),
+      },
+    });
+    // mount-only on purpose
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sentry: trace how loading/food/error evolve. If the loader hangs, the
+  // breadcrumb stream tells us exactly which transition was the last one.
+  useEffect(() => {
+    Sentry.addBreadcrumb({
+      category: "food-detail",
+      level: error ? "error" : "info",
+      message: `state: loading=${loading} hasFood=${!!food} hasKitchen=${!!kitchen} hasError=${!!error}`,
+      data: { error: error || null },
+    });
+  }, [loading, food, kitchen, error]);
+
+  // Sentry: watchdog — if we're still on the loader after 10s, ship an event
+  // so we can see who's stuck (WeChat vs normal browser) and what state we
+  // were in at the time. Cleared as soon as loading flips false.
+  useEffect(() => {
+    if (!loading) return;
+    const t = setTimeout(() => {
+      Sentry.captureMessage("FoodDetailPage: loader stuck >10s", {
+        level: "warning",
+        tags: {
+          page: "FoodDetailPage",
+          stuck_loader: "true",
+          is_wechat: /MicroMessenger/i.test(navigator.userAgent)
+            ? "yes"
+            : "no",
+        },
+        extra: {
+          kitchenId: kitchenId || "(missing)",
+          foodId: foodId || "(missing)",
+          url: window.location.href,
+          referrer: document.referrer || "(none)",
+          hasFood: !!food,
+          hasKitchen: !!kitchen,
+          error: error || null,
+        },
+      });
+    }, 10000);
+    return () => clearTimeout(t);
+  }, [loading, kitchenId, foodId, food, kitchen, error]);
 
   // Pull-to-refresh state
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -1046,6 +1112,9 @@ export default function FoodDetailPage() {
         console.log("📂 [FoodCategories] Background fetch complete:", categories.length, "categories");
       } catch (error) {
         console.error("📂 [FoodCategories] Background fetch error:", error);
+        Sentry.captureException(error, {
+          tags: { page: "FoodDetailPage", op: "fetchFoodCategories" },
+        });
         dispatch(setFoodCategoriesLoading(false));
       }
     };
@@ -1185,6 +1254,10 @@ export default function FoodDetailPage() {
       dispatch(setListingData(listingData));
     } catch (error) {
       console.error("❌ [Listing] Error processing data:", error);
+      Sentry.captureException(error, {
+        tags: { page: "FoodDetailPage", op: "processListingData" },
+        extra: { kitchenId, foodCount: allFoods?.length || 0 },
+      });
       dispatch(setListingLoading(false));
     }
   }, [fullKitchen, allFoods, kitchenId, dispatch]);
