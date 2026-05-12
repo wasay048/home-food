@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import {
   getAnalytics,
@@ -30,14 +30,26 @@ let firebaseApp, auth, db, storage, analytics, analyticsPromise, remoteConfig;
 if (!firebaseDisabled) {
   firebaseApp = getApps().length ? getApps()[0] : initializeApp(config);
   auth = getAuth(firebaseApp);
-  db = getFirestore(firebaseApp);
+
+  // Detect WeChat browser early — its in-app webview (X5/TBS on Android,
+  // restricted WKWebView on iOS) cannot complete Firestore's default
+  // WebChannel/bidi-streaming requests, so getDoc/getDocs hang forever.
+  // Force long-polling for WeChat, auto-detect everywhere else.
+  const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+  db = initializeFirestore(
+    firebaseApp,
+    isWeChat
+      ? { experimentalForceLongPolling: true }
+      : { experimentalAutoDetectLongPolling: true }
+  );
+  console.log(
+    "🔧 [Firestore] Transport:",
+    isWeChat ? "forced long-polling (WeChat)" : "auto-detect long-polling"
+  );
   storage = getStorage(firebaseApp);
 
   // Initialize Remote Config
   remoteConfig = getRemoteConfig(firebaseApp);
-
-  // Detect WeChat browser for shorter cache interval
-  const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
   const isDevelopment =
     import.meta.env.DEV || import.meta.env.MODE === "development";
 

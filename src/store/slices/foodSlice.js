@@ -7,33 +7,60 @@ import {
 import { addLike, removeLike, checkUserLike } from "../../services/likeService";
 import { serializeFirestoreData } from "../../utils/firestoreSerializer";
 
+// Caps how long we wait for Firestore before surfacing an error.
+// Set so the WeChat in-app webview can't leave the page stuck on a loader
+// if the network or transport silently hangs.
+const FOOD_DETAIL_FETCH_TIMEOUT_MS = 15000;
+
+const withTimeout = (promise, ms, label) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`${label} timed out after ${ms}ms`)),
+        ms
+      )
+    ),
+  ]);
+
 // Async thunk for fetching food details with all related data
 export const fetchFoodDetail = createAsyncThunk(
   "food/fetchDetail",
-  async ({ foodId, kitchenId }) => {
+  async ({ foodId, kitchenId }, { rejectWithValue }) => {
     try {
-      // Use the existing optimized function
-      const result = await getFoodDetailWithKitchenAndReviews(
-        foodId,
-        kitchenId
+      const result = await withTimeout(
+        getFoodDetailWithKitchenAndReviews(foodId, kitchenId),
+        FOOD_DETAIL_FETCH_TIMEOUT_MS,
+        "Food detail fetch"
       );
-      return {
-        ...result,
-        foodId,
-        kitchenId,
-      };
+      return { ...result, foodId, kitchenId };
     } catch (error) {
-      // Fallback to basic food fetch
-      const food = await getFoodById(foodId);
-      return {
-        food,
-        kitchen: null,
-        likes: [],
-        reviews: [],
-        reviewStats: null,
-        foodId,
-        kitchenId,
-      };
+      // Fallback to basic food fetch, also bounded.
+      try {
+        const food = await withTimeout(
+          getFoodById(foodId, kitchenId),
+          FOOD_DETAIL_FETCH_TIMEOUT_MS,
+          "Food fallback fetch"
+        );
+        if (!food) {
+          return rejectWithValue(
+            "We couldn't load this dish. Please check your connection and try again."
+          );
+        }
+        return {
+          food,
+          kitchen: null,
+          likes: [],
+          reviews: [],
+          reviewStats: null,
+          foodId,
+          kitchenId,
+        };
+      } catch (fallbackError) {
+        return rejectWithValue(
+          "We couldn't load this dish. Please check your connection and try again."
+        );
+      }
     }
   }
 );
@@ -256,7 +283,10 @@ const foodSlice = createSlice({
       })
       .addCase(fetchFoodDetail.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message;
+        state.error =
+          action.payload ||
+          action.error?.message ||
+          "Failed to load food details";
       })
 
       // Fetch all foods

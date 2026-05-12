@@ -1174,6 +1174,33 @@ export default function FoodDetailPage() {
     }
   }, [fullKitchen, allFoods, kitchenId, dispatch]);
 
+  if (!loading && error && !food) {
+    return (
+      <div className="container">
+        <div className="mobile-container">
+          <div
+            className="padding-20"
+            style={{ textAlign: "center", paddingTop: "60px" }}
+          >
+            <h3 style={{ marginBottom: "12px" }}>Couldn't load this dish</h3>
+            <p style={{ color: "#666", marginBottom: "20px" }}>
+              {typeof error === "string"
+                ? error
+                : "Please check your connection and try again."}
+            </p>
+            <button
+              className="button text-bold font-size-18"
+              onClick={loadFoodDetail}
+              style={{ width: "200px" }}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="container">
