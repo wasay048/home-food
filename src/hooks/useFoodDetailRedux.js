@@ -358,17 +358,18 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
   }, [dispatch]);
 
   // Effects
+  // Only depend on the URL params here. The three load* callbacks' own deps
+  // include slice state that mutates as a result of dispatching (e.g.
+  // kitchenStatsLoading[kitchenId]), so listing them here previously caused
+  // an infinite re-dispatch loop — fetchFoodDetail kept entering `pending`
+  // and the FoodDetailPage spinner never settled. Sentry breadcrumbs in
+  // WeChat confirmed [Complete result] firing 4+ times in 15ms.
   useEffect(() => {
     loadFoodDetail();
     loadKitchenStats();
     loadFoodReviews();
-
-    // Cleanup on unmount
-    return () => {
-      // Optional: Clear data when component unmounts
-      // clearData();
-    };
-  }, [loadFoodDetail, loadKitchenStats, loadFoodReviews]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [foodId, kitchenId]);
 
   // Check like status when food loads and user is authenticated
   useEffect(() => {

@@ -5,11 +5,24 @@ import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { Toaster } from "react-hot-toast";
 import * as Sentry from "@sentry/react";
+import VConsole from "vconsole";
 import { store, persistor } from "./store";
 import AppRoutes from "./routes/AppRoutes";
 import { AuthProvider } from "./context/AuthContext";
 
 import "./styles/index.css";
+
+// vConsole — Tencent's in-page DevTools panel. Hook console.* BEFORE anything
+// else runs so early logs (Firebase init, Sentry init, route mount) are captured.
+// Auto-enables inside WeChat's in-app browser, and on any URL with ?debug=1
+// for ad-hoc inspection from a normal browser. Tap the floating "vConsole"
+// button on the page to open Log / Network / Storage / System tabs.
+const enableVConsole =
+  /MicroMessenger/i.test(navigator.userAgent) ||
+  /[?&]debug=1\b/.test(window.location.search);
+if (enableVConsole) {
+  new VConsole();
+}
 
 Sentry.init({
   dsn: "https://9a5057c3a5d839bbd8658186c927939b@o4510702897790976.ingest.us.sentry.io/4511375868952576",
