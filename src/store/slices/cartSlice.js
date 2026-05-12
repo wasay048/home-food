@@ -70,6 +70,11 @@ const cartSlice = createSlice({
             orderType: newItem.orderType || "GO_GRAB",
           },
           isPreOrder: newItem.isPreOrder || false,
+          // ✅ Persist the Pickup Now flag onto the new cart line. Without
+          // this, the addToCart whitelist strips it and downstream pages
+          // (OrderPage / PaymentPage) see `item.pickupNow === undefined`,
+          // which collapses cat-8 lines into the no-date/no-time branch.
+          pickupNow: !!newItem.pickupNow,
           addedAt: new Date().toISOString(),
         };
 
@@ -107,6 +112,8 @@ const cartSlice = createSlice({
         selectedDate,
         selectedTime,
         fulfillmentType,
+        pickupNow,
+        foodStock,
       } = action.payload;
 
       console.log("📝 Updating cart item:", action.payload);
@@ -130,6 +137,16 @@ const cartSlice = createSlice({
         }
         if (fulfillmentType !== undefined) {
           state.items[itemIndex].fulfillmentType = fulfillmentType;
+        }
+        // ✅ Carry through the Pickup Now flag and the latest stock snapshot
+        // so OrderPage / PaymentPage keep validating quantity against
+        // food.stock for Pickup Now items, even when the cart line was
+        // created before this flag existed.
+        if (pickupNow !== undefined) {
+          state.items[itemIndex].pickupNow = !!pickupNow;
+        }
+        if (foodStock !== undefined && state.items[itemIndex].food) {
+          state.items[itemIndex].food.stock = foodStock;
         }
         state.items[itemIndex].updatedAt = new Date().toISOString();
         console.log("Updated cart redux items:", state.items);

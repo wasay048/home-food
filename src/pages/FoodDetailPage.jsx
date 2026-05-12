@@ -295,13 +295,6 @@ export default function FoodDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // ✅ Pickup Now mode: opt-in via `?pickupNow=1` set by the Pickup Now
-  // inventory list on ListingPage. When ON, the availability number sources
-  // from `food.stock` instead of `food.numAvailable` — this is the *only*
-  // detail-page behavior the flag changes; every other code path is byte-
-  // identical to before the flag was introduced.
-  const isPickupNowMode = searchParams.get("pickupNow") === "1";
-
   const currentUser = useSelector((state) => state.auth.user);
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
@@ -542,6 +535,13 @@ export default function FoodDetailPage() {
     toggleLike,
     loadFoodDetail,
   } = useFoodDetailRedux(foodId, kitchenId);
+
+  // ✅ Pickup Now mode is inferred at runtime from the food doc: any item
+  // that carries on-hand `stock > 0` is treated as Pickup Now everywhere
+  // (chip, availability calc, date/time picker, cart line). No URL flag —
+  // before `food` finishes loading this resolves to `false`, then flips to
+  // `true` once the doc arrives, exactly like any other derived state.
+  const isPickupNowMode = Number(food?.stock) > 0;
 
   // Sentry: log a breadcrumb on mount with the URL params we received, so
   // every captured event from this page carries the originating context.
@@ -1049,11 +1049,14 @@ export default function FoodDetailPage() {
       if (!hasProcessed) {
         sessionStorage.setItem(`direct-landing-processed-${food.id}`, "true");
         
-        // ✅ Check if this is a category 8 item - use default date/time
-        const isCategory8 = getMaxCategoryId(food?.foodCategory) === 8;
+        // ✅ Check if this is a category 8 item - use default date/time.
+        // Pickup Now items behave like Go&Grab even when category 8, so
+        // they use the picker's selected date/time, not the cat-8 sentinel.
+        const isCategory8 =
+          !isPickupNowMode && getMaxCategoryId(food?.foodCategory) === 8;
         const category8DefaultDate = "2000-01-01";
         const category8DefaultTime = "12:00 AM";
-        
+
         // Use setTimeout to ensure this runs after all other state updates
         const timer = setTimeout(() => {
           handleCartQuantityChange({
@@ -1521,19 +1524,37 @@ export default function FoodDetailPage() {
               />
             </div>
 
-            {/* Show group order percentage for category 8 items - on its own line */}
-            {getMaxCategoryId(food?.foodCategory) === 8 && calculateGroupOrderPercentage(food, quantitiesByItemName) !== null && (
+            {/* Pickup Now items replace the Groupbuy % line with a fixed
+                "In Stock - Ready" badge; the percentage logic for regular
+                cat-8 items is left intact. */}
+            {isPickupNowMode ? (
               <div
                 style={{
-                  color: "#e74c3c",
+                  color: "#3fc045",
                   fontSize: "18px",
                   fontWeight: "700",
                   marginTop: "12px",
                   marginBottom: "8px",
                 }}
               >
-                Groupbuy {calculateGroupOrderPercentage(food, quantitiesByItemName)}%
+                In Stock - Ready
               </div>
+            ) : (
+              getMaxCategoryId(food?.foodCategory) === 8 &&
+              calculateGroupOrderPercentage(food, quantitiesByItemName) !==
+                null && (
+                <div
+                  style={{
+                    color: "#e74c3c",
+                    fontSize: "18px",
+                    fontWeight: "700",
+                    marginTop: "12px",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Groupbuy {calculateGroupOrderPercentage(food, quantitiesByItemName)}%
+                </div>
+              )
             )}
 
             {/* <div className="price-quantity-section">
@@ -1564,8 +1585,9 @@ export default function FoodDetailPage() {
                 })()}
               </div>
             </div> */}
-            {/* Dynamic Date Time Picker - Hide for category 8 items */}
-            {getMaxCategoryId(food?.foodCategory) !== 8 && (
+            {/* Dynamic Date Time Picker - Hide for category 8 items, but
+                always show in Pickup Now mode so it mirrors Go&Grab exactly. */}
+            {(isPickupNowMode || getMaxCategoryId(food?.foodCategory) !== 8) && (
             <div className="pickup-details">
               <DateTimePicker
                 food={food}
@@ -1664,11 +1686,14 @@ export default function FoodDetailPage() {
                     console.log("detailll-page - cartQuantity", cartQuantity);
                     console.log("detailll-page - special instructions", specialInstructions);
                     
-                    // ✅ Check if this is a category 8 item - use default date/time
-                    const isCategory8 = getMaxCategoryId(food?.foodCategory) === 8;
+                    // ✅ Check if this is a category 8 item - use default date/time.
+                    // Pickup Now items mirror Go&Grab and use the picker values.
+                    const isCategory8 =
+                      !isPickupNowMode &&
+                      getMaxCategoryId(food?.foodCategory) === 8;
                     const category8DefaultDate = "2000-01-01";
                     const category8DefaultTime = "12:00 AM";
-                    
+
                     handleCartQuantityChange({
                       food,
                       kitchen,

@@ -842,7 +842,7 @@ export default function ListingPage() {
         : "";
     const header = `${kitchen?.name || "Kitchen"} — Pickup Now (No Preorder Needed)`;
     const lines = pickupNowItems.map((it) => {
-      const link = `${origin}/share?kitchenId=${kitchen?.id || ""}&foodId=${it.id}&pickupNow=1`;
+      const link = `${origin}/share?kitchenId=${kitchen?.id || ""}&foodId=${it.id}`;
       return `${it.displayName} — ${it.priceText} (${it.stockText} in stock)\n${link}`;
     });
     const text = [header, ...lines].join("\n\n");
@@ -919,6 +919,11 @@ export default function ListingPage() {
     const currentPickupDate = getPickupDate(food.id, false);
     const currentPickupTime = getPickupTime(food.id, false);
     const isCat8 = getMaxCategoryId(food.foodCategory) === 8;
+    // ✅ Pickup Now classification: any item that carries on-hand `stock`
+    // is treated as a Pickup Now line — its chip swaps to "In Stock - Ready",
+    // its QuantitySelector validates against `food.stock`, and ordering from
+    // this card decrements `stock` instead of `numAvailable`.
+    const isPickupNow = Number(food?.stock) > 0;
     return (
       <div key={food.id} className="menu-list" data-food-letter={foodLetter}>
         <div
@@ -961,7 +966,17 @@ export default function ListingPage() {
                   />
                 )}
               </div>
-              {isCat8 &&
+              {isPickupNow ? (
+                <div
+                  className="group-order-chip group-order-chip--stock"
+                  aria-label="In Stock - Ready"
+                >
+                  <span className="group-order-chip__value">
+                    In Stock - Ready
+                  </span>
+                </div>
+              ) : (
+                isCat8 &&
                 calculateGroupOrderPercentage(food, quantitiesByItemName) !==
                   null && (
                   <div className="group-order-chip" aria-label="Groupbuy">
@@ -974,7 +989,8 @@ export default function ListingPage() {
                       %
                     </span>
                   </div>
-                )}
+                )
+              )}
               <div
                 className="quantity-warpper"
                 onClick={(e) => e.stopPropagation()}
@@ -989,6 +1005,7 @@ export default function ListingPage() {
                     minQuantity={0}
                     orderType={"GO_GRAB"}
                     selectedTime={pickupTimes[food.id]}
+                    pickupNow={isPickupNow}
                   />
                 </div>
               </div>
@@ -1302,7 +1319,7 @@ export default function ListingPage() {
                       tabIndex={0}
                       onClick={() =>
                         window.open(
-                          `/share?kitchenId=${kitchen?.id}&foodId=${item.id}&pickupNow=1`,
+                          `/share?kitchenId=${kitchen?.id}&foodId=${item.id}`,
                           "_blank",
                         )
                       }
@@ -1310,7 +1327,7 @@ export default function ListingPage() {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
                           window.open(
-                            `/share?kitchenId=${kitchen?.id}&foodId=${item.id}&pickupNow=1`,
+                            `/share?kitchenId=${kitchen?.id}&foodId=${item.id}`,
                             "_blank",
                           );
                         }

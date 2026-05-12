@@ -359,6 +359,15 @@ export const placeOrder = async (orderData) => {
             continue;
           }
 
+          // ✅ Pickup Now items: skip every inventory mutation on placeOrder.
+          // The `stock` field is treated as informational only — it is NOT
+          // decremented here. Existing Go&Grab numAvailable behavior below
+          // is unaffected for non-Pickup-Now items.
+          if (item.pickupNow) {
+            console.log("🛑 [ORDER SERVICE] Pickup Now item — skipping inventory update for:", item.name || item.foodItemId);
+            continue;
+          }
+
           // 🆕 Try to find the food document using the same pattern as foodService.js
           let foodRef = null;
           let currentDoc = null;
@@ -401,69 +410,44 @@ export const placeOrder = async (orderData) => {
               foundIn: foodRef.path, // This will show the actual path used
               currentData: {
                 numAvailable: currentData.numAvailable,
-                stock: currentData.stock,
                 numOfSoldItem: currentData.numOfSoldItem,
                 name: currentData.name,
                 allFields: Object.keys(currentData),
               },
             });
 
+            // Continue with your existing calculation logic...
+            const currentAvailable = currentData.numAvailable || 0;
             const orderQuantity = parseInt(item.quantity);
 
-            if (item.pickupNow) {
-              // ✅ Pickup Now: decrement the dedicated `stock` field only.
-              // `numAvailable` is intentionally left untouched so the existing
-              // Go&Grab/Pre-Order availability flow is unaffected.
-              const currentStock = Number(currentData.stock) || 0;
-              const newStock = Math.max(0, currentStock - orderQuantity);
+            const newAvailableItems = Math.max(
+              0,
+              currentAvailable - orderQuantity
+            );
 
-              console.log("📊 [ORDER SERVICE] Pickup Now stock update:", {
-                currentStock,
-                orderQuantity,
-                newStock,
-                calculation: `Stock: ${currentStock} - ${orderQuantity} = ${newStock}`,
-              });
+            // ... rest of your existing update logic
+            console.log("📊 [ORDER SERVICE] Inventory calculation:", {
+              currentAvailable,
+              orderQuantity,
+              newAvailableItems,
+              calculation: `Available: ${currentAvailable} - ${orderQuantity} = ${newAvailableItems}`,
+            });
 
-              if (Number.isNaN(newStock)) {
-                throw new Error(
-                  `Invalid stock calculation: newStock=${newStock}`
-                );
-              }
-
-              await updateDoc(foodRef, { stock: newStock });
-            } else {
-              // Continue with your existing calculation logic...
-              const currentAvailable = currentData.numAvailable || 0;
-
-              const newAvailableItems = Math.max(
-                0,
-                currentAvailable - orderQuantity
-              );
-
-              // ... rest of your existing update logic
-              console.log("📊 [ORDER SERVICE] Inventory calculation:", {
-                currentAvailable,
-                orderQuantity,
-                newAvailableItems,
-                calculation: `Available: ${currentAvailable} - ${orderQuantity} = ${newAvailableItems}`,
-              });
-
-              // Validate the calculation
-              if (isNaN(newAvailableItems)) {
-                const errorMsg = `Invalid calculation: newAvailableItems=${newAvailableItems}`;
-                throw new Error(errorMsg);
-              }
-
-              // Update with absolute values
-              console.log(
-                "🔄 [ORDER SERVICE] Updating document with new values..."
-              );
-
-              await updateDoc(foodRef, {
-                // ✅ Only update numAvailable - do NOT update numOfSoldItem
-                numAvailable: newAvailableItems,
-              });
+            // Validate the calculation
+            if (isNaN(newAvailableItems)) {
+              const errorMsg = `Invalid calculation: newAvailableItems=${newAvailableItems}`;
+              throw new Error(errorMsg);
             }
+
+            // Update with absolute values
+            console.log(
+              "🔄 [ORDER SERVICE] Updating document with new values..."
+            );
+
+            await updateDoc(foodRef, {
+              // ✅ Only update numAvailable - do NOT update numOfSoldItem
+              numAvailable: newAvailableItems,
+            });
           } else {
             const errorMsg = `Food item document not found: ${item.foodItemId}`;
             console.error(`❌ [ORDER SERVICE] ${errorMsg}`);
@@ -749,8 +733,13 @@ export const createOrderObject = ({
   // Transform cart items to order format
   const orderedFoodItems = cartItems.map((item) => {
     const foodCategory = item.foodCategory || item.food?.foodCategory || "";
-    const isCategory8 = getMaxCategoryId(foodCategory) === 8;
-    
+    // ✅ Pickup Now items behave like Go&Grab even when they belong to
+    // category 8 — they ship from on-hand stock and carry real picker
+    // values, so we must NOT swap in the cat-8 sentinel pickup date/time.
+    const isPickupNowItem = !!(item.pickupNow ?? item.food?.pickupNow);
+    const isCategory8 =
+      !isPickupNowItem && getMaxCategoryId(foodCategory) === 8;
+
     // Default date/time for category 8 items
     const defaultCategory8Date = new Date("2000-01-01T00:00:00");
     
@@ -795,9 +784,19 @@ export const createOrderObject = ({
         const n = parseInt(raw, 10);
         return Number.isFinite(n) ? n : 0;
       })(),
-      // ✅ Pickup Now items decrement `stock` in placeOrder() instead of
-      // `numAvailable`. Default false leaves every existing order path
-      // identical to before this flag was introduced.
+      // ✅ Persist the on-hand `stock` value alongside the order line so
+      // the order document captures the inventory state at purchase time.
+      // Sourced from the cart item or its food snapshot (set by the cart
+      // hook when the line was created). Defaults to 0 when absent so the
+      // field is always present and numeric.
+      stock: (() => {
+        const raw = item.stock ?? item.food?.stock ?? 0;
+        const n = parseInt(raw, 10);
+        return Number.isFinite(n) ? n : 0;
+      })(),
+      // ✅ Pickup Now items are flagged on the order doc so reporting and
+      // admin tooling can distinguish them. Inventory itself is NOT mutated
+      // for Pickup Now items in placeOrder() — `stock` is informational.
       pickupNow: !!(item.pickupNow ?? item.food?.pickupNow),
       // ✅ Use default date for category 8 items
       pickupDate: isCategory8 ? defaultCategory8Date : new Date(item.selectedDate),

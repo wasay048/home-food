@@ -626,6 +626,13 @@ body,
   font-weight: 800;
   margin-left: 2px;
 }
+/* Pickup Now variant: same layout slot as Groupbuy chip but green to
+   signal "ready to pick up now" instead of the red group-progress hue. */
+.group-order-chip--stock,
+.group-order-chip--stock .group-order-chip__label,
+.group-order-chip--stock .group-order-chip__value {
+  color: #3fc045;
+}
 .category-group .menu-listing .menu-list .quantity-warpper .right.mb-1 {
   margin-bottom: 0 !important;
 }
@@ -1503,6 +1510,26 @@ body,
   border: 1px solid #eaedf3;
   width: 100%;
   box-sizing: border-box;
+  /* iOS-first: lay the image+details block (.left) next to the quantity /
+     pickup-time block (.quantity-warpper) on the same row. Direct-child
+     selectors below scope this to OrderPage / SuccessPage; ListingPage
+     cards nest the quantity selector inside .left .data .price-row, so
+     they pick up no sibling and render unchanged. */
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.menu-listing .menu-list > .left {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.menu-listing .menu-list > .quantity-warpper {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  text-align: right;
 }
 .menu-listing .menu-list .left {
   display: flex;

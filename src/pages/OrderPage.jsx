@@ -111,12 +111,19 @@ export default function OrderPage() {
             name: fullFoodData.name,
             availability: fullFoodData.availability,
             numAvailable: fullFoodData.numAvailable,
+            stock: fullFoodData.stock,
           }
         : null,
     });
 
     if (fullFoodData) {
-      // Return full food data from kitchen with actual availability
+      // Return full food data from kitchen with actual availability.
+      // ✅ For Pickup Now items, fall back to the cart-item snapshot of
+      // `stock` if the live doc doesn't carry it (e.g. older records). The
+      // existing numAvailable path is untouched.
+      if (cartItem.pickupNow && fullFoodData.stock == null) {
+        return { ...fullFoodData, stock: cartItem.food?.stock };
+      }
       return fullFoodData;
     }
 
@@ -131,6 +138,10 @@ export default function OrderPage() {
       // Default availability - will show "Add to cart" without restrictions
       availability: { numAvailable: 99 },
       numAvailable: 99,
+      // ✅ Pickup Now items use a dedicated `stock` field; snapshot from
+      // the cart item so QuantitySelector's stock-based validation still
+      // works while the live food doc is loading.
+      stock: cartItem.food?.stock,
     };
 
     console.log(
@@ -431,8 +442,9 @@ export default function OrderPage() {
                                 pickupNow={!!item.pickupNow}
                               />
                             </div>
-                            {/* Hide date/time for category 8 items */}
-                            {!isCategory8Item(item) && (
+                            {/* Hide date/time for category 8 items, except
+                                Pickup Now items which mirror Go&Grab. */}
+                            {(item.pickupNow || !isCategory8Item(item)) && (
                               <>
                                 <div className="title">
                                   {item.selectedDate
@@ -544,8 +556,9 @@ export default function OrderPage() {
                                   pickupNow={!!item.pickupNow}
                                 />
                               </div>
-                              {/* Hide date/time for category 8 items */}
-                              {!isCategory8Item(item) && (
+                              {/* Hide date/time for category 8 items, except
+                                  Pickup Now items which mirror Go&Grab. */}
+                              {(item.pickupNow || !isCategory8Item(item)) && (
                                 <>
                                   <div className="title">
                                     {dayjs(item.selectedDate).format(

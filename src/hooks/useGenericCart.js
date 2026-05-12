@@ -448,14 +448,27 @@ export const useGenericCart = () => {
           return Math.max(...categories.filter((c) => !isNaN(c)), 0);
         };
         
-        // ✅ Check if this is a category 8 item - override date/time with defaults
+        // ✅ Check if this is a category 8 item - override date/time with defaults.
+        // Pickup Now items follow the Go&Grab schedule (real picker values),
+        // so we skip the cat-8 sentinel override when pickupNow is true.
         const isCategory8 = getMaxCategoryId(food?.foodCategory) === 8;
-        if (isCategory8) {
+        if (isCategory8 && !pickupNow) {
           console.log("🔥 [Category 8] Using default date/time for category 8 item:", food?.name);
           selectedDate = "2000-01-01";
           selectedTime = "12:00 AM";
         }
-        
+
+        // ✅ Pickup Now items must always carry a valid date so OrderPage /
+        // PaymentPage never render "Invalid Date". Mirrors the FoodDetailPage
+        // fallback (`pickupDate || dayjs().format("YYYY-MM-DD")`) so that
+        // adding straight from the listing card — where the DateTimePicker
+        // may be hidden (cat-8) or untouched — still produces a valid line.
+        // Time falls through to the existing getFirstAvailableTimeSlot path
+        // below, which yields the first Go&Grab slot for today.
+        if (pickupNow && !selectedDate) {
+          selectedDate = dayjs().format("YYYY-MM-DD");
+        }
+
         // ✅ NEW: Use calculateAvailability to determine proper order type
         console.log("selectedDate", selectedDate);
         console.log("selectedTime updations", selectedTime, calledFrom);
@@ -535,6 +548,15 @@ export const useGenericCart = () => {
             cartItemId: matchingItem.id,
             quantity: newQuantity,
             specialInstructions: specialInstructions,
+            // ✅ Preserve / stamp the Pickup Now flag and the latest stock
+            // snapshot. Falls back to the existing cart-item values so a
+            // simple quantity bump never clears the flag.
+            pickupNow:
+              pickupNow || !!matchingItem.pickupNow,
+            foodStock:
+              food?.stock !== undefined
+                ? food.stock
+                : matchingItem.food?.stock,
           };
 
           // ✅ CRITICAL: For Go&Grab items, update the selectedDate but keep orderType as GO_GRAB

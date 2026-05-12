@@ -740,8 +740,9 @@ export default function PaymentPage() {
     const invalidItems = [];
 
     cartItems.forEach((item) => {
-      // ✅ Skip validation for category 8 items - they use default date (2000-01-01) intentionally
-      if (isCategory8Item(item)) {
+      // ✅ Skip validation for category 8 items - they use default date (2000-01-01) intentionally.
+      // Pickup Now items use real picker dates (Go&Grab schedule), so they should be validated.
+      if (isCategory8Item(item) && !item.pickupNow) {
         console.log(
           "📅 [Validation] Skipping category 8 item:",
           item.food?.name,
@@ -1404,8 +1405,9 @@ export default function PaymentPage() {
                             <h5 className="food-name">
                               {item.food?.name || "Unknown Item"}
                             </h5>
-                            {/* Hide date/time for category 8 items */}
-                            {!isCategory8Item(item) && (
+                            {/* Hide date/time for category 8 items, except
+                                Pickup Now which mirrors Go&Grab. */}
+                            {(item.pickupNow || !isCategory8Item(item)) && (
                               <div className="pickup-time">
                                 {dayjs(item.selectedDate).format(
                                   "dddd, MMMM D, YYYY",
@@ -1424,8 +1426,9 @@ export default function PaymentPage() {
                             </div>
                           </div>
                         </div>
-                        {/* Hide edit icon for category 8 items */}
-                        {!isCategory8Item(item) && (
+                        {/* Hide edit icon for category 8 items, except
+                            Pickup Now which mirrors Go&Grab. */}
+                        {(item.pickupNow || !isCategory8Item(item)) && (
                           <div
                             className="edit-icon"
                             role="button"
@@ -1461,8 +1464,9 @@ export default function PaymentPage() {
                                 <h5 className="food-name">
                                   {item.food?.name || "Unknown Item"}
                                 </h5>
-                                {/* Hide date/time for category 8 items */}
-                                {!isCategory8Item(item) && (
+                                {/* Hide date/time for category 8 items, except
+                                    Pickup Now which mirrors Go&Grab. */}
+                                {(item.pickupNow || !isCategory8Item(item)) && (
                                   <div className="pickup-time">
                                     {dayjs(item.selectedDate).format(
                                       "dddd, MMMM D, YYYY",
@@ -1484,8 +1488,9 @@ export default function PaymentPage() {
                                 </div>
                               </div>
                             </div>
-                            {/* Hide edit icon for category 8 items */}
-                            {!isCategory8Item(item) && (
+                            {/* Hide edit icon for category 8 items, except
+                                Pickup Now which mirrors Go&Grab. */}
+                            {(item.pickupNow || !isCategory8Item(item)) && (
                               <div
                                 className="edit-icon"
                                 role="button"
