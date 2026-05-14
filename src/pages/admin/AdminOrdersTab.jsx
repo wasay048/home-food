@@ -3,20 +3,74 @@ import { getAllAdminOrders } from "../../services/adminService";
 import dayjs from "../../lib/dayjs";
 import "./AdminDashboard.css";
 
+// ─── Item classification ────────────────────────────────────────────────
+// Each order line is exactly one of these four shapes. The classifier is
+// the single source of truth for both per-item badges and the "Order Type"
+// filter / grouping below.
+const CLASSIFICATIONS = {
+  pickup_now: { label: "Pickup Now", color: "#3fb950", bg: "rgba(63, 185, 80, 0.15)" },
+  groupbuy: { label: "Group Buy", color: "#e74c3c", bg: "rgba(231, 76, 60, 0.15)" },
+  preorder: { label: "Pre-Order", color: "#58a6ff", bg: "rgba(88, 166, 255, 0.15)" },
+  regular: { label: "Go & Grab", color: "#d29922", bg: "rgba(210, 153, 34, 0.15)" },
+};
+
+const STATUS_OPTIONS = [
+  { value: "all", label: "All Statuses" },
+  { value: "inProgress", label: "In Progress" },
+  { value: "pendingApproval", label: "Pending Approval" },
+  { value: "approved", label: "Approved" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+const getMaxCategoryIdRaw = (foodCategory) => {
+  if (foodCategory == null || foodCategory === "") return 0;
+  const categories = String(foodCategory)
+    .split(",")
+    .map((c) => parseInt(c.trim(), 10));
+  return Math.max(...categories.filter((c) => !isNaN(c)), 0);
+};
+
+const classifyItem = (item) => {
+  if (!item) return "regular";
+  if (item.pickupNow) return "pickup_now";
+  if (item.orderType === "preorder") return "preorder";
+  if (getMaxCategoryIdRaw(item.foodCategory) === 8) return "groupbuy";
+  return "regular";
+};
+
 export default function AdminOrdersTab() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Grouping options
-  const [groupBy, setGroupBy] = useState("kitchen"); // "kitchen", "category", or "kitchen-category"
+  const [groupBy, setGroupBy] = useState("kitchen"); // kitchen | category | kitchen-category | classification
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedSubGroups, setExpandedSubGroups] = useState({});
 
-  // Item filters
-  const [filterCat8, setFilterCat8] = useState(false);
-  const [filterStatus, setFilterStatus] = useState("inprogress");
-  const [filterDate, setFilterDate] = useState("01/01/2000");
+  // ─── Filters ─────────────────────────────────────────────────────────
+  // classificationFilter: limits the *items* rendered inside each order.
+  //   "all" preserves every line; any other value drops items not matching.
+  // statusFilter: matches the order-level orderStatus (loose contains).
+  // pickupDateFilter: matches item.pickupDateString (e.g. "05,12,2026").
+  // searchQuery: substring match against order ID, user ID, kitchen name,
+  //   and every item name in the order.
+  // datePlaced range: filters orders by their datePlaced timestamp.
+  const [classificationFilter, setClassificationFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [pickupDateFilter, setPickupDateFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [datePlacedFrom, setDatePlacedFrom] = useState("");
+  const [datePlacedTo, setDatePlacedTo] = useState("");
+  // High-cardinality dimensions live in dropdowns instead of chips so the
+  // admin can narrow a 900-order list to a single kitchen / category without
+  // opening every accordion.
+  const [selectedKitchenId, setSelectedKitchenId] = useState("ALL");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("ALL");
+  const [sortBy, setSortBy] = useState("newest"); // newest | oldest | revenue_desc | revenue_asc
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -56,9 +110,45 @@ export default function AdminOrdersTab() {
     return max > 0 ? `Category ${max}` : "Uncategorized";
   };
 
-  const groupedOrders = useMemo(() => {
+  // ─── Dropdown options derived from the order set ─────────────────────
+  // Kitchens: keyed by kitchenId, label is the most-common kitchenName.
+  // Categories: distinct max category IDs that appear in any order line.
+  const kitchenOptions = useMemo(() => {
+    const map = new Map();
+    orders.forEach((order) => {
+      const id = order.kitchenId || order.kitchenID || "";
+      if (!id) return;
+      if (!map.has(id)) {
+        map.set(id, order.kitchenName || "Unknown Kitchen");
+      }
+    });
+    return [...map.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [orders]);
+
+  const categoryOptions = useMemo(() => {
+    const set = new Set();
+    orders.forEach((order) => {
+      (order.orderedFoodItems || []).forEach((item) => {
+        const max = getMaxCategoryIdRaw(item.foodCategory);
+        if (max > 0) set.add(max);
+      });
+    });
+    return [...set].sort((a, b) => a - b);
+  }, [orders]);
+
+  // ─── Filtered + grouped orders ───────────────────────────────────────
+  // Pipeline (in order):
+  //   1. drop orders failing date-placed range
+  //   2. drop orders failing search (orderID / userId / kitchen / item names)
+  //   3. drop orders failing status filter (loose contains on orderStatus)
+  //   4. drop items inside each order that fail classification + pickup date
+  //   5. drop orders left with zero items
+  //   6. group remaining orders per groupBy
+  const { groupedOrders, filteredOrders } = useMemo(() => {
     const groups = {};
-    const kitchenCaseMap = {}; // maps lowercase kitchen name to its first original casing
+    const kitchenCaseMap = {};
 
     const getNormalizedKitchenName = (rawName) => {
       if (!rawName) return "Unknown Kitchen";
@@ -70,94 +160,242 @@ export default function AdminOrdersTab() {
       return kitchenCaseMap[lower];
     };
 
-    // --- APPLY ITEM-LEVEL FILTERS FIRST ---
-    let processedOrders = orders;
+    const toDateMs = (ts) => {
+      if (!ts) return null;
+      try {
+        const d = ts.toDate ? ts.toDate() : new Date(ts);
+        return Number.isFinite(d.getTime()) ? d.getTime() : null;
+      } catch {
+        return null;
+      }
+    };
 
-    if (filterCat8) {
-      processedOrders = orders
-        .map((order) => {
-          const matchedItems = order.orderedFoodItems?.filter((item) => {
-            const maxCat = getMaxCategoryId(item.foodCategory);
-            if (maxCat !== "Category 8") return false;
+    const datePlacedFromMs = datePlacedFrom
+      ? dayjs(datePlacedFrom).startOf("day").valueOf()
+      : null;
+    const datePlacedToMs = datePlacedTo
+      ? dayjs(datePlacedTo).endOf("day").valueOf()
+      : null;
+    const searchTerm = searchQuery.trim().toLowerCase();
+    const statusLoose =
+      statusFilter === "all"
+        ? null
+        : statusFilter.toLowerCase().replace(/\s/g, "");
+    const pickupDateTrim = pickupDateFilter.trim();
+    const minPriceNum = priceMin === "" ? null : parseFloat(priceMin);
+    const maxPriceNum = priceMax === "" ? null : parseFloat(priceMax);
 
-            const itemStatus = (item.orderStatus || order.orderStatus || "")
-              .toLowerCase()
-              .replace(/\s/g, "");
-            const matchStatus = filterStatus.toLowerCase().replace(/\s/g, "");
-            if (matchStatus && !itemStatus.includes(matchStatus)) return false;
+    const itemPassesFilters = (item, order) => {
+      // Classification
+      if (
+        classificationFilter !== "all" &&
+        classifyItem(item) !== classificationFilter
+      ) {
+        return false;
+      }
+      // Category dropdown — items keep only when they belong to the chosen cat
+      if (
+        selectedCategoryId !== "ALL" &&
+        getMaxCategoryIdRaw(item.foodCategory) !==
+          parseInt(selectedCategoryId, 10)
+      ) {
+        return false;
+      }
+      // Pickup date string match (admin entered "MM,DD,YYYY" or similar)
+      if (pickupDateTrim) {
+        const pDate =
+          item.pickupDateString ||
+          item.pickDateString ||
+          item.pickupDate ||
+          item.dateString ||
+          "";
+        if (String(pDate) !== pickupDateTrim) return false;
+      }
+      // Per-item status falls back to order status if missing
+      if (statusLoose) {
+        const itemStatus = (item.orderStatus || order.orderStatus || "")
+          .toLowerCase()
+          .replace(/\s/g, "");
+        if (!itemStatus.includes(statusLoose)) return false;
+      }
+      return true;
+    };
 
-            const pDate =
-              item.pickDateString ||
-              item.pickupDateString ||
-              item.pickupDate ||
-              item.dateString;
-            const matchDate = filterDate.trim();
-            if (matchDate && pDate !== matchDate) return false;
+    const orderMatchesSearch = (order) => {
+      if (!searchTerm) return true;
+      const haystack = [
+        order.orderID,
+        order.id,
+        order.userId,
+        order.kitchenName,
+        ...(order.orderedFoodItems || []).map((i) => i?.name),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(searchTerm);
+    };
 
-            return true;
-          });
+    const filtered = [];
+    orders.forEach((order) => {
+      // Kitchen dropdown
+      if (selectedKitchenId !== "ALL") {
+        const orderKitchenId = order.kitchenId || order.kitchenID || "";
+        if (orderKitchenId !== selectedKitchenId) return;
+      }
 
-          if (matchedItems && matchedItems.length > 0) {
-            // Return a shallow copy of order with the filtered items only
-            return { ...order, orderedFoodItems: matchedItems };
-          }
-          return null; // Skip this order entirely if no items matched
-        })
-        .filter(Boolean); // Remove nulls
-    }
+      // Price range — gates the order total against the input bounds
+      const orderTotal = Number(
+        order.orderTotalCoast || order.totalPrice || 0,
+      );
+      if (minPriceNum != null && orderTotal < minPriceNum) return;
+      if (maxPriceNum != null && orderTotal > maxPriceNum) return;
+
+      // Date placed range
+      const placedMs = toDateMs(order.datePlaced);
+      if (datePlacedFromMs != null && (placedMs == null || placedMs < datePlacedFromMs))
+        return;
+      if (datePlacedToMs != null && (placedMs == null || placedMs > datePlacedToMs))
+        return;
+
+      if (!orderMatchesSearch(order)) return;
+
+      // Order-level status check (so search-only matches still drop on status)
+      if (statusLoose) {
+        const orderStatusLoose = (order.orderStatus || "")
+          .toLowerCase()
+          .replace(/\s/g, "");
+        // Allow match if order OR any item carries the status
+        const anyItemStatus = (order.orderedFoodItems || []).some((i) =>
+          (i.orderStatus || "")
+            .toLowerCase()
+            .replace(/\s/g, "")
+            .includes(statusLoose),
+        );
+        if (!orderStatusLoose.includes(statusLoose) && !anyItemStatus) return;
+      }
+
+      const matchedItems = (order.orderedFoodItems || []).filter((item) =>
+        itemPassesFilters(item, order),
+      );
+
+      if (matchedItems.length === 0) return;
+
+      filtered.push({ ...order, orderedFoodItems: matchedItems });
+    });
+
+    // Sort the filtered orders before grouping so every group renders in
+    // the requested order (newest/oldest by datePlaced, highest/lowest by
+    // orderTotalCoast).
+    const sortFiltered = (list) => {
+      const sorted = [...list];
+      const totalOf = (o) =>
+        Number(o.orderTotalCoast || o.totalPrice || 0);
+      switch (sortBy) {
+        case "oldest":
+          return sorted.sort(
+            (a, b) => (toDateMs(a.datePlaced) || 0) - (toDateMs(b.datePlaced) || 0),
+          );
+        case "revenue_desc":
+          return sorted.sort((a, b) => totalOf(b) - totalOf(a));
+        case "revenue_asc":
+          return sorted.sort((a, b) => totalOf(a) - totalOf(b));
+        case "newest":
+        default:
+          return sorted.sort(
+            (a, b) => (toDateMs(b.datePlaced) || 0) - (toDateMs(a.datePlaced) || 0),
+          );
+      }
+    };
+    const sortedFiltered = sortFiltered(filtered);
 
     if (groupBy === "kitchen") {
-      processedOrders.forEach((order) => {
+      sortedFiltered.forEach((order) => {
         const kitchenName = getNormalizedKitchenName(order.kitchenName);
         if (!groups[kitchenName]) groups[kitchenName] = [];
         groups[kitchenName].push(order);
       });
     } else if (groupBy === "category") {
-      processedOrders.forEach((order) => {
-        const categoriesInOrder = order.orderedFoodItems?.map((item) =>
+      sortedFiltered.forEach((order) => {
+        const cats = order.orderedFoodItems?.map((item) =>
           getMaxCategoryId(item.foodCategory),
         ) || ["Uncategorized"];
-        const distinctCategories = [...new Set(categoriesInOrder)];
-
-        distinctCategories.forEach((cat) => {
+        [...new Set(cats)].forEach((cat) => {
           if (!groups[cat]) groups[cat] = [];
-          if (!groups[cat].find((o) => o.id === order.id)) {
-            groups[cat].push(order);
-          }
+          if (!groups[cat].find((o) => o.id === order.id)) groups[cat].push(order);
         });
-
-        if (distinctCategories.length === 0) {
-          if (!groups["Uncategorized"]) groups["Uncategorized"] = [];
-          groups["Uncategorized"].push(order);
-        }
       });
     } else if (groupBy === "kitchen-category") {
-      processedOrders.forEach((order) => {
+      sortedFiltered.forEach((order) => {
         const kitchenName = getNormalizedKitchenName(order.kitchenName);
         if (!groups[kitchenName]) groups[kitchenName] = {};
-
-        const categoriesInOrder = order.orderedFoodItems?.map((item) =>
+        const cats = order.orderedFoodItems?.map((item) =>
           getMaxCategoryId(item.foodCategory),
         ) || ["Uncategorized"];
-        const distinctCategories = [...new Set(categoriesInOrder)];
-
-        distinctCategories.forEach((cat) => {
+        [...new Set(cats)].forEach((cat) => {
           if (!groups[kitchenName][cat]) groups[kitchenName][cat] = [];
           if (!groups[kitchenName][cat].find((o) => o.id === order.id)) {
             groups[kitchenName][cat].push(order);
           }
         });
-
-        if (distinctCategories.length === 0) {
-          if (!groups[kitchenName]["Uncategorized"])
-            groups[kitchenName]["Uncategorized"] = [];
-          groups[kitchenName]["Uncategorized"].push(order);
-        }
+      });
+    } else if (groupBy === "classification") {
+      // Each order can appear under multiple classification buckets if it
+      // contains a mix (e.g. one Pickup Now line + one Pre-Order line).
+      sortedFiltered.forEach((order) => {
+        const classes = [
+          ...new Set(
+            (order.orderedFoodItems || []).map((item) => classifyItem(item)),
+          ),
+        ];
+        classes.forEach((cls) => {
+          const label = CLASSIFICATIONS[cls]?.label || "Other";
+          if (!groups[label]) groups[label] = [];
+          if (!groups[label].find((o) => o.id === order.id)) {
+            groups[label].push(order);
+          }
+        });
       });
     }
 
-    return groups;
-  }, [orders, groupBy, filterCat8, filterStatus, filterDate]);
+    return { groupedOrders: groups, filteredOrders: sortedFiltered };
+  }, [
+    orders,
+    groupBy,
+    classificationFilter,
+    statusFilter,
+    pickupDateFilter,
+    searchQuery,
+    datePlacedFrom,
+    datePlacedTo,
+    selectedKitchenId,
+    selectedCategoryId,
+    sortBy,
+    priceMin,
+    priceMax,
+  ]);
+
+  // ─── Stats over filtered orders ─────────────────────────────────────
+  const stats = useMemo(() => {
+    let total = 0;
+    let pickupNow = 0;
+    let groupbuy = 0;
+    let preorder = 0;
+    let regular = 0;
+    let revenue = 0;
+    filteredOrders.forEach((order) => {
+      total += 1;
+      revenue += Number(order.orderTotalCoast || order.totalPrice || 0);
+      const buckets = new Set(
+        (order.orderedFoodItems || []).map((item) => classifyItem(item)),
+      );
+      if (buckets.has("pickup_now")) pickupNow += 1;
+      if (buckets.has("groupbuy")) groupbuy += 1;
+      if (buckets.has("preorder")) preorder += 1;
+      if (buckets.has("regular")) regular += 1;
+    });
+    return { total, pickupNow, groupbuy, preorder, regular, revenue };
+  }, [filteredOrders]);
 
   const formatTimestamp = (ts) => {
     if (!ts) return "—";
@@ -249,6 +487,10 @@ export default function AdminOrdersTab() {
                     item.pickupDate ||
                     item.dateString;
                   const pTime = item.pickupTime || item.time || item.timeString;
+                  const cls = classifyItem(item);
+                  const classification = CLASSIFICATIONS[cls];
+                  const isVar =
+                    item.variableWeight === 1 || item.variableWeight === true;
                   return (
                     <div
                       key={idx}
@@ -266,36 +508,79 @@ export default function AdminOrdersTab() {
                           justifyContent: "space-between",
                           width: "100%",
                           alignItems: "center",
+                          gap: 8,
                         }}
                       >
-                        <div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            flexWrap: "wrap",
+                          }}
+                        >
                           <span className="admin-order-item-name">
                             {item.name}
                           </span>
                           <span className="admin-order-item-qty">
                             ×{item.quantity || 1}
                           </span>
+                          {classification && (
+                            <span
+                              style={{
+                                background: classification.bg,
+                                color: classification.color,
+                                padding: "2px 8px",
+                                borderRadius: 10,
+                                fontSize: 10,
+                                fontWeight: 600,
+                                letterSpacing: 0.2,
+                              }}
+                            >
+                              {classification.label}
+                            </span>
+                          )}
                         </div>
                         <span className="admin-order-item-price">
                           ${item.price || item.productDiscountedPrice || 0}
                         </span>
                       </div>
 
-                      {/* Pick Date and Time details */}
-                      {(pDate || pTime) && (
+                      {/* Pickup date / time + stock context */}
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "12px",
+                          fontSize: "11px",
+                          color: "#8b949e",
+                          marginTop: "2px",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {pDate && <span>{formatDateString(pDate)}</span>}
+                        {pTime && <span>{formatTimeString(pTime)}</span>}
+                        {cls === "pickup_now" && item.stock != null && (
+                          <span>
+                            📦 Stock at purchase: {item.stock}
+                            {isVar ? " lb" : ""}
+                          </span>
+                        )}
+                        {isVar && item.poundsInOneOrder ? (
+                          <span>⚖️ {item.poundsInOneOrder} lb/order</span>
+                        ) : null}
+                      </div>
+                      {item.specialInstructions ? (
                         <div
                           style={{
-                            display: "flex",
-                            gap: "12px",
-                            fontSize: "11px",
+                            fontSize: 11,
                             color: "#8b949e",
-                            marginTop: "2px",
+                            fontStyle: "italic",
+                            marginTop: 2,
                           }}
                         >
-                          {pDate && <span>{formatDateString(pDate)}</span>}
-                          {pTime && <span>{formatTimeString(pTime)}</span>}
+                          📝 {item.specialInstructions}
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   );
                 })}
@@ -343,120 +628,348 @@ export default function AdminOrdersTab() {
     );
   };
 
+  const chipStyle = (active, color = "#3fb950") => ({
+    margin: 0,
+    padding: "6px 12px",
+    minWidth: "auto",
+    borderRadius: 16,
+    border: `1px solid ${active ? color : "#30363d"}`,
+    background: active ? `${color}22` : "transparent",
+    color: active ? color : "#c9d1d9",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.15s ease",
+  });
+
+  const resetFilters = () => {
+    setClassificationFilter("all");
+    setStatusFilter("all");
+    setPickupDateFilter("");
+    setSearchQuery("");
+    setDatePlacedFrom("");
+    setDatePlacedTo("");
+    setSelectedKitchenId("ALL");
+    setSelectedCategoryId("ALL");
+    setSortBy("newest");
+    setPriceMin("");
+    setPriceMax("");
+  };
+
+  const hasActiveFilters =
+    classificationFilter !== "all" ||
+    statusFilter !== "all" ||
+    pickupDateFilter !== "" ||
+    searchQuery !== "" ||
+    datePlacedFrom !== "" ||
+    datePlacedTo !== "" ||
+    selectedKitchenId !== "ALL" ||
+    selectedCategoryId !== "ALL" ||
+    sortBy !== "newest" ||
+    priceMin !== "" ||
+    priceMax !== "";
+
+  // Bulk expand/collapse: instead of clicking accordion headers one by one,
+  // admin can flip every kitchen / sub-group at once. The toggle records
+  // explicit `false` for each currently-rendered group, so individual
+  // re-expands stay possible afterwards.
+  const expandAllGroups = () => {
+    setExpandedGroups({});
+    setExpandedSubGroups({});
+  };
+  const collapseAllGroups = () => {
+    const all = {};
+    Object.keys(groupedOrders).forEach((k) => {
+      all[k] = false;
+    });
+    setExpandedGroups(all);
+    const subs = {};
+    Object.keys(groupedOrders).forEach((k) => {
+      const inner = groupedOrders[k];
+      if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+        Object.keys(inner).forEach((subKey) => {
+          subs[`${k}-${subKey}`] = false;
+        });
+      }
+    });
+    setExpandedSubGroups(subs);
+  };
+
   return (
     <div style={{ marginTop: 20 }}>
-      {/* Controls */}
+      {/* Stats row */}
       <div
-        className="admin-filters"
-        style={{
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "10px",
-        }}
+        className="admin-stats-row"
+        style={{ gap: 12, flexWrap: "wrap", marginBottom: 16 }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <span style={{ color: "#8b949e", fontSize: "14px" }}>
-              Group By:
-            </span>
-            <button
-              className={`admin-tab ${groupBy === "kitchen" ? "active" : ""}`}
-              onClick={() => setGroupBy("kitchen")}
-              style={{ margin: 0, padding: "6px 12px", minWidth: "auto" }}
-            >
-              Kitchen
-            </button>
-            <button
-              className={`admin-tab ${groupBy === "kitchen-category" ? "active" : ""}`}
-              onClick={() => setGroupBy("kitchen-category")}
-              style={{ margin: 0, padding: "6px 12px", minWidth: "auto" }}
-            >
-              Kitchen &rarr; Category
-            </button>
-            <button
-              className={`admin-tab ${groupBy === "category" ? "active" : ""}`}
-              onClick={() => setGroupBy("category")}
-              style={{ margin: 0, padding: "6px 12px", minWidth: "auto" }}
-            >
-              Category
-            </button>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-              alignItems: "center",
-              flexWrap: "wrap",
-              marginTop: "4px",
-            }}
-          >
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                color: "#c9d1d9",
-                fontSize: "14px",
-                cursor: "pointer",
-                marginRight: "10px",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={filterCat8}
-                onChange={(e) => setFilterCat8(e.target.checked)}
-                style={{ cursor: "pointer", width: "16px", height: "16px" }}
-              />
-              Filter Category 8: "In Progress" & Date
-            </label>
-
-            {filterCat8 && (
-              <>
-                <input
-                  type="text"
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  placeholder="Status (e.g. inprogress)"
-                  style={{
-                    padding: "6px 10px",
-                    borderRadius: "4px",
-                    border: "1px solid #30363d",
-                    background: "#0d1117",
-                    color: "#c9d1d9",
-                    fontSize: "13px",
-                    outline: "none",
-                  }}
-                />
-                <input
-                  type="text"
-                  value={filterDate}
-                  onChange={(e) => setFilterDate(e.target.value)}
-                  placeholder="Date (e.g. 01/01/2000)"
-                  style={{
-                    padding: "6px 10px",
-                    borderRadius: "4px",
-                    border: "1px solid #30363d",
-                    background: "#0d1117",
-                    color: "#c9d1d9",
-                    fontSize: "13px",
-                    outline: "none",
-                  }}
-                />
-              </>
-            )}
+        <div className="admin-stat-card">
+          <div className="admin-stat-label">Filtered Orders</div>
+          <div className="admin-stat-value">{stats.total}</div>
+        </div>
+        <div className="admin-stat-card">
+          <div className="admin-stat-label">Pickup Now</div>
+          <div className="admin-stat-value" style={{ color: "#3fb950" }}>
+            {stats.pickupNow}
           </div>
         </div>
-        <span className="admin-result-count">
-          Showing {orders.length} total orders
-        </span>
+        <div className="admin-stat-card">
+          <div className="admin-stat-label">Group Buy (Cat 8)</div>
+          <div className="admin-stat-value" style={{ color: "#e74c3c" }}>
+            {stats.groupbuy}
+          </div>
+        </div>
+        <div className="admin-stat-card">
+          <div className="admin-stat-label">Pre-Order</div>
+          <div className="admin-stat-value" style={{ color: "#58a6ff" }}>
+            {stats.preorder}
+          </div>
+        </div>
+        <div className="admin-stat-card">
+          <div className="admin-stat-label">Go &amp; Grab</div>
+          <div className="admin-stat-value" style={{ color: "#d29922" }}>
+            {stats.regular}
+          </div>
+        </div>
+        <div className="admin-stat-card">
+          <div className="admin-stat-label">Revenue</div>
+          <div className="admin-stat-value highlight">
+            ${stats.revenue.toFixed(2)}
+          </div>
+        </div>
+      </div>
+
+      {/* Filter panel — labeled grid (matches AdminItemsTab visual rhythm)
+          so the admin can narrow a 900-order list to a single kitchen +
+          category + status in one glance, without expanding accordions. */}
+      <div
+        style={{
+          padding: 16,
+          background: "#161b22",
+          border: "1px solid #30363d",
+          borderRadius: 8,
+          marginBottom: 16,
+        }}
+      >
+        {/* Row 1: high-cardinality dropdowns */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gap: 12,
+          }}
+        >
+          <OrdersFilterField label="Kitchen">
+            <OrdersFilterSelect
+              value={selectedKitchenId}
+              onChange={(e) => setSelectedKitchenId(e.target.value)}
+            >
+              <option value="ALL">All Kitchens</option>
+              {kitchenOptions.map((k) => (
+                <option key={k.id} value={k.id}>
+                  {k.name}
+                </option>
+              ))}
+            </OrdersFilterSelect>
+          </OrdersFilterField>
+
+          <OrdersFilterField label="Category">
+            <OrdersFilterSelect
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
+            >
+              <option value="ALL">All Categories</option>
+              {categoryOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c === 8 ? "Category 8 (Group Buy)" : `Category ${c}`}
+                </option>
+              ))}
+            </OrdersFilterSelect>
+          </OrdersFilterField>
+
+          <OrdersFilterField label="Status">
+            <OrdersFilterSelect
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              {STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </OrdersFilterSelect>
+          </OrdersFilterField>
+
+          <OrdersFilterField label="Sort By">
+            <OrdersFilterSelect
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="revenue_desc">Revenue (High–Low)</option>
+              <option value="revenue_asc">Revenue (Low–High)</option>
+            </OrdersFilterSelect>
+          </OrdersFilterField>
+
+          <OrdersFilterField label="Min Price">
+            <OrdersFilterInput
+              type="number"
+              inputMode="decimal"
+              value={priceMin}
+              onChange={(e) => setPriceMin(e.target.value)}
+              placeholder="0"
+            />
+          </OrdersFilterField>
+
+          <OrdersFilterField label="Max Price">
+            <OrdersFilterInput
+              type="number"
+              inputMode="decimal"
+              value={priceMax}
+              onChange={(e) => setPriceMax(e.target.value)}
+              placeholder="∞"
+            />
+          </OrdersFilterField>
+        </div>
+
+        {/* Row 2: search */}
+        <div style={{ marginTop: 12 }}>
+          <OrdersFilterField label="Search">
+            <OrdersFilterInput
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Order ID, user ID, kitchen, or item name…"
+            />
+          </OrdersFilterField>
+        </div>
+
+        {/* Row 3: date range + pickup date */}
+        <div
+          style={{
+            marginTop: 12,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gap: 12,
+          }}
+        >
+          <OrdersFilterField label="Placed From">
+            <OrdersFilterInput
+              type="date"
+              value={datePlacedFrom}
+              onChange={(e) => setDatePlacedFrom(e.target.value)}
+            />
+          </OrdersFilterField>
+          <OrdersFilterField label="Placed To">
+            <OrdersFilterInput
+              type="date"
+              value={datePlacedTo}
+              onChange={(e) => setDatePlacedTo(e.target.value)}
+            />
+          </OrdersFilterField>
+          <OrdersFilterField label="Pickup Date (MM,DD,YYYY)">
+            <OrdersFilterInput
+              type="text"
+              value={pickupDateFilter}
+              onChange={(e) => setPickupDateFilter(e.target.value)}
+              placeholder="e.g. 05,12,2026"
+            />
+          </OrdersFilterField>
+        </div>
+
+        {/* Row 4: order-type chips */}
+        <div
+          style={{
+            marginTop: 14,
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ color: "#8b949e", fontSize: 12, minWidth: 80 }}>
+            Order Type:
+          </span>
+          {[
+            { key: "all", label: "All", color: "#58a6ff" },
+            { key: "pickup_now", label: "Pickup Now", color: "#3fb950" },
+            { key: "groupbuy", label: "Group Buy", color: "#e74c3c" },
+            { key: "preorder", label: "Pre-Order", color: "#58a6ff" },
+            { key: "regular", label: "Go & Grab", color: "#d29922" },
+          ].map(({ key, label, color }) => (
+            <button
+              key={key}
+              onClick={() => setClassificationFilter(key)}
+              style={chipStyle(classificationFilter === key, color)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Row 5: group-by chips */}
+        <div
+          style={{
+            marginTop: 10,
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ color: "#8b949e", fontSize: 12, minWidth: 80 }}>
+            Group By:
+          </span>
+          {[
+            { key: "kitchen", label: "Kitchen" },
+            { key: "kitchen-category", label: "Kitchen → Category" },
+            { key: "category", label: "Category" },
+            { key: "classification", label: "Order Type" },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setGroupBy(key)}
+              style={chipStyle(groupBy === key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Row 6: action bar — bulk expand/collapse + clear + count */}
+        <div
+          style={{
+            marginTop: 14,
+            display: "flex",
+            gap: 10,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <button onClick={expandAllGroups} style={chipStyle(false)}>
+            ▼ Expand All
+          </button>
+          <button onClick={collapseAllGroups} style={chipStyle(false)}>
+            ▶ Collapse All
+          </button>
+          {hasActiveFilters && (
+            <button
+              onClick={resetFilters}
+              style={{
+                ...chipStyle(true, "#e74c3c"),
+                color: "#e74c3c",
+              }}
+            >
+              ✕ Clear Filters
+            </button>
+          )}
+          <span
+            className="admin-result-count"
+            style={{ marginLeft: "auto" }}
+          >
+            Showing {filteredOrders.length} of {orders.length} orders
+          </span>
+        </div>
       </div>
 
       {/* Grouped orders */}
@@ -654,4 +1167,50 @@ export default function AdminOrdersTab() {
       </div>
     </div>
   );
+}
+
+// ─── Local filter UI primitives ─────────────────────────────────────────
+// Mirrors the look of AdminItemsTab's FilterField/FilterSelect/FilterInput
+// so admins see a consistent filter rhythm across tabs. Kept local so this
+// file remains self-contained and doesn't depend on AdminItemsTab.
+function OrdersFilterField({ label, children }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <span
+        style={{
+          color: "#8b949e",
+          fontSize: 11,
+          textTransform: "uppercase",
+          letterSpacing: 0.4,
+        }}
+      >
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+const ordersFieldStyle = {
+  padding: "8px 12px",
+  borderRadius: 8,
+  border: "1px solid #30363d",
+  background: "#0d1117",
+  color: "#c9d1d9",
+  fontSize: 14,
+  outline: "none",
+  width: "100%",
+  boxSizing: "border-box",
+};
+
+function OrdersFilterSelect({ children, ...props }) {
+  return (
+    <select {...props} style={ordersFieldStyle}>
+      {children}
+    </select>
+  );
+}
+
+function OrdersFilterInput(props) {
+  return <input {...props} style={ordersFieldStyle} />;
 }

@@ -34,7 +34,7 @@ export default function LandingPage() {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [isVisible, setIsVisible] = useState({});
   const observerRef = useRef(null);
-  console.log("Deployed version 0.4.1");
+  console.log("Deployed version 0.4.2");
   const fullText =
     "Homemade meals from talented local chefs, delivered fresh to your door.";
 

@@ -37,6 +37,9 @@ export default function AdminItemsTab() {
   const [onlyFeatured, setOnlyFeatured] = useState(false);
   const [onlyWithImage, setOnlyWithImage] = useState(false);
   const [onlyGroupOrder, setOnlyGroupOrder] = useState(false);
+  // ✅ Pickup Now eligibility filter: matches items with food.stock > 0.
+  // Defaults to false so existing flows render every item as before.
+  const [onlyPickupNow, setOnlyPickupNow] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedItems, setExpandedItems] = useState({});
 
@@ -53,6 +56,7 @@ export default function AdminItemsTab() {
     setOnlyFeatured(false);
     setOnlyWithImage(false);
     setOnlyGroupOrder(false);
+    setOnlyPickupNow(false);
   };
 
   useEffect(() => {
@@ -175,6 +179,10 @@ export default function AdminItemsTab() {
               (b.availability?.numOfSoldItem || b.numOfSoldItem || 0) -
               (a.availability?.numOfSoldItem || a.numOfSoldItem || 0)
           );
+        case "stock_desc":
+          return arr.sort(
+            (a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0)
+          );
         default:
           return arr;
       }
@@ -198,6 +206,11 @@ export default function AdminItemsTab() {
         if (onlyGroupOrder) {
           filteredFoods = filteredFoods.filter(
             (f) => (f.minByGroup || 0) > 0
+          );
+        }
+        if (onlyPickupNow) {
+          filteredFoods = filteredFoods.filter(
+            (f) => (Number(f.stock) || 0) > 0
           );
         }
 
@@ -239,6 +252,7 @@ export default function AdminItemsTab() {
     onlyFeatured,
     onlyWithImage,
     onlyGroupOrder,
+    onlyPickupNow,
     categoryNameMap,
   ]);
 
@@ -379,6 +393,7 @@ export default function AdminItemsTab() {
               <option value="price_desc">Price (High–Low)</option>
               <option value="available_desc">Most Available</option>
               <option value="sold_desc">Most Sold</option>
+              <option value="stock_desc">Most Stock (Pickup Now)</option>
             </FilterSelect>
           </FilterField>
 
@@ -454,6 +469,18 @@ export default function AdminItemsTab() {
               onChange={(e) => setOnlyGroupOrder(e.target.checked)}
             />
             Group order (minByGroup &gt; 0)
+          </label>
+          <label
+            className="admin-filter-toggle"
+            style={{ color: "#3fb950" }}
+            title="Items with on-hand stock available for Pickup Now sales"
+          >
+            <input
+              type="checkbox"
+              checked={onlyPickupNow}
+              onChange={(e) => setOnlyPickupNow(e.target.checked)}
+            />
+            Pickup Now (stock &gt; 0)
           </label>
 
           <button
@@ -568,6 +595,20 @@ export default function AdminItemsTab() {
                           food.engagement?.rating || food.rating || 0;
                         const numLikes =
                           food.engagement?.numOfLike || food.numOfLike || 0;
+                        // ✅ On-hand stock (drives Pickup Now eligibility). 0
+                        // for legacy / non-Pickup-Now items so the badge only
+                        // surfaces where it's meaningful.
+                        const stockCount = Number(food.stock) || 0;
+                        const isPickupNowEligible = stockCount > 0;
+                        const variableWeightOn =
+                          food.variableWeight === 1 ||
+                          food.variableWeight === true;
+                        const poundsInOneOrder =
+                          Number(food.poundsInOneOrder) || 0;
+                        const stockDisplay =
+                          variableWeightOn && poundsInOneOrder > 0
+                            ? `${stockCount * poundsInOneOrder} lb`
+                            : `${stockCount}`;
 
                         return (
                           <div
@@ -728,6 +769,21 @@ export default function AdminItemsTab() {
                                       Sold out
                                     </span>
                                   )}
+                                  {isPickupNowEligible && (
+                                    <span
+                                      title="Item carries on-hand stock and is sellable as Pickup Now"
+                                      style={{
+                                        background: "rgba(63, 185, 80, 0.18)",
+                                        color: "#3fb950",
+                                        padding: "2px 8px",
+                                        borderRadius: 6,
+                                        fontSize: 11,
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      🛒 Pickup Now · {stockDisplay}
+                                    </span>
+                                  )}
                                   <span
                                     style={{
                                       color: "#6e7681",
@@ -809,6 +865,20 @@ export default function AdminItemsTab() {
                                   label="Sold"
                                   value={numSold}
                                 />
+                                <DetailRow
+                                  label="Stock (Pickup Now)"
+                                  value={
+                                    isPickupNowEligible
+                                      ? `${stockDisplay} · ${stockCount} unit${stockCount === 1 ? "" : "s"}`
+                                      : "—"
+                                  }
+                                />
+                                {variableWeightOn && (
+                                  <DetailRow
+                                    label="Pounds / Order"
+                                    value={poundsInOneOrder || "—"}
+                                  />
+                                )}
                                 {food.minByGroup != null && (
                                   <DetailRow
                                     label="Min by Group"

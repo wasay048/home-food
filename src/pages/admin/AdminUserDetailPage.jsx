@@ -358,29 +358,86 @@ export default function AdminUserDetailPage() {
                   <div className="admin-order-body">
                     {/* Order Items */}
                     <div className="admin-order-items">
-                      {order.orderedFoodItems?.map((item, idx) => (
-                        <div key={idx} className="admin-order-item">
-                          <div>
-                            <span className="admin-order-item-name">
-                              {item.name}
-                            </span>
-                            <span className="admin-order-item-qty">
-                              ×{item.quantity || 1}
-                            </span>
-                            {item.orderStatus && item.orderStatus !== order.orderStatus && (
-                              <span
-                                className={`admin-order-status ${item.orderStatus}`}
-                                style={{ marginLeft: 8, fontSize: 10 }}
-                              >
-                                {item.orderStatus}
+                      {order.orderedFoodItems?.map((item, idx) => {
+                        // Per-line classification badge mirrors AdminOrdersTab
+                        // so the same vocabulary surfaces wherever an admin
+                        // reviews orders. Local helpers keep the existing
+                        // file self-contained.
+                        const itemFoodCategory = item.foodCategory ?? "";
+                        const maxCatId = (() => {
+                          if (itemFoodCategory == null || itemFoodCategory === "")
+                            return 0;
+                          const ids = String(itemFoodCategory)
+                            .split(",")
+                            .map((c) => parseInt(c.trim(), 10));
+                          return Math.max(...ids.filter((c) => !isNaN(c)), 0);
+                        })();
+                        let classification = null;
+                        if (item.pickupNow) {
+                          classification = {
+                            label: "Pickup Now",
+                            color: "#3fb950",
+                            bg: "rgba(63, 185, 80, 0.18)",
+                          };
+                        } else if (item.orderType === "preorder") {
+                          classification = {
+                            label: "Pre-Order",
+                            color: "#58a6ff",
+                            bg: "rgba(88, 166, 255, 0.15)",
+                          };
+                        } else if (maxCatId === 8) {
+                          classification = {
+                            label: "Group Buy",
+                            color: "#e74c3c",
+                            bg: "rgba(231, 76, 60, 0.15)",
+                          };
+                        }
+                        return (
+                          <div key={idx} className="admin-order-item">
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: 8,
+                                alignItems: "center",
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <span className="admin-order-item-name">
+                                {item.name}
                               </span>
-                            )}
+                              <span className="admin-order-item-qty">
+                                ×{item.quantity || 1}
+                              </span>
+                              {classification && (
+                                <span
+                                  style={{
+                                    background: classification.bg,
+                                    color: classification.color,
+                                    padding: "2px 8px",
+                                    borderRadius: 10,
+                                    fontSize: 10,
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {classification.label}
+                                </span>
+                              )}
+                              {item.orderStatus &&
+                                item.orderStatus !== order.orderStatus && (
+                                  <span
+                                    className={`admin-order-status ${item.orderStatus}`}
+                                    style={{ marginLeft: 8, fontSize: 10 }}
+                                  >
+                                    {item.orderStatus}
+                                  </span>
+                                )}
+                            </div>
+                            <span className="admin-order-item-price">
+                              ${(item.price * (item.quantity || 1)).toFixed(2)}
+                            </span>
                           </div>
-                          <span className="admin-order-item-price">
-                            ${(item.price * (item.quantity || 1)).toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {/* Payment Breakdown */}

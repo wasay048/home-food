@@ -37,6 +37,16 @@ import { useSelector, useDispatch } from "react-redux";
 // Formula: (totalOrderQuantity / minByGroup) * 100
 // totalOrderQuantity = aggregated quantity across ALL orders for this item (by name, irrespective of kitchen)
 // minByGroup = minimum orders required to meet wholesale requirement (from food item data)
+// Strip the 【付款预定】 pre-order marker (and bare/订 variants) from item
+// names so it never shows in the listing or in copied inventory text.
+const cleanItemName = (name) => {
+  if (!name) return "";
+  return name
+    .replace(/【\s*付款预[定订]\s*】/g, "")
+    .replace(/付款预[定订]/g, "")
+    .trim();
+};
+
 const calculateGroupOrderPercentage = (food, quantitiesByItemName) => {
   if (!food) return 0;
   const minByGroup = food.minByGroup;
@@ -782,13 +792,6 @@ export default function ListingPage() {
   const pickupNowItems = useMemo(() => {
     if (!allFoods || allFoods.length === 0 || !kitchenId) return [];
 
-    const stripPrefix = (name) => {
-      let cleaned = (name || "").trim();
-      while (cleaned.startsWith("付款预订")) {
-        cleaned = cleaned.slice(4).trim();
-      }
-      return cleaned;
-    };
     const isVariableWeight = (food) =>
       food?.variableWeight === 1 || food?.variableWeight === true;
     const formatNum = (n) => {
@@ -825,7 +828,7 @@ export default function ListingPage() {
 
         return {
           id: food.id,
-          displayName: stripPrefix(food.name),
+          displayName: cleanItemName(food.name),
           priceText,
           stockText,
         };
@@ -836,16 +839,12 @@ export default function ListingPage() {
 
   const handleCopyInventory = useCallback(async () => {
     if (!pickupNowItems || pickupNowItems.length === 0) return;
-    const origin =
-      typeof window !== "undefined" && window.location
-        ? window.location.origin
-        : "";
-    const header = `${kitchen?.name || "Kitchen"} — Pickup Now (No Preorder Needed)`;
-    const lines = pickupNowItems.map((it) => {
-      const link = `${origin}/share?kitchenId=${kitchen?.id || ""}&foodId=${it.id}`;
-      return `${it.displayName} — ${it.priceText} (${it.stockText} in stock)\n${link}`;
-    });
-    const text = [header, ...lines].join("\n\n");
+    const header = `${kitchen?.name || "Kitchen"} — Available now`;
+    const lines = pickupNowItems.map(
+      (it) =>
+        `${it.displayName} has ${it.stockText} in stock (${it.priceText})`,
+    );
+    const text = [header, ...lines].join("\n");
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(text);
@@ -939,14 +938,14 @@ export default function ListingPage() {
           <div className="image">
             <img
               src={food.imageUrl || "/src/assets/images/product.png"}
-              alt={food.name}
+              alt={cleanItemName(food.name)}
               onError={(e) => {
                 e.target.src = "/src/assets/images/product.png";
               }}
             />
           </div>
           <div className="data">
-            <div className="title">{food.name}</div>
+            <div className="title">{cleanItemName(food.name)}</div>
             <div className="text">{food.description || ""}</div>
             <div className="price-row">
               <div
@@ -1177,7 +1176,10 @@ export default function ListingPage() {
                     }}
                   />
                 ) : (
-                  <div className="kitchen-info-avatar__placeholder" aria-hidden="true" />
+                  <div
+                    className="kitchen-info-avatar__placeholder"
+                    aria-hidden="true"
+                  />
                 )}
               </div>
               <div className="kitchen-info-text">
@@ -1286,12 +1288,7 @@ export default function ListingPage() {
           {pickupNowItems.length > 0 && (
             <div className="pickup-now-section">
               <div className="pickup-now-header">
-                <h2 className="small-title pickup-now-title">
-                  Pickup Now{" "}
-                  <span className="pickup-now-subtitle">
-                    (No Preorder Needed)
-                  </span>
-                </h2>
+                <h2 className="small-title pickup-now-title">Available now</h2>
                 <button
                   type="button"
                   className="pickup-now-copy-btn"
@@ -1479,14 +1476,16 @@ export default function ListingPage() {
                                 food.imageUrl ||
                                 "/src/assets/images/product.png"
                               }
-                              alt={food.name}
+                              alt={cleanItemName(food.name)}
                               onError={(e) => {
                                 e.target.src = "/src/assets/images/product.png";
                               }}
                             />
                           </div>
                           <div className="data">
-                            <div className="title">{food.name}</div>
+                            <div className="title">
+                              {cleanItemName(food.name)}
+                            </div>
                             <div className="text">{food.description || ""}</div>
                             <div className="price-row">
                               <div
