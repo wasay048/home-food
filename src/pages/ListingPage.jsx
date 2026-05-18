@@ -970,16 +970,14 @@ export default function ListingPage() {
                   className="group-order-chip group-order-chip--stock"
                   aria-label="In Stock - Ready"
                 >
-                  <span className="group-order-chip__value">
-                    In Stock - Ready
-                  </span>
+                  <span className="group-order-chip__value">In Stock</span>
                 </div>
               ) : (
                 isCat8 &&
                 calculateGroupOrderPercentage(food, quantitiesByItemName) !==
                   null && (
-                  <div className="group-order-chip" aria-label="Groupbuy">
-                    <span className="group-order-chip__label">Groupbuy:</span>{" "}
+                  <div className="group-order-chip" aria-label="Progress">
+                    <span className="group-order-chip__label">Progress:</span>{" "}
                     <span className="group-order-chip__value">
                       {calculateGroupOrderPercentage(
                         food,

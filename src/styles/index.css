@@ -588,20 +588,58 @@ body,
 .category-group .menu-listing .menu-list .left .data .price-row {
   margin-top: 0;
   margin-bottom: 0;
-  gap: 8px;
+  /* Tight gap is only used between price and chip; the quantity selector
+     is pushed to the right edge via margin-left: auto below, so this gap
+     doesn't compress the chip→quantity spacing on narrow screens. */
+  gap: 6px;
+  /* Align text on the baseline so the large price ($100) and the smaller
+     chip ("Progress: X%") read as sitting on the same line. The quantity
+     selector is centered separately below. */
+  align-items: baseline;
 }
-/* Keep "$" and the number on one line, side by side, regardless of how
-   much the chip next to them eats. */
 .category-group .menu-listing .menu-list .left .data .price-row .price {
   flex: 0 0 auto;
   white-space: nowrap;
+  margin-top: 15px;
+}
+.category-group .menu-listing .menu-list .left .data .price-row .group-order-chip {
+  margin-top: 15px;
+  /* Never shrink — the chip must show "Progress: X%" in full. To make room
+     on narrow screens (iPhone SE width), the +/- buttons below are sized
+     down instead of truncating the chip text. */
+  flex: 0 0 auto;
+  padding: 0 2px;
+}
+/* QuantitySelector is a tall pill control; keep it vertically centered
+   against the baseline-aligned text, AND pin it to the right edge. */
+.category-group .menu-listing .menu-list .left .data .price-row .quantity-warpper {
+  align-self: center;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+/* Compact the small QuantitySelector inside category-group cards so the
+   row fits "Progress: X%" + price + buttons within the data column at
+   iPhone SE width without overflowing or truncating the chip. */
+.category-group .menu-listing .menu-list .left .data .price-row .quantity-selector--small .quantity-selector__controls {
+  gap: 6px;
+}
+.category-group .menu-listing .menu-list .left .data .price-row .quantity-selector--small .quantity-selector__display {
+  min-width: 14px;
+}
+.category-group .menu-listing .menu-list .left .data .price-row .quantity-selector--small .quantity-btn {
+  width: 22px;
+  height: 22px;
+}
+.category-group .menu-listing .menu-list .left .data .price-row .quantity-selector--small .quantity-btn svg {
+  width: 9px;
+  height: 9px;
 }
 
-/* iOS-style "Group order filled: X%" chip — fills the white space between
+/* iOS-style "Progress: X%" chip — fills the white space between
    the price and the quantity selector for category-8 (Group PreOrder)
-   cards. Allowed to wrap to two lines if there isn't horizontal room. */
+   cards. Must stay on a single line so "Progress: 60%" doesn't break. */
 .group-order-chip {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   max-width: 100%;
   display: inline-block;
@@ -613,9 +651,7 @@ body,
   font-weight: 700;
   letter-spacing: 0.1px;
   line-height: 1.25;
-  white-space: normal;
-  word-break: normal;
-  overflow-wrap: break-word;
+  white-space: nowrap;
 }
 .group-order-chip__label {
   color: #c0392b;
