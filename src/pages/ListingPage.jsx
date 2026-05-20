@@ -863,9 +863,10 @@ export default function ListingPage() {
     const header = `${kitchen?.name || "Kitchen"} — Available now`;
     const lines = pickupNowItems.map(
       (it) =>
-        `${it.displayName} has ${it.stockText} in stock (${it.priceText})`,
+        `- ${it.displayName} has ${it.stockText} in stock (${it.priceText})`,
     );
-    const text = [header, ...lines].join("\n");
+    const url = "www.homefreshfoods.ai/foods";
+    const text = [header, ...lines, url].join("\n");
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(text);
@@ -1317,31 +1318,46 @@ export default function ListingPage() {
                   {copyFeedback || "Copy"}
                 </button>
               </div>
-              <div className="pickup-now-list">
+              <div className="pickup-now-table">
+                <div className="pickup-now-row pickup-now-row--head">
+                  <span className="pickup-now-col pickup-now-col--name" />
+                  <span className="pickup-now-col pickup-now-col--price">
+                    Price
+                  </span>
+                  <span className="pickup-now-col pickup-now-col--stock">
+                    In Stock
+                  </span>
+                </div>
                 {pickupNowItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="pickup-now-line pickup-now-col--clickable"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() =>
-                      window.open(
-                        `/share?kitchenId=${kitchen?.id}&foodId=${item.id}`,
-                        "_blank",
-                      )
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
+                  <div key={item.id} className="pickup-now-row">
+                    <span
+                      className="pickup-now-col pickup-now-col--name pickup-now-col--clickable"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() =>
                         window.open(
                           `/share?kitchenId=${kitchen?.id}&foodId=${item.id}`,
                           "_blank",
-                        );
+                        )
                       }
-                    }}
-                  >
-                    - {item.displayName} ({item.priceText}): {item.stockText} in
-                    stock
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          window.open(
+                            `/share?kitchenId=${kitchen?.id}&foodId=${item.id}`,
+                            "_blank",
+                          );
+                        }
+                      }}
+                    >
+                      {item.displayName}
+                    </span>
+                    <span className="pickup-now-col pickup-now-col--price">
+                      {item.priceText}
+                    </span>
+                    <span className="pickup-now-col pickup-now-col--stock">
+                      {item.stockText}
+                    </span>
                   </div>
                 ))}
               </div>
