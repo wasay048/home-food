@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
-import { QRCodeSVG } from "qrcode.react";
 import scooterRider from "../assets/scooter-rider.png";
 import { useGenericCart } from "../hooks/useGenericCart";
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
@@ -453,6 +452,28 @@ export default function ListingPage() {
     getMaxCategoryId,
     quantitiesByItemName,
   ]);
+
+  // ✅ "Groupbuy of the Week" — the 3 category-8 items with the highest
+  // group-order progress %. Surfaced at the top of the Group PreOrder section
+  // to nudge users toward the same items, so wholesale minimums are hit faster
+  // instead of orders spreading thin across the whole menu. cat8.items is
+  // already sorted by progress desc (via compareItems), so we just filter out
+  // 0% items and take the top 3. Hidden while searching to keep results clean.
+  const topGroupbuyItems = useMemo(() => {
+    if (searchTokens.length > 0) return [];
+    const cat8 = groupedGoGrabItems.find((g) => g.categoryId === 8);
+    if (!cat8 || !cat8.items) return [];
+    return cat8.items
+      .filter(
+        (food) =>
+          // Exclude "Pickup Now" (in-stock) items — those render as
+          // "In Stock" with no progress %, so they don't belong in a
+          // progress-ranked groupbuy highlight.
+          !(Number(food?.stock) > 0) &&
+          calculateGroupOrderPercentage(food, quantitiesByItemName) > 0,
+      )
+      .slice(0, 3);
+  }, [groupedGoGrabItems, quantitiesByItemName, searchTokens.length]);
 
   // ✅ Build alphabet-grouped items per category (for letter headers)
   const alphabetGroupedItems = useMemo(() => {
@@ -1296,46 +1317,31 @@ export default function ListingPage() {
                   {copyFeedback || "Copy"}
                 </button>
               </div>
-              <div className="pickup-now-table">
-                <div className="pickup-now-row pickup-now-row--head">
-                  <span className="pickup-now-col pickup-now-col--name" />
-                  <span className="pickup-now-col pickup-now-col--price">
-                    Price
-                  </span>
-                  <span className="pickup-now-col pickup-now-col--stock">
-                    In Stock
-                  </span>
-                </div>
+              <div className="pickup-now-list">
                 {pickupNowItems.map((item) => (
-                  <div key={item.id} className="pickup-now-row">
-                    <span
-                      className="pickup-now-col pickup-now-col--name pickup-now-col--clickable"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() =>
+                  <div
+                    key={item.id}
+                    className="pickup-now-line pickup-now-col--clickable"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() =>
+                      window.open(
+                        `/share?kitchenId=${kitchen?.id}&foodId=${item.id}`,
+                        "_blank",
+                      )
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
                         window.open(
                           `/share?kitchenId=${kitchen?.id}&foodId=${item.id}`,
                           "_blank",
-                        )
+                        );
                       }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          window.open(
-                            `/share?kitchenId=${kitchen?.id}&foodId=${item.id}`,
-                            "_blank",
-                          );
-                        }
-                      }}
-                    >
-                      {item.displayName}
-                    </span>
-                    <span className="pickup-now-col pickup-now-col--price">
-                      {item.priceText}
-                    </span>
-                    <span className="pickup-now-col pickup-now-col--stock">
-                      {item.stockText}
-                    </span>
+                    }}
+                  >
+                    - {item.displayName} ({item.priceText}): {item.stockText} in
+                    stock
                   </div>
                 ))}
               </div>
@@ -1351,6 +1357,21 @@ export default function ListingPage() {
                 return (
                   <div key={group.categoryId} className="category-group">
                     <h3 className="category-title">{group.categoryName}</h3>
+                    {isCat8 && topGroupbuyItems.length > 0 && (
+                      <div className="groupbuy-week">
+                        <div className="groupbuy-week__heading">
+                          🔥Groupbuy of the Week🔥
+                        </div>
+                        <div className="groupbuy-week__subtitle">
+                          Order these to hit the group goal togther
+                        </div>
+                        <div className="menu-listing">
+                          {topGroupbuyItems.map((food) =>
+                            renderGoGrabFoodCard(food),
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {isCat8 && group.subcategoryGroups ? (
                       <div className="subcategory-list">
                         {group.subcategoryGroups.map((sg) => {
@@ -1617,17 +1638,6 @@ export default function ListingPage() {
           >
             Continue to View Cart
           </button>
-
-          {/* QR Code Section */}
-          <div className="scanner-bottom mb-16">
-            <div className="text">
-              Full menus from your local home kitchens can be found in the
-              HomeFresh app, available in the iOS App Store.
-            </div>
-            <div className="qr">
-              <QRCodeSVG value="https://www.homefreshfoods.ai" size={50} />
-            </div>
-          </div>
         </div>
       </div>
     </div>
