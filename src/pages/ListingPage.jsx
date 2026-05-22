@@ -868,10 +868,10 @@ export default function ListingPage() {
 
   const handleCopyInventory = useCallback(async () => {
     if (!pickupNowItems || pickupNowItems.length === 0) return;
-    const header = `${kitchen?.name || "Kitchen"} — Available now`;
+    const header = `${kitchen?.name || "Kitchen"}: Available now`;
     const lines = pickupNowItems.map(
       (it) =>
-        `- ${it.displayName} has ${it.stockText} in stock (${it.priceText})`,
+        `•  ${it.displayName}(${it.priceText}): ${it.stockText} in stock`,
     );
     const url = "www.homefreshfoods.ai/foods";
     const text = [header, ...lines, url].join("\n");
