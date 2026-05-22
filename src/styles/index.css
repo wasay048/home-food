@@ -311,11 +311,15 @@ body,
   background: rgba(118, 118, 128, 0.12); /* iOS search-field fill */
   backdrop-filter: saturate(180%) blur(16px);
   -webkit-backdrop-filter: saturate(180%) blur(16px);
-  transition: background 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    background 0.18s ease,
+    box-shadow 0.18s ease;
 }
 .listing-search-bar:focus-within {
   background: #ffffff;
-  box-shadow: 0 0 0 1.5px #3fc045, 0 4px 14px rgba(63, 192, 69, 0.12);
+  box-shadow:
+    0 0 0 1.5px #3fc045,
+    0 4px 14px rgba(63, 192, 69, 0.12);
 }
 .listing-search-bar__icon {
   flex-shrink: 0;
@@ -516,9 +520,9 @@ body,
 }
 .pickup-now-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 80px 70px;
+  grid-template-columns: minmax(0, 1fr) 52px 40px;
   align-items: center;
-  gap: 8px;
+  gap: 1px;
   padding: 2px 0;
   font-size: 13px;
   line-height: 1.3;
@@ -628,7 +632,13 @@ body,
   white-space: nowrap;
   margin-top: 15px;
 }
-.category-group .menu-listing .menu-list .left .data .price-row .group-order-chip {
+.category-group
+  .menu-listing
+  .menu-list
+  .left
+  .data
+  .price-row
+  .group-order-chip {
   margin-top: 15px;
   /* Never shrink — the chip must show "Progress: X%" in full. To make room
      on narrow screens (iPhone SE width), the +/- buttons below are sized
@@ -638,7 +648,13 @@ body,
 }
 /* QuantitySelector is a tall pill control; keep it vertically centered
    against the baseline-aligned text, AND pin it to the right edge. */
-.category-group .menu-listing .menu-list .left .data .price-row .quantity-warpper {
+.category-group
+  .menu-listing
+  .menu-list
+  .left
+  .data
+  .price-row
+  .quantity-warpper {
   align-self: center;
   margin-left: auto;
   flex: 0 0 auto;
@@ -646,17 +662,46 @@ body,
 /* Compact the small QuantitySelector inside category-group cards so the
    row fits "Progress: X%" + price + buttons within the data column at
    iPhone SE width without overflowing or truncating the chip. */
-.category-group .menu-listing .menu-list .left .data .price-row .quantity-selector--small .quantity-selector__controls {
+.category-group
+  .menu-listing
+  .menu-list
+  .left
+  .data
+  .price-row
+  .quantity-selector--small
+  .quantity-selector__controls {
   gap: 6px;
 }
-.category-group .menu-listing .menu-list .left .data .price-row .quantity-selector--small .quantity-selector__display {
+.category-group
+  .menu-listing
+  .menu-list
+  .left
+  .data
+  .price-row
+  .quantity-selector--small
+  .quantity-selector__display {
   min-width: 14px;
 }
-.category-group .menu-listing .menu-list .left .data .price-row .quantity-selector--small .quantity-btn {
+.category-group
+  .menu-listing
+  .menu-list
+  .left
+  .data
+  .price-row
+  .quantity-selector--small
+  .quantity-btn {
   width: 22px;
   height: 22px;
 }
-.category-group .menu-listing .menu-list .left .data .price-row .quantity-selector--small .quantity-btn svg {
+.category-group
+  .menu-listing
+  .menu-list
+  .left
+  .data
+  .price-row
+  .quantity-selector--small
+  .quantity-btn
+  svg {
   width: 9px;
   height: 9px;
 }
@@ -713,13 +758,15 @@ body,
 .subcategory-group {
   background: #ffffff;
   border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04),
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
     0 6px 18px rgba(17, 24, 39, 0.04);
   overflow: hidden;
   transition: box-shadow 0.18s ease;
 }
 .subcategory-group.is-expanded {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05),
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.05),
     0 10px 28px rgba(17, 24, 39, 0.07);
 }
 .subcategory-header {
@@ -775,7 +822,8 @@ body,
 .subcategory-header__chevron {
   flex-shrink: 0;
   color: #8e8e93;
-  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
     color 0.18s ease;
 }
 .subcategory-group.is-expanded .subcategory-header__chevron {
@@ -2749,8 +2797,8 @@ body,
   overflow: hidden;
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.25);
   font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "Helvetica Neue", Arial, sans-serif;
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial,
+    sans-serif;
   animation: iosAlertIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @keyframes iosAlertIn {

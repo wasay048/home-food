@@ -46,6 +46,14 @@ const cleanItemName = (name) => {
     .trim();
 };
 
+// Strip a trailing weight suffix like "2磅" or "3-4磅" from an item name.
+// In the Pickup Now table the price is shown per-pound on the right, so a
+// "2磅"/"3-4磅" baked into the name confuses users — drop it for that list.
+const stripPoundSuffix = (name) => {
+  if (!name) return "";
+  return name.replace(/\s*\d+(?:\s*[-~–~]\s*\d+)?\s*磅\s*$/u, "").trim();
+};
+
 const calculateGroupOrderPercentage = (food, quantitiesByItemName) => {
   if (!food) return 0;
   const minByGroup = food.minByGroup;
@@ -849,7 +857,7 @@ export default function ListingPage() {
 
         return {
           id: food.id,
-          displayName: cleanItemName(food.name),
+          displayName: stripPoundSuffix(cleanItemName(food.name)),
           priceText,
           stockText,
         };
@@ -992,7 +1000,7 @@ export default function ListingPage() {
                   className="group-order-chip group-order-chip--stock"
                   aria-label="In Stock - Ready"
                 >
-                  <span className="group-order-chip__value">In Stock</span>
+                  <span className="group-order-chip__value">In-Stock</span>
                 </div>
               ) : (
                 isCat8 &&
@@ -1322,10 +1330,10 @@ export default function ListingPage() {
                 <div className="pickup-now-row pickup-now-row--head">
                   <span className="pickup-now-col pickup-now-col--name" />
                   <span className="pickup-now-col pickup-now-col--price">
-                    Price
+                    Price{" "}
                   </span>
                   <span className="pickup-now-col pickup-now-col--stock">
-                    In Stock
+                    In-Stock
                   </span>
                 </div>
                 {pickupNowItems.map((item) => (
