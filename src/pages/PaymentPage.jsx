@@ -21,9 +21,10 @@ import {
   placeOrder,
   createOrderObject,
   validateItemAvailability,
+  detectItemChanges,
 } from "../services/orderService";
 import { getKitchenById } from "../services/foodService";
-import { clearCart } from "../store/slices/cartSlice";
+import { clearCart, updateCartItemSnapshot } from "../store/slices/cartSlice";
 import { updateUserProfile as updateUserProfileRedux } from "../store/slices/authSlice";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import { useGenericCart } from "../hooks/useGenericCart";
@@ -69,6 +70,14 @@ export default function PaymentPage() {
     useState(false);
   const [invalidDateItems, setInvalidDateItems] = useState([]);
   const [showPhoneErrorDialog, setShowPhoneErrorDialog] = useState(false);
+
+  // Freshness check state — surfaced when the live food doc's name or price
+  // has drifted from the cart snapshot between adding to cart and placing the
+  // order. `pendingPlaceOrderTick` is bumped after the user confirms so a
+  // useEffect can retry handlePlaceOrder once Redux flushes the updated cart.
+  const [pendingChanges, setPendingChanges] = useState([]);
+  const [showChangesDialog, setShowChangesDialog] = useState(false);
+  const [pendingPlaceOrderTick, setPendingPlaceOrderTick] = useState(0);
 
   const [showWeChatDialog, setShowWeChatDialog] = useState(false);
   const [paymentType, setPaymentType] = useState("online"); // "online" or "cash"
@@ -887,6 +896,24 @@ export default function PaymentPage() {
         return;
       }
 
+      // ✅ Freshness check: compare cart snapshots against live food docs.
+      // If the kitchen updated a name or price after the item was added to
+      // the cart, surface a confirmation modal so the user can review the
+      // change before we charge them.
+      console.log("🔄 Starting change detection...");
+      const changes = await detectItemChanges(
+        cartItems,
+        kitchenInfo?.id || kitchenInfo?.kitchenId || cartItems[0]?.kitchenId
+      );
+      if (changes.length > 0) {
+        console.log("⚠️ Item changes detected, asking for confirmation:", changes);
+        setPendingChanges(changes);
+        setShowChangesDialog(true);
+        orderLockRef.current = false;
+        setIsPlacingOrder(false);
+        return;
+      }
+
       console.log("✅ All validations passed, proceeding with order...");
 
       // Calculate remaining amount after balance deduction
@@ -1108,6 +1135,41 @@ export default function PaymentPage() {
       orderLockRef.current = false;
     }
   };
+
+  const handleConfirmChanges = () => {
+    if (pendingChanges.length > 0) {
+      dispatch(
+        updateCartItemSnapshot(
+          pendingChanges.map((c) => ({
+            cartItemId: c.cartItemId,
+            name: c.liveName,
+            cost: c.livePrice,
+          }))
+        )
+      );
+    }
+    setShowChangesDialog(false);
+    setPendingChanges([]);
+    // Bump the tick so the effect below re-runs handlePlaceOrder after Redux
+    // has propagated the snapshot update into cartItems.
+    setPendingPlaceOrderTick((t) => t + 1);
+  };
+
+  const handleCancelChanges = () => {
+    setShowChangesDialog(false);
+    setPendingChanges([]);
+  };
+
+  // Retry placing the order after the user confirms the change-detection
+  // modal. handlePlaceOrder's closure reads the latest cartItems by the time
+  // this effect fires because the dispatch and tick bump happen in the same
+  // batch — React renders once with updated cart + tick, then runs the effect.
+  useEffect(() => {
+    if (pendingPlaceOrderTick > 0) {
+      handlePlaceOrder();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPlaceOrderTick]);
 
   const handleCopyEmail = async (email) => {
     try {
@@ -2168,6 +2230,98 @@ export default function PaymentPage() {
                 }
               >
                 Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showChangesDialog && (
+        <div className="modal-overlay" onClick={handleCancelChanges}>
+          <div
+            className="modal-container validation-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3 className="modal-title">⚠️ Items Updated</h3>
+              <button
+                className="modal-close-btn"
+                onClick={handleCancelChanges}
+                aria-label="Close modal"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="modal-content">
+              <p className="validation-message">
+                Some items in your cart were updated by the kitchen since you
+                added them. Please review and confirm before placing your
+                order:
+              </p>
+              <div className="invalid-items-list">
+                {pendingChanges.map((change, index) => (
+                  <div key={index} className="invalid-item-card">
+                    <div className="invalid-item-info">
+                      <div className="food-image-small">
+                        {change.imageUrl && (
+                          <img
+                            src={change.imageUrl}
+                            alt={change.liveName || change.snapshotName}
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                            }}
+                          />
+                        )}
+                      </div>
+                      <div className="invalid-item-details">
+                        {change.nameChanged ? (
+                          <h5 className="food-name-bold">
+                            <span
+                              style={{
+                                textDecoration: "line-through",
+                                color: "#888",
+                                fontWeight: "normal",
+                                marginRight: "6px",
+                              }}
+                            >
+                              {change.snapshotName || "—"}
+                            </span>
+                            → {change.liveName}
+                          </h5>
+                        ) : (
+                          <h5 className="food-name-bold">
+                            {change.liveName || change.snapshotName}
+                          </h5>
+                        )}
+                        {change.priceChanged && (
+                          <div className="invalid-date-info">
+                            <span className="date-label">Price:</span>
+                            <span className="error-text">
+                              <span
+                                style={{
+                                  textDecoration: "line-through",
+                                  color: "#888",
+                                  marginRight: "6px",
+                                }}
+                              >
+                                ${change.snapshotPrice}
+                              </span>
+                              → ${change.livePrice}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={handleCancelChanges}>
+                Cancel
+              </button>
+              <button className="btn-primary" onClick={handleConfirmChanges}>
+                Confirm & Place Order
               </button>
             </div>
           </div>

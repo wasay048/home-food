@@ -466,7 +466,7 @@ export default function FoodDetailPage() {
     );
   }
 
-  const { kitchen: fullKitchen, foods: allFoods } =
+  const { kitchen: fullKitchen, foods: allFoods, refetch: refetchKitchenFoods } =
     useKitchenWithFoods(kitchenId);
   const [activeTab, setActiveTab] = useState("reviews");
   const [selectedQuantity, setSelectedQuantity] = useState(0);
@@ -674,6 +674,41 @@ export default function FoodDetailPage() {
   useEffect(() => {
     dispatch(fetchAggregatedOrderQuantities());
   }, [dispatch]);
+
+  // ✅ Auto-refresh when the page returns to the foreground (e.g. user
+  // switches back to the WeChat in-app browser from another chat/app).
+  // `visibilitychange` covers most cases; `pageshow` with `persisted=true`
+  // covers iOS bfcache restore where `visibilitychange` does not fire. A
+  // short cooldown prevents hammering Firebase if the user rapidly toggles
+  // foreground/background. Refreshes the food detail, the kitchen/foods
+  // feed, and the aggregated order quantities (group-buy progress).
+  const lastForegroundRefreshRef = useRef(0);
+  useEffect(() => {
+    const REFRESH_COOLDOWN_MS = 5000;
+    const refreshFromForeground = (source) => {
+      const now = Date.now();
+      if (now - lastForegroundRefreshRef.current < REFRESH_COOLDOWN_MS) return;
+      lastForegroundRefreshRef.current = now;
+      console.log(`🔁 [FoodDetailPage] Foreground refresh (${source})`);
+      try { loadFoodDetail && loadFoodDetail(); } catch (_) {}
+      try { refetchKitchenFoods && refetchKitchenFoods(); } catch (_) {}
+      dispatch(fetchAggregatedOrderQuantities());
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refreshFromForeground("visibilitychange");
+      }
+    };
+    const handlePageShow = (e) => {
+      if (e.persisted) refreshFromForeground("pageshow");
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, [loadFoodDetail, refetchKitchenFoods, dispatch]);
 
   // ✅ NEW: Get aggregated order quantities from Redux
   const { quantitiesByItemName } = useSelector((state) => state.orderAggregation);

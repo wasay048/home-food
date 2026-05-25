@@ -124,7 +124,6 @@ export const chefSendBulkSms = onCall(
           ``,
           trimmedMessage,
           ``,
-          `For help visit homefreshfoods.ai or reply HELP.`,
           `Reply STOP to unsubscribe.`,
         ].join("\n");
 

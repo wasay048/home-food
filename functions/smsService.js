@@ -112,7 +112,7 @@ export const SMSTemplates = {
     `HomeFresh: Slight delay on order #${orderId}. Ready in ${delayMinutes} minutes. Sorry for the inconvenience. Reply STOP to unsubscribe.`,
 
   orderStatusUpdate: (orderId, status) =>
-    `HomeFresh: Order #${orderId} status update: ${status}. For help visit homefreshfoods.ai or reply HELP. Reply STOP to unsubscribe.`,
+    `HomeFresh: Order #${orderId} status update: ${status}. Reply STOP to unsubscribe.`,
 
   optInConfirmation: () =>
     `HomeFresh: You're now subscribed to order confirmation and status SMS updates. Msg frequency varies per order. Msg & Data rates may apply. Reply STOP to unsubscribe, HELP for help.`,

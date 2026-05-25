@@ -266,6 +266,94 @@ const validatePreOrderAvailability = async (item, kitchenId) => {
 };
 
 /**
+ * Resolve a live food document for a cart item, trying the kitchen
+ * subcollection first and falling back to the top-level foodItems collection.
+ * Returns the document data or null if not found.
+ */
+const fetchLiveFoodDoc = async (foodItemId, kitchenId) => {
+  let currentDoc = null;
+  if (kitchenId) {
+    try {
+      const subRef = doc(db, "kitchens", kitchenId, "foodItems", foodItemId);
+      currentDoc = await getDoc(subRef);
+    } catch (e) {
+      currentDoc = null;
+    }
+  }
+  if (!currentDoc || !currentDoc.exists()) {
+    try {
+      const topRef = doc(db, "foodItems", foodItemId);
+      currentDoc = await getDoc(topRef);
+    } catch (e) {
+      currentDoc = null;
+    }
+  }
+  return currentDoc && currentDoc.exists() ? currentDoc.data() : null;
+};
+
+/**
+ * Detect name/price changes between the cart-snapshot and the live food doc.
+ * Returns an array of { cartItemId, foodId, snapshotName, liveName,
+ *   snapshotPrice, livePrice, nameChanged, priceChanged, imageUrl } so the UI
+ * can ask the user to confirm before the order is placed.
+ *
+ * Prices are compared as numbers (rounded to 2dp) to avoid string-vs-number
+ * false positives. Name comparison is exact (trimmed) — only flagged when the
+ * live doc carries a non-empty name so we don't treat missing data as a diff.
+ */
+export const detectItemChanges = async (cartItems, kitchenId) => {
+  const changes = [];
+
+  for (const item of cartItems) {
+    const foodItemId = item.foodId || item.id;
+    if (!foodItemId) continue;
+
+    const live = await fetchLiveFoodDoc(foodItemId, kitchenId);
+    if (!live) continue; // availability check handles "missing" items separately
+
+    const snapshotName = (item.food?.name || "").trim();
+    const liveName = (live.name || "").trim();
+
+    const snapshotPriceRaw = item.food?.cost ?? item.food?.price ?? 0;
+    const livePriceRaw = live.cost ?? live.price ?? 0;
+    const snapshotPrice = Number(parseFloat(snapshotPriceRaw).toFixed(2));
+    const livePrice = Number(parseFloat(livePriceRaw).toFixed(2));
+
+    const nameChanged = liveName !== "" && snapshotName !== liveName;
+    const priceChanged =
+      !Number.isNaN(snapshotPrice) &&
+      !Number.isNaN(livePrice) &&
+      snapshotPrice !== livePrice;
+
+    if (nameChanged || priceChanged) {
+      changes.push({
+        cartItemId: item.id,
+        foodId: foodItemId,
+        snapshotName,
+        liveName,
+        snapshotPrice: snapshotPrice.toFixed(2),
+        livePrice: livePrice.toFixed(2),
+        nameChanged,
+        priceChanged,
+        imageUrl: item.food?.imageUrl || item.food?.image || live.imageUrl || null,
+      });
+    }
+  }
+
+  console.log("🔄 [Change Detection] Diff vs live food docs:", {
+    total: cartItems.length,
+    changed: changes.length,
+    changes: changes.map((c) => ({
+      foodId: c.foodId,
+      nameChanged: c.nameChanged,
+      priceChanged: c.priceChanged,
+    })),
+  });
+
+  return changes;
+};
+
+/**
  * Main validation function that checks all cart items
  * Reusable across different components
  */

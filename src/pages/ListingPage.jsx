@@ -262,6 +262,40 @@ export default function ListingPage() {
     dispatch(fetchAggregatedOrderQuantities());
   }, [dispatch]);
 
+  // ✅ Auto-refresh when the page returns to the foreground (e.g. user
+  // switches back to the WeChat in-app browser from another chat/app).
+  // `visibilitychange` covers most cases; `pageshow` with `persisted=true`
+  // covers iOS bfcache restore where `visibilitychange` does not fire. A
+  // short cooldown prevents hammering Firebase if the user rapidly toggles
+  // foreground/background. Refreshes both the kitchen/foods feed and the
+  // aggregated order quantities (group-buy progress).
+  const lastForegroundRefreshRef = useRef(0);
+  useEffect(() => {
+    const REFRESH_COOLDOWN_MS = 5000;
+    const refreshFromForeground = (source) => {
+      const now = Date.now();
+      if (now - lastForegroundRefreshRef.current < REFRESH_COOLDOWN_MS) return;
+      lastForegroundRefreshRef.current = now;
+      console.log(`🔁 [ListingPage] Foreground refresh (${source})`);
+      refetch();
+      dispatch(fetchAggregatedOrderQuantities());
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refreshFromForeground("visibilitychange");
+      }
+    };
+    const handlePageShow = (e) => {
+      if (e.persisted) refreshFromForeground("pageshow");
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, [refetch, dispatch]);
+
   // ✅ Get food categories from Redux store
   const foodCategories = useSelector(
     (state) => state.foodCategories?.categories || [],

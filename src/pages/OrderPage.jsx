@@ -2,14 +2,19 @@ import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import dayjs from "dayjs";
-import { clearCart, removeItemsFromOtherKitchens } from "../store/slices/cartSlice";
+import {
+  clearCart,
+  removeItemsFromOtherKitchens,
+  updateCartItemSnapshot,
+} from "../store/slices/cartSlice";
 import { showToast } from "../utils/toast";
 import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
 import scooterRider from "../assets/scooter-rider.png";
 
 import { useKitchenWithFoods } from "../hooks/useKitchenListing";
 import { useGenericCart } from "../hooks/useGenericCart";
-import { CornerDownLeft } from "lucide-react";
+import { detectItemChanges } from "../services/orderService";
+import { X } from "lucide-react";
 
 // ✅ Helper function to get max category ID from comma-separated string (e.g., "5, 7" -> 7)
 const getMaxCategoryId = (foodCategory) => {
@@ -56,6 +61,12 @@ export default function OrderPage() {
   const [editModeItems, setEditModeItems] = useState(new Set());
 
   const [showRemoveAllDialog, setShowRemoveAllDialog] = useState(false);
+
+  // Freshness check state — populated when name/price drifted from the live
+  // food doc between adding to cart and pressing Check Out.
+  const [pendingChanges, setPendingChanges] = useState([]);
+  const [showChangesDialog, setShowChangesDialog] = useState(false);
+  const [isCheckingChanges, setIsCheckingChanges] = useState(false);
 
   // Handle navigation from PaymentPage edit functionality
   useEffect(() => {
@@ -296,6 +307,55 @@ export default function OrderPage() {
   };
 
   const totalItemsCount = cartItems?.length || 0;
+
+  // Compare each cart item's snapshot against the live food doc before letting
+  // the user move on to checkout. If anything drifted, surface a confirmation
+  // modal listing the changes; otherwise navigate straight through.
+  const handleCheckOut = async () => {
+    if (cartItems.length === 0 || isCheckingChanges) return;
+
+    const targetKitchenId =
+      activeListingKitchenId || cartItems[0]?.kitchenId || null;
+
+    setIsCheckingChanges(true);
+    try {
+      const changes = await detectItemChanges(cartItems, targetKitchenId);
+      if (changes.length > 0) {
+        setPendingChanges(changes);
+        setShowChangesDialog(true);
+        return;
+      }
+      navigate("/checkout");
+    } catch (error) {
+      console.error("❌ [OrderPage] Change detection failed:", error);
+      // If the check itself failed, don't block the user — let them continue.
+      navigate("/checkout");
+    } finally {
+      setIsCheckingChanges(false);
+    }
+  };
+
+  const handleConfirmChanges = () => {
+    if (pendingChanges.length > 0) {
+      dispatch(
+        updateCartItemSnapshot(
+          pendingChanges.map((c) => ({
+            cartItemId: c.cartItemId,
+            name: c.liveName,
+            cost: c.livePrice,
+          }))
+        )
+      );
+    }
+    setShowChangesDialog(false);
+    setPendingChanges([]);
+    navigate("/checkout");
+  };
+
+  const handleCancelChanges = () => {
+    setShowChangesDialog(false);
+    setPendingChanges([]);
+  };
 
   return (
     <div className="container">
@@ -651,9 +711,10 @@ export default function OrderPage() {
                 {/* Single Checkout Button */}
                 <button
                   className="action-button"
-                  onClick={() => navigate("/checkout")}
+                  onClick={handleCheckOut}
+                  disabled={isCheckingChanges}
                 >
-                  Check Out
+                  {isCheckingChanges ? "Checking..." : "Check Out"}
                 </button>
 
                 {/* What Else is Available Button */}
@@ -678,6 +739,96 @@ export default function OrderPage() {
           )}
         </div>
       </div>
+      {showChangesDialog && (
+        <div className="modal-overlay" onClick={handleCancelChanges}>
+          <div
+            className="modal-container validation-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3 className="modal-title">⚠️ Items Updated</h3>
+              <button
+                className="modal-close-btn"
+                onClick={handleCancelChanges}
+                aria-label="Close modal"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="modal-content">
+              <p className="validation-message">
+                Some items in your cart were updated by the kitchen. Please
+                review and confirm before continuing to checkout:
+              </p>
+              <div className="invalid-items-list">
+                {pendingChanges.map((change, index) => (
+                  <div key={index} className="invalid-item-card">
+                    <div className="invalid-item-info">
+                      <div className="food-image-small">
+                        {change.imageUrl && (
+                          <img
+                            src={change.imageUrl}
+                            alt={change.liveName || change.snapshotName}
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                            }}
+                          />
+                        )}
+                      </div>
+                      <div className="invalid-item-details">
+                        {change.nameChanged ? (
+                          <h5 className="food-name-bold">
+                            <span
+                              style={{
+                                textDecoration: "line-through",
+                                color: "#888",
+                                fontWeight: "normal",
+                                marginRight: "6px",
+                              }}
+                            >
+                              {change.snapshotName || "—"}
+                            </span>
+                            → {change.liveName}
+                          </h5>
+                        ) : (
+                          <h5 className="food-name-bold">
+                            {change.liveName || change.snapshotName}
+                          </h5>
+                        )}
+                        {change.priceChanged && (
+                          <div className="invalid-date-info">
+                            <span className="date-label">Price:</span>
+                            <span className="error-text">
+                              <span
+                                style={{
+                                  textDecoration: "line-through",
+                                  color: "#888",
+                                  marginRight: "6px",
+                                }}
+                              >
+                                ${change.snapshotPrice}
+                              </span>
+                              → ${change.livePrice}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={handleCancelChanges}>
+                Cancel
+              </button>
+              <button className="btn-primary" onClick={handleConfirmChanges}>
+                Confirm & Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showRemoveAllDialog && (
         <div className="modal-overlay" onClick={cancelRemoveAll}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>

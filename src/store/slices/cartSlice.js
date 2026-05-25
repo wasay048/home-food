@@ -210,6 +210,26 @@ const cartSlice = createSlice({
       }
     },
 
+    // Refresh the name/price snapshot on cart items after the user has
+    // confirmed live changes pulled from Firestore. Accepts an array of
+    // { cartItemId, name?, cost? } and only touches `food.name` / `food.cost`
+    // so quantity, dates, special instructions, etc. stay intact.
+    updateCartItemSnapshot: (state, action) => {
+      const updates = Array.isArray(action.payload) ? action.payload : [];
+      if (updates.length === 0) return;
+
+      updates.forEach(({ cartItemId, name, cost }) => {
+        const idx = state.items.findIndex((it) => it.id === cartItemId);
+        if (idx === -1) return;
+        if (!state.items[idx].food) state.items[idx].food = {};
+        if (name !== undefined) state.items[idx].food.name = name;
+        if (cost !== undefined) state.items[idx].food.cost = cost;
+        state.items[idx].updatedAt = new Date().toISOString();
+      });
+
+      cartSlice.caseReducers.calculateTotals(state);
+    },
+
     // Remove all cart items that do NOT belong to the given kitchenId.
     // Called when the user navigates to a kitchen listing so stale
     // items from a previously-viewed kitchen are pruned automatically.
@@ -319,6 +339,7 @@ export const {
   addToCart,
   removeFromCart,
   updateCartItem,
+  updateCartItemSnapshot,
   updatePickupDetails,
   clearCart,
   clearError,
