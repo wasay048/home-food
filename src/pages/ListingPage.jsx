@@ -1155,8 +1155,9 @@ export default function ListingPage() {
         </div>
       )}
       <div className="mobile-container" style={{ position: "relative" }}>
-        {/* iOS-style Alphabet Sidebar */}
-        {activeAlphabetLetters.length > 1 && (
+        {/* iOS-style Alphabet Sidebar — temporarily hidden per request. Flip
+            this flag back to true to restore. */}
+        {false && activeAlphabetLetters.length > 1 && (
           <div
             ref={alphabetSidebarRef}
             onTouchMove={handleAlphabetTouch}
