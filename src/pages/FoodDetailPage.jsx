@@ -1663,6 +1663,7 @@ export default function FoodDetailPage() {
                   });
                 }}
                 disabled={!food || !kitchen}
+                pickupNow={isPickupNowMode}
                 className="food-detail-picker"
                 dateLabel={
                   food?.orderType === 1 ? "Delivery Date" : "Pickup Date"

@@ -15,7 +15,10 @@ import {
   setListingLoading,
   setKitchenId,
 } from "../store/slices/listingSlice";
-import { removeItemsFromOtherKitchens } from "../store/slices/cartSlice";
+import {
+  removeItemsFromOtherKitchens,
+  refreshPickupNowDates,
+} from "../store/slices/cartSlice";
 import { setCurrentKitchen } from "../store/slices/foodSlice";
 import {
   setFoodCategories,
@@ -79,6 +82,15 @@ export default function ListingPage() {
   } = useSelector((state) => state.listing);
 
   const dispatch = useDispatch();
+
+  // Self-heal any Pickup Now / In-Stock-Ready cart lines whose stored date is
+  // stale (e.g. the legacy "2000-01-01" sentinel, or a date from a past
+  // visit). These items pick up "today", so we roll their date forward before
+  // initializePickupDataFromCart seeds the picker — otherwise the card would
+  // display "Jan 1, 2000". Idempotent; only touches `pickupNow` lines.
+  useEffect(() => {
+    dispatch(refreshPickupNowDates({ today: dayjs().format("YYYY-MM-DD") }));
+  }, [dispatch]);
 
   // ✅ NEW: Get aggregated order quantities from Redux
   const { quantitiesByItemName } = useSelector(
@@ -1103,6 +1115,7 @@ export default function ListingPage() {
                     handleTimeChange(food.id, newTime, false);
                   }}
                   disabled={!food || !kitchen}
+                  pickupNow={isPickupNow}
                   className="listing-page-picker"
                   dateLabel={
                     food.orderType === 1 ? "Delivery Date" : "Pickup Date"

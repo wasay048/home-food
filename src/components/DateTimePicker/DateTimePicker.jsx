@@ -35,6 +35,11 @@ const DateTimePicker = ({
   disableDateSelection = false,
   isDeliveryMode = false,
   fulfillmentType = null, // 1 = delivery, 2 = pickup, null = pickup (default)
+  // ✅ Pickup Now / In-Stock-Ready flag. When true, the internal cart writes
+  // below pass it through so useGenericCart skips the category-8 sentinel
+  // override (2000-01-01 / 12:00 AM) and keeps the real picker date/time.
+  // Defaults to false so every existing caller stays byte-identical.
+  pickupNow = false,
 }) => {
   console.log("use24HourTimeSlots fulfillmentType", fulfillmentType);
   // Check if food has category 7 or 8 (special category requiring 24-hour time slots)
@@ -718,16 +723,19 @@ const DateTimePicker = ({
         food,
         kitchen,
         newQuantity: cartQuantity,
-        selectedDate: internalDate,
+        // ✅ Use the freshly picked date, not the stale internalDate (state
+        // updates are async). Previously masked by the cat-8 override.
+        selectedDate: dateValue,
         selectedTime: selectedTime,
         specialInstructions: "",
         incomingOrderType: orderType,
         calledFrom: "default",
         updateFlag: "date",
+        pickupNow,
       });
       onTimeChange(null);
     },
-    [orderType, selectedDate, onDateChange, onTimeChange, isMobile]
+    [orderType, selectedDate, onDateChange, onTimeChange, isMobile, pickupNow]
   );
 
   // ✅ FIXED: Handle time selection without causing infinite loops
@@ -746,9 +754,10 @@ const DateTimePicker = ({
         incomingOrderType: orderType,
         calledFrom: "default",
         updateFlag: "date",
+        pickupNow,
       });
     },
-    [onTimeChange]
+    [onTimeChange, pickupNow]
   );
 
   // Custom date picker for mobile when needed
