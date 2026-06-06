@@ -24,7 +24,11 @@ import {
   detectItemChanges,
 } from "../services/orderService";
 import { getKitchenById } from "../services/foodService";
-import { clearCart, updateCartItemSnapshot } from "../store/slices/cartSlice";
+import {
+  clearCart,
+  updateCartItemSnapshot,
+  refreshPickupNowDates,
+} from "../store/slices/cartSlice";
 import { updateUserProfile as updateUserProfileRedux } from "../store/slices/authSlice";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
 import { useGenericCart } from "../hooks/useGenericCart";
@@ -126,6 +130,15 @@ export default function PaymentPage() {
   // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   // const isAuthenticated = true;
+
+  // Silently roll stale Pickup Now / In-Stock-Ready dates forward to today.
+  // These items pick up "today", so a date saved on a past visit would
+  // otherwise be flagged by validatePickupDates() and block the order. Runs
+  // once after rehydration; the reducer is idempotent and only touches
+  // `pickupNow` lines, leaving pre-orders and regular Go&Grab items intact.
+  useEffect(() => {
+    dispatch(refreshPickupNowDates({ today: dayjs().format("YYYY-MM-DD") }));
+  }, [dispatch]);
 
   // ✅ Pre-populate phone number from saved cellPhone in user account
   useEffect(() => {

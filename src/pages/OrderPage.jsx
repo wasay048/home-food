@@ -6,6 +6,7 @@ import {
   clearCart,
   removeItemsFromOtherKitchens,
   updateCartItemSnapshot,
+  refreshPickupNowDates,
 } from "../store/slices/cartSlice";
 import { showToast } from "../utils/toast";
 import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
@@ -53,6 +54,14 @@ export default function OrderPage() {
       dispatch(removeItemsFromOtherKitchens(activeListingKitchenId));
     }
   }, [activeListingKitchenId, dispatch]);
+
+  // Silently roll stale Pickup Now / In-Stock-Ready dates forward to today.
+  // These items pick up "today", so a date saved on a past visit would
+  // otherwise be flagged as invalid at checkout. Runs once after rehydration;
+  // the reducer is idempotent and only touches `pickupNow` lines.
+  useEffect(() => {
+    dispatch(refreshPickupNowDates({ today: dayjs().format("YYYY-MM-DD") }));
+  }, [dispatch]);
 
   // Use generic cart hook for reliable quantity updates
   const { getCartQuantity } = useGenericCart();

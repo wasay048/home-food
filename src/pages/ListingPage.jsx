@@ -1082,7 +1082,10 @@ export default function ListingPage() {
                 </div>
               ) : null;
             })()}
-            {!isCat8 && (
+            {/* Show the date/time picker for regular Go&Grab cards, and also
+                for Pickup Now / In-Stock-Ready items — even though those are
+                category 8 — so the listing mirrors FoodDetailPage exactly. */}
+            {(isPickupNow || !isCat8) && (
               <div
                 className="pickup-time-section"
                 onClick={(e) => e.stopPropagation()}

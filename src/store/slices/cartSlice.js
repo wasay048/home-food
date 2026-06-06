@@ -210,6 +210,47 @@ const cartSlice = createSlice({
       }
     },
 
+    // Silently roll stale pickup dates forward for Pickup Now / In-Stock-Ready
+    // items only. These lines behave like Go&Grab (picked up "today"), so a
+    // date chosen on a past visit (e.g. added May 22, user returns June 5)
+    // would otherwise trip the "invalid date" guard at checkout. We bump ONLY
+    // items flagged `pickupNow` whose selectedDate is strictly before today,
+    // keeping the chosen time. Pre-orders, category-8, and regular Go&Grab
+    // lines are intentionally left untouched. Payload: { today: "YYYY-MM-DD" }.
+    refreshPickupNowDates: (state, action) => {
+      const today = action.payload?.today;
+      if (!today) return;
+
+      let changed = 0;
+      state.items.forEach((item) => {
+        if (!item.pickupNow) return;
+
+        const current = item.selectedDate || item.pickupDetails?.date;
+        // Only roll forward genuinely past dates; leave today/future as-is.
+        if (!current || current >= today) return;
+
+        item.selectedDate = today;
+        if (!item.pickupDetails) item.pickupDetails = {};
+        item.pickupDetails.date = today;
+        // Pickup Now mirrors Go&Grab, so keep its "Pick up today" label fresh.
+        if (
+          item.pickupDetails.orderType === "GO_GRAB" ||
+          item.orderType === "GO_GRAB"
+        ) {
+          item.pickupDetails.display = "Pick up today";
+        }
+        item.updatedAt = new Date().toISOString();
+        changed += 1;
+      });
+
+      if (changed > 0) {
+        console.log(
+          `📅 [Cart] Rolled ${changed} stale Pickup Now item(s) forward to ${today}`
+        );
+        state.lastUpdated = new Date().toISOString();
+      }
+    },
+
     // Refresh the name/price snapshot on cart items after the user has
     // confirmed live changes pulled from Firestore. Accepts an array of
     // { cartItemId, name?, cost? } and only touches `food.name` / `food.cost`
@@ -341,6 +382,7 @@ export const {
   updateCartItem,
   updateCartItemSnapshot,
   updatePickupDetails,
+  refreshPickupNowDates,
   clearCart,
   clearError,
   calculateTotals,
