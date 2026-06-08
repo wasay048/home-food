@@ -9,7 +9,14 @@ import { uploadImageToStorage } from "../services/storageService";
 import { useUserAccount } from "../hooks/useUserAccount";
 import { showToast } from "../utils/toast";
 import { db } from "../services/firebase";
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
 import "./MyBalancePage.css";
 
 export default function MyBalancePage() {
@@ -18,7 +25,9 @@ export default function MyBalancePage() {
 
   // User state — localStorage-backed, no timing issues
   const currentUser = useSelector((state) => state.auth.user);
+  // const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
   const { isAuthenticated } = useWeChatAuth();
+  // const { isAuthenticated } = { isAuthenticated: true };
 
   // Balance
   const { getUserBalance } = useUserAccount();
@@ -37,8 +46,9 @@ export default function MyBalancePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Pending request check
-  const [hasPendingRequest, setHasPendingRequest] = useState(false);
+  // Pending request check — holds the pending doc's details (amount, date) or null
+  const [pendingRequest, setPendingRequest] = useState(null);
+  const hasPendingRequest = !!pendingRequest;
 
   // Auth dialog — only shown on explicit user action
   const [showAuthDialog, setShowAuthDialog] = useState(false);
@@ -74,10 +84,18 @@ export default function MyBalancePage() {
       const q = query(
         collection(db, "credit"),
         where("userId", "==", currentUser.id),
-        where("status", "==", "pending")
+        where("status", "==", "pending"),
       );
       const snapshot = await getDocs(q);
-      setHasPendingRequest(!snapshot.empty);
+      if (!snapshot.empty) {
+        const data = snapshot.docs[0].data();
+        setPendingRequest({
+          amount: data.amount,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : null,
+        });
+      } else {
+        setPendingRequest(null);
+      }
     } catch (err) {
       console.error("Error checking pending requests:", err);
     }
@@ -137,7 +155,11 @@ export default function MyBalancePage() {
     try {
       setIsUploading(true);
       const userId = currentUser?.uid || currentUser?.id || "anonymous";
-      const downloadURL = await uploadImageToStorage(file, "Credit-Requests", userId);
+      const downloadURL = await uploadImageToStorage(
+        file,
+        "Credit-Requests",
+        userId,
+      );
       setFirebaseImageUrl(downloadURL);
       showToast.success("Screenshot uploaded successfully!");
     } catch (error) {
@@ -179,7 +201,9 @@ export default function MyBalancePage() {
       return;
     }
     if (hasPendingRequest) {
-      showToast.error("You already have a pending credit request under review.");
+      showToast.error(
+        "You already have a pending credit request under review.",
+      );
       return;
     }
     const amount = parseFloat(creditAmount);
@@ -226,14 +250,25 @@ export default function MyBalancePage() {
 
       {/* Pull-to-refresh indicator */}
       {refreshing && (
-        <div style={{ textAlign: "center", padding: "8px 0", fontSize: "13px", color: "#888" }}>
+        <div
+          style={{
+            textAlign: "center",
+            padding: "8px 0",
+            fontSize: "13px",
+            color: "#888",
+          }}
+        >
           Refreshing…
         </div>
       )}
 
       {/* Header */}
       <div className="my-balance-header">
-        <button className="back-button" onClick={handleBack} aria-label="Go back">
+        <button
+          className="back-button"
+          onClick={handleBack}
+          aria-label="Go back"
+        >
           <ArrowLeft size={24} />
         </button>
         <h1 className="page-title">My Balance</h1>
@@ -241,18 +276,39 @@ export default function MyBalancePage() {
       </div>
 
       {/* Balance Card */}
-      <div className="balance-display-card">
+      <div
+        className={`balance-display-card ${accountBalance < 0 ? "negative" : ""}`}
+      >
         <div className="balance-label">Current Balance</div>
         <div className="balance-amount">${accountBalance.toFixed(2)}</div>
       </div>
 
       {/* Pending Request Warning */}
       {hasPendingRequest && !showSuccess && (
-        <div style={{ background: "#fff3cd", border: "1px solid #ffc107", borderRadius: "12px", padding: "16px", marginBottom: "20px", textAlign: "center" }}>
+        <div
+          style={{
+            background: "#fff3cd",
+            border: "1px solid #ffc107",
+            borderRadius: "12px",
+            padding: "16px",
+            marginBottom: "20px",
+            textAlign: "center",
+          }}
+        >
           <div style={{ fontSize: "24px", marginBottom: "6px" }}>⏳</div>
-          <div style={{ fontSize: "15px", fontWeight: "600", color: "#856404" }}>Pending Credit Request</div>
+          <div
+            style={{ fontSize: "15px", fontWeight: "600", color: "#856404" }}
+          >
+            Pending Credit Request
+          </div>
           <div style={{ fontSize: "13px", color: "#856404", marginTop: "4px" }}>
-            You have a credit request that is currently being reviewed by the admin. You'll be able to submit a new request once it's been approved or processed.
+            You submitted a request
+            {pendingRequest.createdAt
+              ? ` on ${pendingRequest.createdAt.toLocaleDateString("en-US", { month: "long", day: "numeric" })}`
+              : ""}{" "}
+            to add ${pendingRequest.amount} credit to your account balance. The
+            request is being reviewed. You can add more credits once the
+            previous request is processed.
           </div>
         </div>
       )}
@@ -262,7 +318,9 @@ export default function MyBalancePage() {
         <div className="credit-success-message">
           <div className="success-icon">✅</div>
           <div className="success-text">Credit Request Submitted!</div>
-          <div className="success-subtext">Your credit will be added once approved by the admin.</div>
+          <div className="success-subtext">
+            Your credit will be added once approved by the admin.
+          </div>
         </div>
       )}
 
@@ -289,14 +347,17 @@ export default function MyBalancePage() {
             <div className="section-title">Payment Information</div>
             {[
               { label: "PayPal", value: "13817276240@163.com" },
-              { label: "Venmo",  value: "@Huifang-Qin" },
-              { label: "Zelle",  value: "5107389532" },
+              { label: "Venmo", value: "@Huifang-Qin" },
+              { label: "Zelle", value: "5107389532" },
             ].map(({ label, value }) => (
               <div className="payment-info-row" key={label}>
                 <span className="payment-label">{label}</span>
                 <span className="payment-value">
                   {value}
-                  <button className="copy-btn" onClick={() => handleCopy(value)}>
+                  <button
+                    className="copy-btn"
+                    onClick={() => handleCopy(value)}
+                  >
                     <Copy size={14} /> Copy
                   </button>
                 </span>
@@ -306,7 +367,8 @@ export default function MyBalancePage() {
 
           <div className="screenshot-upload-section">
             <div className="section-title">
-              After making credit payment, please upload payment screenshot by clicking the box below:
+              After making credit payment, please upload payment screenshot by
+              clicking the box below:
             </div>
 
             {!uploadPreview ? (
@@ -315,28 +377,46 @@ export default function MyBalancePage() {
                 className={`upload-dropzone ${isDragActive ? "drag-active" : ""}`}
               >
                 <input {...getInputProps()} />
-                <div className="upload-icon"><ImageIcon size={40} color="#999" /></div>
+                <div className="upload-icon">
+                  <ImageIcon size={40} color="#999" />
+                </div>
                 <div className="upload-text">
-                  {isDragActive ? "Drop your image here..." : "Tap to upload or drag & drop"}
+                  {isDragActive
+                    ? "Drop your image here..."
+                    : "Tap to upload or drag & drop"}
                 </div>
                 <div className="upload-hint">JPG, PNG, GIF • Max 10MB</div>
               </div>
             ) : (
               <div className="upload-preview-container">
                 <img src={uploadPreview} alt="Payment screenshot" />
-                <button className="remove-btn" onClick={removeImage}><X size={18} /></button>
+                <button className="remove-btn" onClick={removeImage}>
+                  <X size={18} />
+                </button>
               </div>
             )}
 
-            {isUploading && <div className="upload-status uploading">⏳ Uploading...</div>}
-            {firebaseImageUrl && !isUploading && <div className="upload-status success">✅ Upload complete</div>}
-            {uploadError && <div className="upload-status error">❌ {uploadError}</div>}
+            {isUploading && (
+              <div className="upload-status uploading">⏳ Uploading...</div>
+            )}
+            {firebaseImageUrl && !isUploading && (
+              <div className="upload-status success">✅ Upload complete</div>
+            )}
+            {uploadError && (
+              <div className="upload-status error">❌ {uploadError}</div>
+            )}
           </div>
 
           <button
             className="add-credit-btn"
             onClick={handleAddCredit}
-            disabled={isSubmitting || isUploading || !firebaseImageUrl || !creditAmount || parseFloat(creditAmount) <= 0}
+            disabled={
+              isSubmitting ||
+              isUploading ||
+              !firebaseImageUrl ||
+              !creditAmount ||
+              parseFloat(creditAmount) <= 0
+            }
           >
             {isSubmitting ? "Processing..." : "Add Credit"}
           </button>

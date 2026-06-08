@@ -89,6 +89,8 @@ export default function MyOrdersPage() {
   const location = useLocation();
   const dispatch = useDispatch();
   const { isAuthenticated, currentUser } = useWeChatAuth();
+  //  const currentUser = { id: "5MhENXvWZ8QYsavYrvNCoFTnIA82" };
+  // const isAuthenticated = true;
   const { quantitiesByItemName } = useSelector((state) => state.orderAggregation);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -667,7 +669,7 @@ export default function MyOrdersPage() {
           {/* Account Balance Card */}
           {currentUser && (
             <div>
-              <div className="account-balance-card">
+              <div className={`account-balance-card ${accountBalance < 0 ? "negative" : ""}`}>
                 <div className="balance-label">Account Balance</div>
                 <div className="balance-amount">${accountBalance.toFixed(2)}</div>
               </div>
@@ -684,13 +686,13 @@ export default function MyOrdersPage() {
           {currentUser && (
             <div className="order-tabs">
               <button
-                className={`order-tab ${activeTab === "inProgress" ? "active" : ""}`}
+                className={`order-tab order-tab-inprogress ${activeTab === "inProgress" ? "active" : ""}`}
                 onClick={() => setActiveTab("inProgress")}
               >
                 In Progress
               </button>
               <button
-                className={`order-tab ${activeTab === "delivered" ? "active" : ""}`}
+                className={`order-tab order-tab-delivered ${activeTab === "delivered" ? "active" : ""}`}
                 onClick={() => setActiveTab("delivered")}
               >
                 Delivered

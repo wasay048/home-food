@@ -3382,6 +3382,16 @@ body,
   font-weight: 600;
 }
 
+.order-tab-inprogress.active {
+  background: #1a1a1a;
+  color: white;
+}
+
+.order-tab-delivered.active {
+  background: #3fc045;
+  color: white;
+}
+
 .order-tab:not(.active):hover {
   background: rgba(63, 192, 69, 0.1);
   color: #3fc045;
@@ -3398,6 +3408,11 @@ body,
   border-radius: 12px;
   color: white;
   box-shadow: 0 4px 12px rgba(63, 192, 69, 0.25);
+}
+
+.account-balance-card.negative {
+  background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
+  box-shadow: 0 4px 12px rgba(229, 57, 53, 0.25);
 }
 
 .account-balance-card .balance-label {

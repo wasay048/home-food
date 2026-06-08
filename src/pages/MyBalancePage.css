@@ -46,6 +46,11 @@
   box-shadow: 0 4px 15px rgba(63, 192, 69, 0.3);
 }
 
+.balance-display-card.negative {
+  background: linear-gradient(135deg, #e53935, #c62828);
+  box-shadow: 0 4px 15px rgba(229, 57, 53, 0.3);
+}
+
 .balance-display-card .balance-label {
   font-size: 14px;
   font-weight: 500;
