@@ -3411,8 +3411,8 @@ body,
 }
 
 .account-balance-card.negative {
-  background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
-  box-shadow: 0 4px 12px rgba(229, 57, 53, 0.25);
+  background: linear-gradient(135deg, #ff7b7b 0%, #f25c5c 100%);
+  box-shadow: 0 4px 12px rgba(242, 92, 92, 0.25);
 }
 
 .account-balance-card .balance-label {
