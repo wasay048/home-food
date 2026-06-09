@@ -47,8 +47,8 @@
 }
 
 .balance-display-card.negative {
-  background: linear-gradient(135deg, #e53935, #c62828);
-  box-shadow: 0 4px 15px rgba(229, 57, 53, 0.3);
+  background: linear-gradient(135deg, #ff7b7b, #f25c5c);
+  box-shadow: 0 4px 15px rgba(242, 92, 92, 0.3);
 }
 
 .balance-display-card .balance-label {
