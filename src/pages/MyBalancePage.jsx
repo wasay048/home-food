@@ -283,6 +283,14 @@ export default function MyBalancePage() {
         <div className="balance-amount">${accountBalance.toFixed(2)}</div>
       </div>
 
+      {/* Transaction History */}
+      <button
+        className="transaction-history-btn"
+        onClick={() => navigate("/transactions")}
+      >
+        Transaction History
+      </button>
+
       {/* Pending Request Warning */}
       {hasPendingRequest && !showSuccess && (
         <div

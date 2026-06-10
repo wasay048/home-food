@@ -64,6 +64,12 @@
   letter-spacing: -0.5px;
 }
 
+/* Transaction History link — full width inside the page's own padding */
+.my-balance-page .transaction-history-btn {
+  width: 100%;
+  margin: -8px 0 24px 0;
+}
+
 /* Amount Input Section */
 .credit-amount-section {
   margin-bottom: 20px;

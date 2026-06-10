@@ -916,10 +916,13 @@ export default function PaymentPage() {
       console.log("🔄 Starting change detection...");
       const changes = await detectItemChanges(
         cartItems,
-        kitchenInfo?.id || kitchenInfo?.kitchenId || cartItems[0]?.kitchenId
+        kitchenInfo?.id || kitchenInfo?.kitchenId || cartItems[0]?.kitchenId,
       );
       if (changes.length > 0) {
-        console.log("⚠️ Item changes detected, asking for confirmation:", changes);
+        console.log(
+          "⚠️ Item changes detected, asking for confirmation:",
+          changes,
+        );
         setPendingChanges(changes);
         setShowChangesDialog(true);
         orderLockRef.current = false;
@@ -993,12 +996,33 @@ export default function PaymentPage() {
             newBalance: deductResult.newBalance,
           });
 
+          // Build a human-readable summary of the ordered items for the
+          // transaction history, mirroring the iOS client: variable-weight
+          // items show total pounds, everything else shows "<qty> x <name>".
+          const orderItemsSummary = cartItems
+            .map((item) => {
+              const name = item.food?.name ?? item.name ?? "";
+              const quantity = Number(item.quantity ?? 1);
+              const isVariableWeight =
+                item.food?.variableWeight === 1 ||
+                item.food?.variableWeight === true;
+              if (isVariableWeight) {
+                const pounds = Number(item.food?.poundsInOneOrder ?? 0);
+                return `${(quantity * pounds).toFixed(1)} lbs  ${name}`;
+              }
+              return `${quantity.toFixed(0)} x ${name}`;
+            })
+            .join(", ");
+
           // Add entry to balanceAdjustment collection
           try {
             await addDoc(collection(db, "balanceAdjustment"), {
               balanceSent: -balanceToUse,
               senderUserID: currentUser.id,
               receiverUserID: "system",
+              isOrderPayment: true,
+              orderNumber: orderData.orderID,
+              orderItemsSummary,
               timestamp: serverTimestamp(),
             });
             console.log("✅ Balance adjustment recorded successfully");
@@ -1157,8 +1181,8 @@ export default function PaymentPage() {
             cartItemId: c.cartItemId,
             name: c.liveName,
             cost: c.livePrice,
-          }))
-        )
+          })),
+        ),
       );
     }
     setShowChangesDialog(false);
@@ -2268,8 +2292,7 @@ export default function PaymentPage() {
             <div className="modal-content">
               <p className="validation-message">
                 Some items in your cart were updated by the kitchen since you
-                added them. Please review and confirm before placing your
-                order:
+                added them. Please review and confirm before placing your order:
               </p>
               <div className="invalid-items-list">
                 {pendingChanges.map((change, index) => (

@@ -3526,10 +3526,12 @@ body,
 
 .transaction-icon.incoming {
   background-color: #edf9ee;
+  color: #3fc045;
 }
 
 .transaction-icon.outgoing {
   background-color: #fdf2f2;
+  color: #e74c3c;
 }
 
 /* Transaction Details */
@@ -3568,4 +3570,149 @@ body,
 
 .transaction-amount.outgoing {
   color: #e74c3c;
+}
+
+/* Transaction row wrapper — row + optional extended details */
+.transaction-row-wrapper {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.transaction-row-wrapper:last-child {
+  border-bottom: none;
+}
+
+.transaction-row-wrapper .transaction-row {
+  border-bottom: none;
+}
+
+/* Extended details under a row (weight adjustments / order payments) */
+.transaction-extended-details {
+  padding: 0 4px 14px 52px;
+  margin-top: -8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.transaction-detail-primary {
+  font-size: 12px;
+  font-weight: 600;
+  color: #212226;
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.transaction-detail-secondary {
+  font-size: 12px;
+  color: #8d93a1;
+  line-height: 1.4;
+}
+
+/* Pull-to-refresh indicator */
+.transaction-refresh-indicator {
+  text-align: center;
+  padding: 8px 0;
+  font-size: 13px;
+  color: #888;
+}
+
+/* Empty state */
+.transaction-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Current balance banner (target-user history view) */
+.transaction-balance-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 4px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #ffffff;
+}
+
+.transaction-balance-banner .banner-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #212226;
+}
+
+.transaction-balance-banner .banner-info-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #8d93a1;
+  display: flex;
+  align-items: center;
+}
+
+.transaction-balance-banner .banner-amount {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.transaction-balance-banner .banner-amount.positive {
+  color: #3fc045;
+}
+
+.transaction-balance-banner .banner-amount.negative {
+  color: #e74c3c;
+}
+
+/* Info overlay (port of iOS infoOverlay ToastView) */
+.transaction-info-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.transaction-info-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.transaction-info-card h3 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #212226;
+  text-align: center;
+}
+
+.transaction-info-card p {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
+}
+
+.transaction-info-card .transaction-info-close-btn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 16px;
+  background: #3fc045;
+  color: #fff;
+  border: none;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
