@@ -68,6 +68,20 @@
 .my-balance-page .transaction-history-btn {
   width: 100%;
   margin: -8px 0 24px 0;
+  background: #e0e0e0;
+  color: #000;
+  border: 1.5px solid #c4c4c4;
+  font-size: 17px;
+  font-weight: 700;
+  padding: 13px 16px;
+}
+
+.my-balance-page .transaction-history-btn:hover {
+  background: #d4d4d4;
+}
+
+.my-balance-page .transaction-history-btn:active {
+  background: #c8c8c8;
 }
 
 /* Amount Input Section */
