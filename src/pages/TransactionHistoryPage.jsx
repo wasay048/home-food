@@ -120,6 +120,19 @@ async function fetchTransactions(userId) {
   return allRecords.sort((a, b) => b.timestamp - a.timestamp);
 }
 
+/**
+ * Strip trailing weight suffixes like "2磅" or "3-4磅" from item names for
+ * display only. Matches at the end of a name or right before a separator
+ * (comma / opening paren) so it also cleans names embedded in a comma-separated
+ * order summary string.
+ */
+function stripPoundSuffix(text) {
+  if (typeof text !== "string") return text ?? "";
+  return text
+    .replace(/\s*\d+(?:\s*[-~–~]\s*\d+)?\s*磅(?=\s*(?:$|[,，(（]))/gu, "")
+    .trim();
+}
+
 export default function TransactionHistoryPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -289,7 +302,7 @@ export default function TransactionHistoryPage() {
     let directionLabel;
     if (transaction.isVariableWeightAdjustment === true) {
       // Weight-based delivery adjustment — already very specific, keep it
-      directionLabel = `Weight Adj: ${transaction.itemName ?? "Item"}`;
+      directionLabel = `Weight Adj: ${stripPoundSuffix(transaction.itemName ?? "Item")}`;
     } else if (
       transaction.senderUserID === currentUserId &&
       transaction.receiverUserID === "system" &&
@@ -367,7 +380,7 @@ export default function TransactionHistoryPage() {
               <div className="transaction-detail-primary">
                 Order #{transaction.orderNumber},{" "}
                 {transaction.originalQuantity ?? 1} x{" "}
-                {transaction.itemName ?? ""}
+                {stripPoundSuffix(transaction.itemName)}
               </div>
             )}
             {transaction.isQuantityAdjustment === true ? (
@@ -407,7 +420,7 @@ export default function TransactionHistoryPage() {
             <div className="transaction-extended-details">
               <div className="transaction-detail-primary">
                 {transaction.orderItemsSummary
-                  ? `Order #${transaction.orderNumber}, ${transaction.orderItemsSummary}`
+                  ? `Order #${transaction.orderNumber}, ${stripPoundSuffix(transaction.orderItemsSummary)}`
                   : `Order #${transaction.orderNumber}`}
               </div>
             </div>
