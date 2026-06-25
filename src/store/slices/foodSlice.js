@@ -1,24 +1,44 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
-  getFoodDetailWithKitchenAndReviews,
   getFoodById,
+  getKitchenById,
+  getFoodReviews,
+  calculateReviewStats,
   getAllFoods,
 } from "../../services/foodService";
 import { addLike, removeLike, checkUserLike } from "../../services/likeService";
 import { serializeFirestoreData } from "../../utils/firestoreSerializer";
 
-// Async thunk for fetching food details with all related data
+// Async thunk for the LOAD-TIME CRITICAL PATH. The food-detail spinner is
+// gated on this thunk, so it now fetches ONLY what the above-the-fold UI needs:
+// the food doc + the kitchen doc. Reviews load separately and non-blocking via
+// fetchFoodReviewsOnly; likes are no longer fetched here because they are never
+// rendered on this page (the heart count comes from food.numOfLike, and the
+// filled/empty state comes from checkFoodLikeStatus). When kitchenId is known
+// up front (always true on the detail page) we fetch food + kitchen in parallel
+// since getKitchenById does not depend on the food doc — collapsing the
+// previous 3–5 serial Firestore round trips down to ~1.
 export const fetchFoodDetail = createAsyncThunk(
   "food/fetchDetail",
   async ({ foodId, kitchenId }) => {
     try {
-      // Use the existing optimized function
-      const result = await getFoodDetailWithKitchenAndReviews(
-        foodId,
-        kitchenId
-      );
+      let food;
+      let kitchen;
+      if (kitchenId) {
+        [food, kitchen] = await Promise.all([
+          getFoodById(foodId, kitchenId),
+          getKitchenById(kitchenId),
+        ]);
+      } else {
+        // No kitchenId provided → must read the food doc first to learn it.
+        food = await getFoodById(foodId);
+        const targetKitchenId = food?.kitchenId;
+        kitchen = targetKitchenId ? await getKitchenById(targetKitchenId) : null;
+      }
       return {
-        ...result,
+        food,
+        kitchen,
+        likes: [],
         foodId,
         kitchenId,
       };
@@ -29,12 +49,23 @@ export const fetchFoodDetail = createAsyncThunk(
         food,
         kitchen: null,
         likes: [],
-        reviews: [],
-        reviewStats: null,
         foodId,
         kitchenId,
       };
     }
+  }
+);
+
+// Async thunk for loading reviews OFF the critical path. It writes the same
+// currentReviews / currentReviewStats fields the page already renders, but
+// WITHOUT touching `loading`, so the spinner is gated only on food + kitchen.
+// Uses the real getFoodReviews service (NOT the mock reviewsSlice stub).
+export const fetchFoodReviewsOnly = createAsyncThunk(
+  "food/fetchReviewsOnly",
+  async ({ foodId, kitchenId }) => {
+    const reviews = await getFoodReviews(foodId, kitchenId);
+    const reviewStats = calculateReviewStats(reviews);
+    return { reviews, reviewStats };
   }
 );
 
@@ -240,23 +271,32 @@ const foodSlice = createSlice({
       })
       .addCase(fetchFoodDetail.fulfilled, (state, action) => {
         state.loading = false;
-        const { food, kitchen, likes, reviews, reviewStats } = action.payload;
+        const { food, kitchen, likes } = action.payload;
 
         // Serialize Firestore data to prevent Redux non-serializable warnings
         state.currentFood = serializeFirestoreData(food);
         state.currentKitchen = serializeFirestoreData(kitchen);
-        state.currentReviews = reviews
-          ? reviews.map((review) => serializeFirestoreData(review))
-          : [];
-        state.currentReviewStats = serializeFirestoreData(reviewStats);
         state.currentLikes = likes
           ? likes.map((like) => serializeFirestoreData(like))
           : [];
         state.lastUpdated = new Date().toISOString();
+        // NOTE: currentReviews / currentReviewStats are intentionally NOT set
+        // here. They are owned by fetchFoodReviewsOnly (non-blocking) so that a
+        // reviews response landing before this one is never overwritten with
+        // empty values. clearCurrentFood resets them on food/kitchen change.
       })
       .addCase(fetchFoodDetail.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message;
+      })
+
+      // Reviews loaded off the critical path — does NOT affect the load spinner
+      .addCase(fetchFoodReviewsOnly.fulfilled, (state, action) => {
+        const { reviews, reviewStats } = action.payload;
+        state.currentReviews = reviews
+          ? reviews.map((review) => serializeFirestoreData(review))
+          : [];
+        state.currentReviewStats = serializeFirestoreData(reviewStats);
       })
 
       // Fetch all foods
