@@ -7,7 +7,7 @@ import {
 /**
  * Hook to fetch a specific kitchen with its food items from Firebase
  */
-export function useKitchenWithFoods(kitchenId) {
+export function useKitchenWithFoods(kitchenId, { defer = false } = {}) {
   const [kitchen, setKitchen] = useState(null);
   const [foods, setFoods] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,12 +21,12 @@ export function useKitchenWithFoods(kitchenId) {
   };
 
   useEffect(() => {
-    async function fetchKitchenData() {
-      if (!kitchenId) {
-        setLoading(false);
-        return;
-      }
+    if (!kitchenId) {
+      setLoading(false);
+      return;
+    }
 
+    async function fetchKitchenData() {
       console.log(`[useKitchenWithFoods] Fetching kitchen: ${kitchenId}`);
 
       try {
@@ -49,8 +49,31 @@ export function useKitchenWithFoods(kitchenId) {
       }
     }
 
-    fetchKitchenData();
-  }, [kitchenId, refreshKey]);
+    // Callers where foods are the primary content (ListingPage, OrderPage) run
+    // synchronously, exactly as before. Callers that only prefetch (FoodDetail
+    // page, defer:true) run after first paint via requestIdleCallback so the
+    // duplicate kitchen doc + full foodItems subcollection read never competes
+    // with the critical fetch. setTimeout fallback for WeChat / iOS Safari.
+    if (!defer) {
+      fetchKitchenData();
+      return;
+    }
+
+    const ric =
+      typeof window !== "undefined" && window.requestIdleCallback
+        ? window.requestIdleCallback
+        : (cb) => setTimeout(cb, 200);
+    const handle = ric(fetchKitchenData);
+    return () => {
+      if (window.cancelIdleCallback && typeof handle === "number") {
+        try {
+          window.cancelIdleCallback(handle);
+        } catch (_) {}
+      } else {
+        clearTimeout(handle);
+      }
+    };
+  }, [kitchenId, refreshKey, defer]);
 
   return {
     kitchen,

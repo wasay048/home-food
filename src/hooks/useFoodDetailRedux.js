@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import dayjs from "dayjs";
 import {
   fetchFoodDetail,
+  fetchFoodReviewsOnly,
   toggleFoodLike,
   clearCurrentFood,
   checkFoodLikeStatus,
@@ -87,7 +88,10 @@ export const useFoodDetailRedux = (foodId, kitchenId) => {
   // Actions
   const loadFoodDetail = useCallback(() => {
     if (foodId && kitchenId) {
+      // Critical path: food + kitchen — gates the loading spinner.
       dispatch(fetchFoodDetail({ foodId, kitchenId }));
+      // Reviews load in parallel but do NOT gate the spinner (below the fold).
+      dispatch(fetchFoodReviewsOnly({ foodId, kitchenId }));
     }
   }, [dispatch, foodId, kitchenId]);
 
