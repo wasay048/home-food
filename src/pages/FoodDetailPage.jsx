@@ -466,8 +466,13 @@ export default function FoodDetailPage() {
     );
   }
 
+  // `defer: true` — on this page the kitchen+foods feed is only a prefetch to
+  // warm ListingPage, so its (duplicate kitchen doc + full foodItems
+  // subcollection) read is pushed to idle and never competes with the critical
+  // food/kitchen fetch on first paint. The hook stays mounted so
+  // refetchKitchenFoods keeps working for the foreground-refresh effect below.
   const { kitchen: fullKitchen, foods: allFoods, refetch: refetchKitchenFoods } =
-    useKitchenWithFoods(kitchenId);
+    useKitchenWithFoods(kitchenId, { defer: true });
   const [activeTab, setActiveTab] = useState("reviews");
   const [selectedQuantity, setSelectedQuantity] = useState(0);
   const [specialInstructions, setSpecialInstructions] = useState(() => {
@@ -670,10 +675,42 @@ export default function FoodDetailPage() {
     }
   }, [dispatch, foodId, kitchenId]);
 
-  // ✅ Fetch aggregated order quantities globally
+  // ✅ Aggregated order quantities feed ONLY the cat-8 "Groupbuy Progress %"
+  // line. The underlying query scans the entire non-canceled orders collection,
+  // so we (a) only fetch for items that actually render that line, (b) defer to
+  // idle so it never competes with the critical food/kitchen fetch on first
+  // paint, and (c) skip when a recent fetch is still fresh. Pickup Now items
+  // never show the % line. A setTimeout fallback is required because WeChat's
+  // in-app browser and iOS Safari have no requestIdleCallback — without it the
+  // % would never populate for the primary client.
+  const orderAggregationLastFetched = useSelector(
+    (state) => state.orderAggregation.lastFetched
+  );
   useEffect(() => {
-    dispatch(fetchAggregatedOrderQuantities());
-  }, [dispatch]);
+    if (!food || isPickupNowMode) return;
+    if (getMaxCategoryId(food?.foodCategory) !== 8) return;
+    const FRESH_MS = 5 * 60 * 1000;
+    if (
+      orderAggregationLastFetched &&
+      Date.now() - orderAggregationLastFetched < FRESH_MS
+    ) {
+      return;
+    }
+    const ric =
+      typeof window !== "undefined" && window.requestIdleCallback
+        ? window.requestIdleCallback
+        : (cb) => setTimeout(cb, 200);
+    const handle = ric(() => dispatch(fetchAggregatedOrderQuantities()));
+    return () => {
+      if (window.cancelIdleCallback && typeof handle === "number") {
+        try {
+          window.cancelIdleCallback(handle);
+        } catch (_) {}
+      } else {
+        clearTimeout(handle);
+      }
+    };
+  }, [dispatch, food, isPickupNowMode, orderAggregationLastFetched]);
 
   // ✅ Auto-refresh when the page returns to the foreground (e.g. user
   // switches back to the WeChat in-app browser from another chat/app).
@@ -1157,7 +1194,23 @@ export default function FoodDetailPage() {
       }
     };
 
-    fetchCategoriesInBackground();
+    // Defer to idle — this is a ListingPage prefetch with no consumer on this
+    // page, so it must not compete with the critical fetch on first paint.
+    // setTimeout fallback for WeChat / iOS Safari (no requestIdleCallback).
+    const ric =
+      typeof window !== "undefined" && window.requestIdleCallback
+        ? window.requestIdleCallback
+        : (cb) => setTimeout(cb, 200);
+    const handle = ric(fetchCategoriesInBackground);
+    return () => {
+      if (window.cancelIdleCallback && typeof handle === "number") {
+        try {
+          window.cancelIdleCallback(handle);
+        } catch (_) {}
+      } else {
+        clearTimeout(handle);
+      }
+    };
   }, [dispatch, existingCategories.length, categoriesLastUpdated]);
 
 
