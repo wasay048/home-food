@@ -1277,8 +1277,15 @@ export async function getKitchenWithFoodItems(kitchenId) {
   }
 
   try {
-    // Get kitchen document
-    const kitchenDoc = await getDoc(doc(db, "kitchens", kitchenId));
+    // Fetch the kitchen doc and the foodItems subcollection in PARALLEL. The
+    // subcollection path is derived purely from kitchenId and does not depend
+    // on the kitchen doc, so awaiting them serially needlessly doubles latency.
+    // If the kitchen turns out not to exist, the (already-resolved) foods array
+    // is simply discarded — observably identical to the old serial behavior.
+    const [kitchenDoc, foodItemsSnapshot] = await Promise.all([
+      getDoc(doc(db, "kitchens", kitchenId)),
+      getDocs(collection(db, "kitchens", kitchenId, "foodItems")),
+    ]);
 
     if (!kitchenDoc.exists()) {
       console.warn(`[getKitchenWithFoodItems] Kitchen ${kitchenId} not found`);
@@ -1292,10 +1299,6 @@ export async function getKitchenWithFoodItems(kitchenId) {
       id: kitchenDoc.id,
       ...kitchenDoc.data(),
     };
-
-    // Get all food items from this kitchen's subcollection
-    const foodItemsRef = collection(db, "kitchens", kitchenId, "foodItems");
-    const foodItemsSnapshot = await getDocs(foodItemsRef);
 
     const foods = foodItemsSnapshot.docs.map((doc) =>
       normalizeFoodItem({ id: doc.id, kitchenId: kitchenId, ...doc.data() })

@@ -33,6 +33,7 @@ import { fetchAggregatedOrderQuantities } from "../store/slices/orderAggregation
 // import Edit from "../assets/images/edit.svg";
 import { QuantitySelector } from "../components/QuantitySelector/QuantitySelector";
 import DateTimePicker from "../components/DateTimePicker/DateTimePicker";
+import MobileLoader from "../components/Loader/MobileLoader";
 import { useSelector, useDispatch } from "react-redux";
 
 // ✅ Calculate group order percentage using Redux aggregated orders
@@ -112,12 +113,16 @@ export default function ListingPage() {
   }, [kitchenId, dispatch]);
 
   // ✅ Fetch fresh data from Firebase when mounting/refreshing
+  // On a direct /foods landing, Redux `kitchenId` is null until the seeding
+  // effect above runs (one render later). Passing the default here lets the
+  // critical foods fetch start on the FIRST render instead of waiting a cycle.
+  // For normal navigation `kitchenId` is already set, so this is a no-op.
   const {
     kitchen: fullKitchen,
     foods: allFoods,
     loading: freshLoading,
     refetch,
-  } = useKitchenWithFoods(kitchenId);
+  } = useKitchenWithFoods(kitchenId || DEFAULT_DIRECT_LANDING_KITCHEN_ID);
 
   // ✅ Pull-to-refresh state
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -269,10 +274,42 @@ export default function ListingPage() {
     }
   }, [fullKitchen, allFoods, kitchenId, dispatch]);
 
-  // ✅ Fetch aggregated order quantities globally for the group buy progress calculation
+  // ✅ Aggregated order quantities drive the group-buy Progress % chips, the
+  // group-order sort, and "Groupbuy of the Week". The underlying query scans
+  // the entire non-canceled orders collection, so we defer it to idle (with a
+  // setTimeout fallback for WeChat / iOS Safari) and skip it when a recent
+  // fetch is still fresh — this keeps it from competing with the critical
+  // kitchen/foods fetch on first paint. The list renders immediately (sorted
+  // alphabetically, chips at 0%) and re-sorts once this lands — the same
+  // behavior that already happened on every fresh session, just off the
+  // critical path. The foreground-refresh effect below intentionally stays
+  // eager so returning to the page always pulls fresh progress.
+  const orderAggregationLastFetched = useSelector(
+    (state) => state.orderAggregation.lastFetched,
+  );
   useEffect(() => {
-    dispatch(fetchAggregatedOrderQuantities());
-  }, [dispatch]);
+    const FRESH_MS = 5 * 60 * 1000;
+    if (
+      orderAggregationLastFetched &&
+      Date.now() - orderAggregationLastFetched < FRESH_MS
+    ) {
+      return;
+    }
+    const ric =
+      typeof window !== "undefined" && window.requestIdleCallback
+        ? window.requestIdleCallback
+        : (cb) => setTimeout(cb, 200);
+    const handle = ric(() => dispatch(fetchAggregatedOrderQuantities()));
+    return () => {
+      if (window.cancelIdleCallback && typeof handle === "number") {
+        try {
+          window.cancelIdleCallback(handle);
+        } catch (_) {}
+      } else {
+        clearTimeout(handle);
+      }
+    };
+  }, [dispatch, orderAggregationLastFetched]);
 
   // ✅ Auto-refresh when the page returns to the foreground (e.g. user
   // switches back to the WeChat in-app browser from another chat/app).
@@ -327,19 +364,36 @@ export default function ListingPage() {
     if (foodCategories.length > 0 && !isStale) return;
 
     let cancelled = false;
-    (async () => {
-      try {
-        dispatch(setFoodCategoriesLoading(true));
-        const categories = await getFoodCategories();
-        if (cancelled) return;
-        dispatch(setFoodCategories(categories));
-      } catch (err) {
-        console.error("[ListingPage] Failed to fetch food categories:", err);
-        if (!cancelled) dispatch(setFoodCategoriesLoading(false));
-      }
-    })();
+    // Defer to idle so this non-critical fetch (category heading names + the
+    // search index) doesn't compete with the critical kitchen/foods fetch on
+    // first paint. setTimeout fallback is mandatory — WeChat / iOS Safari have
+    // no requestIdleCallback, and without it category names would never load.
+    const ric =
+      typeof window !== "undefined" && window.requestIdleCallback
+        ? window.requestIdleCallback
+        : (cb) => setTimeout(cb, 200);
+    const handle = ric(() => {
+      (async () => {
+        try {
+          dispatch(setFoodCategoriesLoading(true));
+          const categories = await getFoodCategories();
+          if (cancelled) return;
+          dispatch(setFoodCategories(categories));
+        } catch (err) {
+          console.error("[ListingPage] Failed to fetch food categories:", err);
+          if (!cancelled) dispatch(setFoodCategoriesLoading(false));
+        }
+      })();
+    });
     return () => {
       cancelled = true;
+      if (window.cancelIdleCallback && typeof handle === "number") {
+        try {
+          window.cancelIdleCallback(handle);
+        } catch (_) {}
+      } else {
+        clearTimeout(handle);
+      }
     };
   }, [dispatch, foodCategories.length, foodCategoriesLastUpdated]);
 
@@ -599,6 +653,34 @@ export default function ListingPage() {
   // State for managing pickup dates and times for each food item
   const [pickupDates, setPickupDates] = useState({});
   const [pickupTimes, setPickupTimes] = useState({});
+
+  // ✅ Progressive rendering. Each menu card mounts a heavy DateTimePicker +
+  // QuantitySelector, so mounting the ENTIRE flat menu at once is the dominant
+  // first-paint cost for large kitchens. Render a capped number of flat-category
+  // cards initially, then expand to the full list on idle (setTimeout fallback
+  // for WeChat / iOS Safari which lack requestIdleCallback). Search always
+  // renders the full filtered list so a match is never hidden behind the cap,
+  // and cat-8 subcategory accordions (already lazy via expand) are untouched.
+  // A late-mounted card still reads its pickup date/time via getPickupDate and
+  // its quantity from Redux, so no selection or cart state is lost.
+  const FLAT_CARD_CAP = 15;
+  const [renderAllFlatCards, setRenderAllFlatCards] = useState(false);
+  useEffect(() => {
+    const ric =
+      typeof window !== "undefined" && window.requestIdleCallback
+        ? window.requestIdleCallback
+        : (cb) => setTimeout(cb, 200);
+    const handle = ric(() => setRenderAllFlatCards(true));
+    return () => {
+      if (window.cancelIdleCallback && typeof handle === "number") {
+        try {
+          window.cancelIdleCallback(handle);
+        } catch (_) {}
+      } else {
+        clearTimeout(handle);
+      }
+    };
+  }, []);
 
   // ✅ Collapsed-by-default subcategory accordions for category 8 (Group PreOrder).
   // While a search is active we treat every subcategory as expanded so matches
@@ -1015,6 +1097,10 @@ export default function ListingPage() {
             <img
               src={food.imageUrl || "/src/assets/images/product.png"}
               alt={cleanItemName(food.name)}
+              loading="lazy"
+              decoding="async"
+              width={70}
+              height={80}
               onError={(e) => {
                 e.target.src = "/src/assets/images/product.png";
               }}
@@ -1133,6 +1219,18 @@ export default function ListingPage() {
       </div>
     );
   };
+
+  // Show a loader only on a true first visit (no cached/Redux data yet) while
+  // the initial kitchen/foods fetch is in flight. Repeat visits rehydrate
+  // content from redux-persist (PersistGate gates render until then), so
+  // `hasAnyContent` is already true and the loader never flashes over existing
+  // data. `freshLoading` flips false in the hook's `finally` even on error, so
+  // the loader can never hang — a failed fetch just reveals the page beneath.
+  const hasAnyContent =
+    pickupNowItems.length > 0 ||
+    groupedGoGrabItems.length > 0 ||
+    availablePreorderDates.length > 0;
+  const showInitialLoader = freshLoading && !hasAnyContent;
 
   return (
     <div
@@ -1361,6 +1459,18 @@ export default function ListingPage() {
             )}
           </div>
 
+          {/* Initial loading state — only on a true first visit (no cached
+              Redux data yet). Repeat visits show persisted content instantly,
+              so this never flashes over existing data. */}
+          {showInitialLoader && (
+            <MobileLoader
+              isLoading={true}
+              text="Loading menu..."
+              overlay={false}
+              size="medium"
+            />
+          )}
+
           {/* Pickup Now (No Preorder Needed) — flat inventory table of items
               with stock > 0, sourced from goGrabItems. Rendered above the
               categorized menu cards; existing sections below are untouched. */}
@@ -1508,7 +1618,10 @@ export default function ListingPage() {
                       </div>
                     ) : (
                       <div className="menu-listing">
-                        {group.items.map((food) => renderGoGrabFoodCard(food))}
+                        {(renderAllFlatCards || searchTokens.length > 0
+                          ? group.items
+                          : group.items.slice(0, FLAT_CARD_CAP)
+                        ).map((food) => renderGoGrabFoodCard(food))}
                       </div>
                     )}
                   </div>
@@ -1571,6 +1684,10 @@ export default function ListingPage() {
                                 "/src/assets/images/product.png"
                               }
                               alt={cleanItemName(food.name)}
+                              loading="lazy"
+                              decoding="async"
+                              width={70}
+                              height={80}
                               onError={(e) => {
                                 e.target.src = "/src/assets/images/product.png";
                               }}
