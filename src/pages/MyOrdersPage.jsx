@@ -96,7 +96,6 @@ export default function MyOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [foodItemsData, setFoodItemsData] = useState({});
-  const [kitchenData, setKitchenData] = useState({});
   const [pickupDates, setPickupDates] = useState({});
   const [pickupTimes, setPickupTimes] = useState({});
   const [activeTab, setActiveTab] = useState("inProgress");
@@ -258,78 +257,45 @@ export default function MyOrdersPage() {
         setOrders(sortedOrders);
         setError(null);
 
-        // Fetch live food data for category 8 items
-        const category8FoodIds = new Set();
-        const kitchenIds = new Set();
-        
+        // Fetch live food data for category 8 items that are still active.
+        // Delivered items never reach the "group_progress" display case (see
+        // getOrderDisplayCase), so fetching their food data is wasted work —
+        // for customers with a long order history this was the majority of
+        // the fetches on this page.
+        const category8Lookups = new Map(); // foodItemId -> kitchenId
+
         sortedOrders.forEach((order) => {
-          if (order.kitchenId) {
-            kitchenIds.add(order.kitchenId);
-          }
           order.orderedFoodItems?.forEach((item) => {
+            if (item.orderStatus === "delivered") return;
             const maxCategoryId = getMaxCategoryId(item.foodCategory);
             if (maxCategoryId === 8 && item.foodItemId) {
-              category8FoodIds.add(item.foodItemId);
+              category8Lookups.set(item.foodItemId, item.kitchenId || order.kitchenId);
             }
           });
         });
 
-        console.log("📋 [MyOrdersPage] Category 8 food IDs:", Array.from(category8FoodIds));
-        console.log("📋 [MyOrdersPage] Kitchen IDs:", Array.from(kitchenIds));
+        // Fetch food data for each category 8 item in parallel. Look in the
+        // item's own kitchen subcollection first (that's where these items
+        // actually live), falling back to the top-level foodItems collection.
+        const foodEntries = await Promise.all(
+          Array.from(category8Lookups.entries()).map(async ([foodItemId, kitchenId]) => {
+            try {
+              let foodDoc = kitchenId
+                ? await getDoc(doc(db, "kitchens", kitchenId, "foodItems", foodItemId))
+                : null;
 
-        // Fetch food data for each category 8 item - try both locations
-        const foodData = {};
-        for (const foodItemId of category8FoodIds) {
-          try {
-            // First try the top-level foodItems collection
-            let foodRef = doc(db, "foodItems", foodItemId);
-            let foodDoc = await getDoc(foodRef);
-            
-            // If not found, try kitchen subcollection
-            if (!foodDoc.exists()) {
-              for (const kitchenId of kitchenIds) {
-                foodRef = doc(db, "kitchens", kitchenId, "foodItems", foodItemId);
-                foodDoc = await getDoc(foodRef);
-                if (foodDoc.exists()) {
-                  console.log(`✅ Found in kitchen ${kitchenId} subcollection`);
-                  break;
-                }
+              if (!foodDoc || !foodDoc.exists()) {
+                foodDoc = await getDoc(doc(db, "foodItems", foodItemId));
               }
-            }
-            
-            if (foodDoc.exists()) {
-              const data = foodDoc.data();
-              foodData[foodItemId] = data;
-              console.log(`✅ Food data for ${foodItemId}:`, {
-                name: data.name,
-                minByGroup: data.minByGroup,
-                maxByGroup: data.maxByGroup,
-                numAvailable: data.numAvailable,
-              });
-            } else {
-              console.warn(`⚠️ Food item ${foodItemId} not found in any location`);
-            }
-          } catch (err) {
-            console.error(`Error fetching food item ${foodItemId}:`, err);
-          }
-        }
-        setFoodItemsData(foodData);
 
-        // Fetch kitchen data
-        const kitchens = {};
-        for (const kitchenId of kitchenIds) {
-          try {
-            const kitchenRef = doc(db, "kitchens", kitchenId);
-            const kitchenDoc = await getDoc(kitchenRef);
-            if (kitchenDoc.exists()) {
-              kitchens[kitchenId] = { id: kitchenId, ...kitchenDoc.data() };
-              console.log(`✅ Kitchen data for ${kitchenId}:`, kitchens[kitchenId].name);
+              return foodDoc.exists() ? [foodItemId, foodDoc.data()] : null;
+            } catch (err) {
+              console.error(`Error fetching food item ${foodItemId}:`, err);
+              return null;
             }
-          } catch (err) {
-            console.error(`Error fetching kitchen ${kitchenId}:`, err);
-          }
-        }
-        setKitchenData(kitchens);
+          })
+        );
+        setFoodItemsData(Object.fromEntries(foodEntries.filter(Boolean)));
 
         // Fetch aggregated order quantities globally
         dispatch(fetchAggregatedOrderQuantities());
